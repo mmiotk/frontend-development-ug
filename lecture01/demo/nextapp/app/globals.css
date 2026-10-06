@@ -1,0 +1,29 @@
+:root {
+  --border: #d4d4d8;
+  --accent: #2563eb;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  margin: 0;
+  line-height: 1.55;
+  color: #18181b;
+}
+
+nav {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+nav a { color: var(--accent); text-decoration: none; }
+nav a:hover { text-decoration: underline; }
+
+main { padding: 1.5rem; max-width: 60rem; }
+
+input { padding: .3rem .5rem; border: 1px solid var(--border); border-radius: .375rem; }
+button { padding: .4rem .8rem; border: 1px solid var(--border); border-radius: .375rem; cursor: pointer; background: #fff; }
+button:hover { background: #f4f4f5; }

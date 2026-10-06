@@ -1,0 +1,6 @@
+# zależności i artefakty buildu — nie commitujemy
+/node_modules
+/.next
+/out
+*.log
+.env*.local

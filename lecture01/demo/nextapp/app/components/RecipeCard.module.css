@@ -1,0 +1,18 @@
+/* CSS Modules (segment 7): classes are SCOPED to this file — no global leaks.
+   Next.js compiles .card to a unique name like RecipeCard_card__Xyz47. */
+.card {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: .75rem;
+  padding: .75rem;
+  text-align: center;
+  width: 10rem;
+  background: #fafafa;
+  color: inherit;
+  text-decoration: none;
+  transition: background .15s;
+}
+.card:hover { background: #f0f0f0; }
+.emoji      { font-size: 2.5rem; }
+.name       { margin: .25rem 0; font-size: 1rem; }
+.time       { font-size: .85rem; color: #52525b; margin: .2rem 0; }

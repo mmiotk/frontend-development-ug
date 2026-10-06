@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <title>Demo 01 — React without JSX</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    .box { border: 1px solid #ccc; border-radius: .5rem; padding: 1rem; max-width: 40rem; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React 18 via CLASSIC <script> tags => global React and ReactDOM. No build, no modules, no tricks. -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script>
+    // React is global (from <script>). A short alias just for readability of nested calls:
+    const h = React.createElement;
+
+    // A component is just a FUNCTION that returns an element.
+    function DishItem(props) {
+      return h("li", null, props.name, " — ", h("em", null, props.cuisine));
+    }
+
+    const dishes = [
+      { name: "Naleśniki", cuisine: "polska" },
+      { name: "Pizza",     cuisine: "włoska" },
+      { name: "Sushi",     cuisine: "japońska" },
+    ];
+
+    const dishList = h(
+      "ul",
+      null,
+      dishes.map((d) => h(DishItem, { key: d.name, name: d.name, cuisine: d.cuisine }))
+    );
+
+    const tree = h("section", { className: "box" },
+      h("h1", null, "Dishes"),
+      dishList
+    );
+
+    ReactDOM.createRoot(document.getElementById("root")).render(tree);
+  </script>
+</body>
+</html>

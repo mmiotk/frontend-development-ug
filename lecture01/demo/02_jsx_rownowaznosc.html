@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <title>Demo 02 — JSX = syntactic sugar over createElement</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    .box { border: 1px solid #ccc; border-radius: .5rem; padding: 1rem; max-width: 40rem; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React (global React/ReactDOM) + Babel (compiles JSX in the browser, demos only): -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- type="text/babel" => Babel compiles this script (JSX -> React.createElement). -->
+  <script type="text/babel">
+    // THIS JSX...
+    const tree = (
+      <section className="box">
+        <h1>Hello React 👋</h1>
+        <p>Same as demo 01 — but in JSX.</p>
+        <ul>
+          <li>expressions in {"{ }"}</li>
+          <li>className instead of class</li>
+          <li>single root (or use a fragment)</li>
+        </ul>
+      </section>
+    );
+
+    // ...Babel compiles to EXACTLY:
+    // React.createElement("section", { className: "box" },
+    //   React.createElement("h1", null, "Hello React 👋"),
+    //   React.createElement("p",  null, "..."),
+    //   React.createElement("ul", null, ...));
+    console.log("Element from JSX (plain object):", tree);
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(tree);
+
+    // JSX rules (added in the same script):
+    const recipeName = "Pizza";
+    const ready = true;
+    const ingredients = ["ciasto", "sos", "ser"];
+
+    const example = (
+      <>                                                            {/* fragment — no extra DOM wrapper */}
+        <h2>Recipe: {recipeName.toUpperCase()}</h2>                 {/* JS expression in {} */}
+        {ready ? <span>✅ Ready</span> : <span>⏳ Not ready</span>} {/* ternary */}
+        {ingredients.length > 0 && <p>Ingredients: {ingredients.length}</p>}  {/* && short-circuit */}
+        <ul>
+          {ingredients.map((ing) => <li key={ing}>{ing}</li>)}      {/* list + key */}
+        </ul>
+        <img src="https://picsum.photos/64" alt="recipe" />          {/* self-closing tag */}
+      </>
+    );
+
+    root.render(example); // the same root, a new element: React updates the page
+  </script>
+</body>
+</html>
