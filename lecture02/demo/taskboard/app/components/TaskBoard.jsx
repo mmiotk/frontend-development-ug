@@ -1,12 +1,5 @@
 "use client";
-// Final state of TaskBoard after all segments.
-// Segment 0: static skeleton (initialTasks prop, ul/li list).
-// Segment 1: useState — add / toggle / delete tasks, controlled input.
-// Segment 2: useEffect — document title (with cleanup), localStorage persistence.
-// Segment 3: useRef — DOM focus after add, render counter without re-render.
-// Segment 4: filter + counts as derived values (no extra state, no memoization).
-// Segment 5: custom hooks — all task logic extracted to useTasks (+ useLocalStorage).
-// Segment 6: "Clear done" button (clearDone from useTasks) used to demo the rules of hooks.
+// Final TaskBoard: task logic comes from useTasks; the input, focus, render counter and tab title stay here.
 import { useState, useEffect, useRef } from "react";
 import { useTasks } from "../hooks/useTasks";
 

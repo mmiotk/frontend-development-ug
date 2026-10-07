@@ -1,4 +1,4 @@
-// Static initial tasks — no fetch (data fetching is lecture 05).
+// Static initial tasks — a plain module, no data fetching.
 export const initialTasks = [
   { id: 1, text: "Przeczytaj dokumentację React 19", done: false },
   { id: 2, text: "Zbuduj komponent TaskBoard",        done: false },
