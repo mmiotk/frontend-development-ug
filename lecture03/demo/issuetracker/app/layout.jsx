@@ -1,11 +1,11 @@
 // Root layout — HTML shell shared by every route.
-// Added in segment 1: navigation with Link (client-side navigation, no full reload).
+// Navigation uses Link: client-side navigation, no full page reload.
 import "./globals.css";
 import Link from "next/link";
 
 export const metadata = {
   title: "Issue Tracker — Demo L03",
-  description: "Lecture 03 — live-coding: routing + forms (React 19 + Next.js 16)",
+  description: "Live-coding demo: routing and forms (React 19 + Next.js 16)",
 };
 
 export default function RootLayout({ children }) {
