@@ -11,21 +11,19 @@ export default class ErrorBoundary extends Component {
   }
 
   // Called during render when a child throws.
-  // Returns the new state — must be a pure function.
+  // Must be a pure function — returns the new state.
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
   }
 
-  // Called after render for logging (side effects allowed here).
+  // Called after render — for logging (side effects are OK here).
   componentDidCatch(error, info) {
     console.error('ErrorBoundary caught:', error, info.componentStack);
   }
 
   render() {
     if (this.state.hasError) {
-      return (
-        <p>Wystąpił błąd: {this.state.error?.message}</p>
-      );
+      return <p>Wystąpił błąd: {this.state.error?.message}</p>;
     }
     return this.props.children;
   }

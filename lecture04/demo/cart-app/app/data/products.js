@@ -1,4 +1,4 @@
-// Static product catalog — in a real app, fetched from the backend (lecture 05).
+// Static product catalog — in a real app, fetched from the backend.
 export const products = [
   { id: 1, name: 'Kawa ziarnista Arabica 1kg', price: 49.99 },
   { id: 2, name: 'Herbata Earl Grey 100g',     price: 18.50 },

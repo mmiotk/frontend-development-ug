@@ -4,7 +4,7 @@ import { useCartDispatch } from '../context/CartContext';
 
 // Reads only dispatch from context (CartDispatchContext), so a cart change does not
 // re-render it through context. It still re-renders on every cart change, because its
-// parent CartPage reads cart state and renders all rows again (see slide 13, fix 3: memo).
+// parent CartPage reads cart state and renders all rows again.
 export default function CartItem({ item }) {
   const dispatch = useCartDispatch();
 

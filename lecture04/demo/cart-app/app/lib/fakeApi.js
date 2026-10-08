@@ -1,5 +1,5 @@
 // Simulates network calls with a delay.
-// No real backend — lecture 05 adds fetch / Server Actions.
+// No real backend: the data is hard-coded and nothing is fetched.
 
 // Simulate adding a product to the remote cart (1.5 s delay).
 // Pass shouldFail = true to demonstrate useOptimistic rollback.

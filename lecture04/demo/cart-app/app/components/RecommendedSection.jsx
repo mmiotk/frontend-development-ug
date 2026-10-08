@@ -5,8 +5,9 @@ import { fetchRecommended } from '../lib/fakeApi';
 import RecommendedProducts from './RecommendedProducts';
 import ErrorBoundary from './ErrorBoundary';
 
-// Promise created at module level — created once when this module is first imported,
-// not on every render. This is the standard pattern for use() + Suspense on the client.
+// Promise created at module level — once, when this module is first imported,
+// not on every render. A promise created in the component that calls use()
+// would be recreated on every retry, and that component would suspend forever.
 // To demo ErrorBoundary: change to fetchRecommended(true) → promise rejects → boundary catches.
 const recommendedPromise = fetchRecommended();
 

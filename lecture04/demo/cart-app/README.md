@@ -23,7 +23,7 @@ app/
   data/products.js        Statyczny katalog produktów
   lib/
     cartReducer.js        Czysty reducer: ADD_ITEM / REMOVE_ITEM / UPDATE_QTY / CLEAR_CART
-    fakeApi.js            Symulowane opóźnienia sieciowe (bez fetch — wykład 05)
+    fakeApi.js            Symulowane opóźnienia sieciowe (bez fetch)
   context/
     CartContext.jsx       createContext + CartProvider + useCartState + useCartDispatch
   components/
@@ -38,4 +38,4 @@ app/
 
 ## Wymagania wstępne
 
-React 19, Next.js 16, Node.js >= 20.
+React 19.3.0, Next.js 16.4.0 (wersje przypięte w `package.json`), Node.js >= 20.
