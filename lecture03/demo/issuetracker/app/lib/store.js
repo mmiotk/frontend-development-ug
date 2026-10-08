@@ -1,7 +1,7 @@
 // Demo-only client-side store: module-level mutable array.
 // Persists across client-side navigation (module stays loaded in the browser bundle).
 // Resets on full page reload or server restart.
-// Real persistence: Server Actions + database.
+// Real persistence: server + database.
 import { initialIssues } from "../data/issues.js";
 
 let _issues = [...initialIssues];
