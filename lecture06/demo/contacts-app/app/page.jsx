@@ -10,13 +10,12 @@ export default function HomePage() {
   const [contacts, setContacts] = useState(initialContacts);
   const [query, setQuery]       = useState('');
 
-  // useMemo: recomputes only when contacts or query actually change
+  // useMemo: filter only when contacts or query change
   const filtered = useMemo(
     () => filterContacts(contacts, query),
     [contacts, query]
   );
 
-  // useCallback: stable reference — memoized children won't re-render unnecessarily
   const handleAdd = useCallback((newContact) => {
     setContacts((prev) => [...prev, { ...newContact, id: Date.now() }]);
   }, []);
