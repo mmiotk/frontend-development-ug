@@ -13,7 +13,7 @@ async function fetchArticles() {
 }
 
 export default async function HomePage() {
-  console.log("HomePage render — server side"); // appears in terminal, NOT in browser DevTools
+  console.log("HomePage render — server side"); // appears in the terminal; in dev, DevTools also shows it tagged "Server"
   const articles = await fetchArticles();
 
   return (

@@ -1,5 +1,5 @@
 // lib/actions.js
-"use server"; // ten plik eksportuje wyłącznie Server Actions
+"use server"; // this file exports only Server Actions
 
 import { addArticle } from "./store";
 import { articleSchema } from "./validate";
@@ -26,5 +26,5 @@ export async function createArticle(prevState, formData) {
   // Invalidate the list page cache so the new article appears immediately
   revalidatePath("/");
 
-  redirect("/"); // rzuca wyjątek wewnętrznie — kod po tej linii się nie wykona
+  redirect("/"); // throws internally: code after this line does not run
 }

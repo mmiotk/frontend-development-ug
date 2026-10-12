@@ -1,6 +1,6 @@
 # cart-app — projekt referencyjny wykładu 04
 
-Demo live-coding: **Shopping Cart** — `useReducer` + Context API + `useOptimistic` + Suspense/Error Boundary.
+Demo live-coding: **Sklep kawowy** (koszyk): `useReducer` + kontekst + `useOptimistic` + `use` z `Suspense` + granica błędów.
 
 Temat celowo inny niż lab 04 (Pokédex), by student przenosił pojęcia, a nie kopiował demo.
 
@@ -12,30 +12,37 @@ npm run dev
 # http://localhost:3000
 ```
 
-## Struktura
+## Trasy
 
-```
-app/
-  layout.jsx              Root layout — CartProvider owija całe drzewo
-  page.jsx                Strona główna — lista produktów + podsumowanie koszyka + rekomendacje
-  globals.css             Celowo pusty — zero stylowania
-  cart/page.jsx           Strona koszyka — szczegóły pozycji, zmiana ilości, usuwanie
-  data/products.js        Statyczny katalog produktów
-  lib/
-    cartReducer.js        Czysty reducer: ADD_ITEM / REMOVE_ITEM / UPDATE_QTY / CLEAR_CART
-    fakeApi.js            Symulowane opóźnienia sieciowe (bez fetch)
-  context/
-    CartContext.jsx       createContext + CartProvider + useCartState + useCartDispatch
-  components/
-    CartSummary.jsx       Suma i liczba pozycji — czyta CartStateContext
-    CartItem.jsx          Wiersz pozycji: zmiana ilości, usuwanie — czyta CartDispatchContext
-    ProductList.jsx       Lista produktów z AddToCartButton
-    AddToCartButton.jsx   useOptimistic — natychmiastowe UI + rollback
-    RecommendedSection.jsx  Wrapper: Suspense + ErrorBoundary
-    RecommendedProducts.jsx use() — zawiesza się do czasu rozwiązania promise
-    ErrorBoundary.jsx     Klasa React łapiąca błędy renderowania
-```
+| Trasa | Plik | Opis |
+|-------|------|------|
+| `/` | `app/page.jsx` | Komponent serwerowy: podsumowanie koszyka, lista produktów, rekomendacje |
+| `/cart` | `app/cart/page.jsx` | Komponent kliencki: pozycje koszyka, zmiana ilości, usuwanie |
 
-## Wymagania wstępne
+## Etapy budowy aplikacji
 
-React 19.3.0, Next.js 16.4.0 (wersje przypięte w `package.json`), Node.js >= 20.
+Kolejność i czasy: `../PROWADZACY.md` (120 min); kod każdego etapu jest też na slajdach `../../slides_nowe/`.
+Projekt zawiera stan końcowy (po kroku 6.3), pliki pośrednie powstają na zajęciach.
+
+| Etap | Slajd | Temat | Kluczowe pliki |
+|------|-------|-------|----------------|
+| 0 | 01 | Projekt + statyczny szkielet | `app/data/products.js`, `app/layout.jsx`, `app/page.jsx` |
+| 1 | 01–03 | Reducer i `useReducer` | `app/lib/cartReducer.js`, `app/page.jsx` |
+| 2 | 04–05 | Prop drilling i kontekst | `app/context/CartContext.jsx` |
+| 3 | 06 | Dostawca w layoucie, komponenty z koszykiem | `app/layout.jsx`, `app/components/CartSummary.jsx`, `CartItem.jsx`, `ProductList.jsx`, `app/cart/page.jsx` |
+| 4 | 07 | `useOptimistic` | `app/lib/fakeApi.js`, `app/components/AddToCartButton.jsx` |
+| 5 | 08–10 | `use`, `Suspense`, granica błędów | `app/components/RecommendedProducts.jsx`, `ErrorBoundary.jsx`, `RecommendedSection.jsx` |
+| 6 | 11–12 | Rendery kontekstu i jego podział | `app/context/CartContext.jsx` (dwa konteksty) |
+
+## Zgodność ze slajdami
+
+Pliki są kodem ze slajdów w stanie końcowym. Różnią się od bloków na slajdach tylko komentarzami (kontrola mechaniczna
+porównaniem bloków kodu ze slajdów 01–12 z plikami) oraz tym, że bloki pośrednie z `useCart()` (slajdy 05–07, 11)
+w stanie końcowym używają `useCartState()` i `useCartDispatch()` (slajd 12). Blok `CartContext.jsx` ze slajdu 12 ma jeszcze
+tymczasowy `useCart`, którego w projekcie już nie ma.
+
+## Uwagi
+
+- Napis „Ładowanie rekomendacji...” widać tylko pod `npm run dev`; po `next build` strona `/` jest statyczna.
+- Stan koszyka żyje w pamięci otwartej strony; po F5 koszyk jest pusty (trwałość to wykład 05).
+- Wersje przypięte w `package.json`: Next.js 16.4.0, React 19.3.0; Node.js >= 20.9.

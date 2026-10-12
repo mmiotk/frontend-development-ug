@@ -1,4 +1,4 @@
-// app/swr-demo/page.jsx — pełna wersja
+// app/swr-demo/page.jsx
 "use client";
 
 import useSWR from "swr";

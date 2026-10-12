@@ -20,16 +20,18 @@ npm run dev   # http://localhost:3000
 
 ## Etapy budowy aplikacji
 
-| Etap | Temat | Kluczowe pliki |
-|------|-------|----------------|
-| 0 | Setup + statyczny szkielet | `app/data/issues.js`, `app/layout.jsx`, `app/page.jsx` |
-| 1 | Zagnieżdżone layouty + nawigacja | `app/layout.jsx`, `app/issue/layout.jsx` |
-| 2 | Trasa `/issue/[id]` + `loading` + `error` | `app/issue/[id]/page.jsx`, `loading.jsx`, `error.jsx` |
-| 3 | `<form action>` + FormData + store | `app/new/page.jsx`, `app/lib/store.js` |
-| 4 | `useActionState` | `app/new/page.jsx` |
-| 5 | `useFormStatus` | `app/components/SubmitButton.jsx` |
-| 6 | Walidacja Zod | `app/lib/schema.js`, `app/new/page.jsx` |
-| 7 | React Hook Form + Zod | `app/new-rhf/page.jsx` |
+Kolejność i czasy: `../PROWADZACY.md` (120 min); kod każdego etapu jest też na slajdach `../../slides_nowe/`.
+
+| Etap | Slajd | Temat | Kluczowe pliki |
+|------|-------|-------|----------------|
+| 0 | 01 | Projekt + statyczny szkielet | `app/data/issues.js`, `app/layout.jsx`, `app/page.jsx` |
+| 1 | 02–03 | Układy i linki, prefetch | `app/layout.jsx`, `app/issue/layout.jsx`, `app/page.jsx` |
+| 2 | 04–05 | Trasa `/issue/[id]` + `loading` + `error` | `app/issue/[id]/page.jsx`, `loading.jsx`, `error.jsx` |
+| 3 | 06–07 | Dane w module + `<form action>` | `app/lib/store.js`, `app/page.jsx`, `app/new/page.jsx` |
+| 4 | 08 | `useActionState` | `app/new/page.jsx` |
+| 5 | 09 | `useFormStatus` | `app/components/SubmitButton.jsx` |
+| 6 | 10 | Walidacja Zod | `app/lib/schema.js`, `app/new/page.jsx` |
+| 7 | 11–13 | React Hook Form + Zod, wybór podejścia | `app/new-rhf/page.jsx`, `app/layout.jsx` |
 
 ## Uwagi
 
