@@ -1,39 +1,35 @@
 'use client';
 
-import { useOptimistic, startTransition, useState } from 'react';
-import { useCartDispatch } from '../context/CartContext';
+import { startTransition, useState } from 'react';
+import { useCartDispatch, useCartOptimistic } from '../context/CartContext';
 import { fakeAddToCart } from '../lib/fakeApi';
 
-// Demonstrates useOptimistic: immediate UI feedback before the async op completes.
-// When fakeAddToCart resolves → dispatch commits the item to real cart state.
-// When fakeAddToCart rejects → optimistic state reverts (rollback), item not added.
+// Optimistic add: the cart on screen changes at once, the server answers after 1.5 s.
+// On success dispatch commits the item to the real cart state.
+// On error the optimistic item disappears when the transition ends (rollback).
 export default function AddToCartButton({ product }) {
   const dispatch = useCartDispatch();
+  const addOptimistic = useCartOptimistic();
   const [error, setError] = useState(null);
-
-  // Real state: false (not adding).
-  // Optimistic state: true while startTransition is pending.
-  // After transition ends (success or error), reverts to real state (false).
-  const [optimisticAdding, setOptimisticAdding] = useOptimistic(false);
 
   function handleAdd() {
     setError(null);
     startTransition(async () => {
-      setOptimisticAdding(true);       // immediate UI: "Dodawanie..."
+      addOptimistic({ type: 'ADD_ITEM', product }); // immediate UI: item in the cart
       try {
-        await fakeAddToCart(product);  // 1.5 s simulated network call
-        dispatch({ type: 'ADD_ITEM', product }); // commit to real state
+        await fakeAddToCart(product);               // 1.5 s simulated network call
+        startTransition(() => {
+          dispatch({ type: 'ADD_ITEM', product });  // commit to real state
+        });
       } catch (err) {
-        setError(err.message);         // optimistic state auto-reverts to false
+        setError(err.message);                      // optimistic item reverts
       }
     });
   }
 
   return (
     <>
-      <button onClick={handleAdd} disabled={optimisticAdding}>
-        {optimisticAdding ? 'Dodawanie...' : 'Dodaj do koszyka'}
-      </button>
+      <button onClick={handleAdd}>Dodaj do koszyka</button>
       {error && <span> Błąd: {error}</span>}
     </>
   );

@@ -20,7 +20,7 @@ npm run dev   # http://localhost:3000
 
 ## Etapy budowy aplikacji
 
-Kolejność i czasy: `../PROWADZACY.md` (120 min); kod każdego etapu jest też na slajdach `../../slides_nowe/`.
+Kolejność i czasy: `../PROWADZACY.md` (120 min); kod każdego etapu jest też na slajdach `../../slides/`.
 
 | Etap | Slajd | Temat | Kluczowe pliki |
 |------|-------|-------|----------------|

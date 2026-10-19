@@ -4,20 +4,25 @@
 import { useState, useEffect } from "react";
 
 export function useLocalStorage(key, fallback) {
-  // Lazy initializer: read from localStorage once on mount.
-  const [value, setValue] = useState(() => {
+  // Server render and hydration both start from fallback, so their HTML matches.
+  const [value, setValue] = useState(fallback);
+  const [loaded, setLoaded] = useState(false); // true once localStorage has been read
+
+  // Second pass: read the stored value in the browser, after hydration.
+  useEffect(() => {
     try {
       const stored = localStorage.getItem(key);
-      return stored ? JSON.parse(stored) : fallback;
+      if (stored) setValue(JSON.parse(stored));
     } catch {
-      return fallback; // SSR safety (no localStorage on server)
+      // corrupted entry: keep fallback
     }
-  });
+    setLoaded(true);
+  }, [key]);
 
-  // Sync value to localStorage whenever it changes.
+  // Write only after the read — otherwise fallback would overwrite the stored list.
   useEffect(() => {
-    localStorage.setItem(key, JSON.stringify(value));
-  }, [key, value]);
+    if (loaded) localStorage.setItem(key, JSON.stringify(value));
+  }, [key, value, loaded]);
 
   return [value, setValue];
 }

@@ -4,7 +4,7 @@ import { products } from '../data/products';
 import AddToCartButton from './AddToCartButton';
 
 // No props from parent and no context: the product list is static.
-// Each AddToCartButton reads dispatch from context by itself.
+// Each AddToCartButton reads dispatch and the optimistic setter from context by itself.
 export default function ProductList() {
   return (
     <section>

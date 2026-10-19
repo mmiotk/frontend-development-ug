@@ -21,7 +21,7 @@ npm run dev
 
 ## Etapy budowy aplikacji
 
-Kolejność i czasy: `../PROWADZACY.md` (120 min); kod każdego etapu jest też na slajdach `../../slides_nowe/`.
+Kolejność i czasy: `../PROWADZACY.md` (120 min); kod każdego etapu jest też na slajdach `../../slides/`.
 Projekt zawiera stan końcowy (po kroku 6.3), pliki pośrednie powstają na zajęciach.
 
 | Etap | Slajd | Temat | Kluczowe pliki |
@@ -30,15 +30,15 @@ Projekt zawiera stan końcowy (po kroku 6.3), pliki pośrednie powstają na zaj�
 | 1 | 01–03 | Reducer i `useReducer` | `app/lib/cartReducer.js`, `app/page.jsx` |
 | 2 | 04–05 | Prop drilling i kontekst | `app/context/CartContext.jsx` |
 | 3 | 06 | Dostawca w layoucie, komponenty z koszykiem | `app/layout.jsx`, `app/components/CartSummary.jsx`, `CartItem.jsx`, `ProductList.jsx`, `app/cart/page.jsx` |
-| 4 | 07 | `useOptimistic` | `app/lib/fakeApi.js`, `app/components/AddToCartButton.jsx` |
+| 4 | 07 | `useOptimistic`: koszyk optymistyczny | `app/lib/fakeApi.js`, `app/context/CartContext.jsx`, `app/components/AddToCartButton.jsx` |
 | 5 | 08–10 | `use`, `Suspense`, granica błędów | `app/components/RecommendedProducts.jsx`, `ErrorBoundary.jsx`, `RecommendedSection.jsx` |
-| 6 | 11–12 | Rendery kontekstu i jego podział | `app/context/CartContext.jsx` (dwa konteksty) |
+| 6 | 11–12 | Rendery kontekstu i jego podział | `app/context/CartContext.jsx` (stan osobno, funkcje osobno) |
 
 ## Zgodność ze slajdami
 
 Pliki są kodem ze slajdów w stanie końcowym. Różnią się od bloków na slajdach tylko komentarzami (kontrola mechaniczna
 porównaniem bloków kodu ze slajdów 01–12 z plikami) oraz tym, że bloki pośrednie z `useCart()` (slajdy 05–07, 11)
-w stanie końcowym używają `useCartState()` i `useCartDispatch()` (slajd 12). Blok `CartContext.jsx` ze slajdu 12 ma jeszcze
+w stanie końcowym używają `useCartState()`, `useCartDispatch()` i `useCartOptimistic()` (slajd 12). Blok `CartContext.jsx` ze slajdu 12 ma jeszcze
 tymczasowy `useCart`, którego w projekcie już nie ma.
 
 ## Uwagi

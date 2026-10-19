@@ -23,7 +23,7 @@ app/
   components/
     TaskBoard.jsx         — główny Client Component (wersja końcowa)
   hooks/
-    useLocalStorage.js    — własny hook: persystencja w localStorage
+    useLocalStorage.js    — własny hook: persystencja w localStorage (odczyt po hydratacji, flaga loaded)
     useTasks.js           — własny hook: cała logika zadań (CRUD, filtr, liczniki)
 ```
 
@@ -32,8 +32,8 @@ app/
 | Etap | Pojęcie | Plik |
 |------|---------|------|
 | 1 | `useState` (CRUD, formularz kontrolowany) | `TaskBoard.jsx` |
-| 2 | `useEffect` (tytuł, localStorage, cleanup) | `TaskBoard.jsx` |
-| 3 | `useRef` (focus, licznik bez re-renderu) | `TaskBoard.jsx` |
+| 2 | `useEffect` (tytuł, localStorage, cleanup), hydratacja i renderowanie dwuprzebiegowe | `TaskBoard.jsx` |
+| 3 | `useRef` (focus; licznik renderów tylko na czas pomiaru, potem usunięty) | `TaskBoard.jsx` |
 | 4 | filtr i liczniki jako wartości pochodne | `TaskBoard.jsx` |
 | 5 | własne hooki | `hooks/useLocalStorage.js`, `hooks/useTasks.js` |
 | 6 | reguły hooków (przycisk „Clear done” → `clearDone`) | `hooks/useTasks.js`, `TaskBoard.jsx` |
@@ -43,3 +43,4 @@ app/
 - Brak CSS: zero `className`, zero `style={{}}` — demonstracja logiki, nie wyglądu.
 - Kod po angielsku; treść UI (teksty zadań) po polsku.
 - `node_modules` i `.next` są w `.gitignore`.
+- Wersja końcowa nie zgłasza błędów hydratacji: lista z magazynu dochodzi w drugim przebiegu, po hydratacji.

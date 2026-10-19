@@ -1,5 +1,5 @@
 "use client";
-// Final TaskBoard: task logic comes from useTasks; the input, focus, render counter and tab title stay here.
+// Final TaskBoard: task logic comes from useTasks; the input, focus and tab title stay here.
 import { useState, useEffect, useRef } from "react";
 import { useTasks } from "../hooks/useTasks";
 
@@ -20,9 +20,6 @@ export default function TaskBoard({ initialTasks }) {
 
   // useRef: DOM reference — setting .current.focus() does NOT cause a re-render.
   const inputRef = useRef(null);
-  // useRef: mutable counter — persists across renders, does NOT trigger re-render.
-  const renderCount = useRef(0);
-  renderCount.current += 1;
 
   // useEffect: update browser tab title to reflect pending task count.
   useEffect(() => {
@@ -42,8 +39,6 @@ export default function TaskBoard({ initialTasks }) {
 
   return (
     <div>
-      <p>Renders: {renderCount.current}</p>
-
       <input
         ref={inputRef}
         value={text}

@@ -32,7 +32,7 @@ BASE_URL=http://localhost:3001 npm run dev -- --port 3001
 
 ## Etapy budowy aplikacji
 
-Kolejność i czasy: `../PROWADZACY.md` (120 min); kod każdego etapu jest też na slajdach `../../slides_nowe/`.
+Kolejność i czasy: `../PROWADZACY.md` (120 min); kod każdego etapu jest też na slajdach `../../slides/`.
 Projekt zawiera stan końcowy (po kroku 6.3), pliki pośrednie powstają na zajęciach.
 
 | Etap | Slajd | Temat | Kluczowe pliki |
@@ -41,7 +41,7 @@ Projekt zawiera stan końcowy (po kroku 6.3), pliki pośrednie powstają na zaj�
 | 1 | 02 | Route Handler | `app/api/articles/route.js`, `app/api/articles/[id]/route.js` |
 | 2 | 03–04 | Strona `async`, `loading`, `error`, strona artykułu | `app/layout.jsx`, `app/page.jsx`, `app/loading.jsx`, `app/error.jsx`, `app/articles/[id]/` |
 | 3 | 05 | Promise z serwera i `use` | `app/suspend/ArticleListClient.jsx`, `app/suspend/page.jsx` |
-| 4 | 06 | Pamięć podręczna `fetch` | `app/page.jsx` (doświadczenie z `force-cache`, wraca `no-store`) |
+| 4 | 06 | Pamięć podręczna `fetch` | `app/page.jsx` (doświadczenie z `force-cache`, potem `revalidate: 60` z `connection()`) |
 | 5 | 07–10 | Server Action, walidacja, rewalidacja, przekierowanie | `lib/validate.js`, `lib/actions.js`, `app/new/page.jsx` |
 | 6 | 11–12 | SWR (TanStack Query tylko na slajdzie) | `app/swr-demo/page.jsx` |
 
@@ -59,5 +59,5 @@ Slajd 12 (TanStack Query) jest fragmentem poglądowym: biblioteki nie ma w `pack
 ## Uwagi
 
 - Dane: `lib/store.js`, magazyn w pamięci procesu na `globalThis`; działa offline, zeruje się przy restarcie serwera.
-- Po `next build` stronę `/` oznacza `ƒ`, czyli renderowaną przy każdym żądaniu; build nie wymaga działającego serwera, dopóki `fetchArticles` używa `no-store`.
+- Po `next build` stronę `/` oznacza `ƒ`, czyli renderowaną przy każdym żądaniu, bo `HomePage` wywołuje `await connection()`; build nie wymaga więc działającego serwera. Odpowiedź `/api/articles` żyje w pamięci `fetch` 60 s (`next: { revalidate: 60 }`): artykuł dodany przez `POST /api/articles` pojawia się na `/` dopiero po wygaśnięciu wpisu, a dodany formularzem `/new` od razu, dzięki `revalidatePath("/")` w akcji.
 - Wersje przypięte w `package.json`: Next.js 16.4.0 (`retry` w `app/error.jsx`), React 19.3.0, SWR 2.5.1, Zod 3.25.76; Node.js >= 20.9.
