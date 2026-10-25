@@ -1,4 +1,4 @@
-# Frontend development — dema z wykładów
+# Frontend development — slajdy i dema z wykładów
 
 Kod demo pisany na wykładach. Repozytorium jest aktualizowane po każdym wykładzie. Stan po danym wykładzie: `git checkout wNN` (np. `git checkout w01`), powrót do najnowszego: `git checkout main`.
 
