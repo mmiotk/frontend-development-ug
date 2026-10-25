@@ -1,23 +1,23 @@
-// Issue list — converted to Client Component so it reads from the mutable store.
-// getIssues() is called on every mount; after client-side navigation the
-// component remounts and picks up newly added issues.
+// Lista zgłoszeń jako komponent kliencki, bo czyta zmienny magazyn z przeglądarki.
+// getIssues() wywołuje się przy każdym montowaniu; po nawigacji po stronie klienta
+// komponent montuje się od nowa i widzi nowo dodane zgłoszenia.
 "use client";
 import Link from "next/link";
 import { getIssues } from "./lib/store";
 
 export default function HomePage() {
-  const issues = getIssues(); // reads module-level array on every mount
+  const issues = getIssues(); // odczyt tablicy z modułu przy każdym renderze
 
   return (
     <div>
       <h1>Issue Tracker</h1>
       <ul>
-        {issues.map((issue) => (
-          <li key={issue.id}>
-            <Link href={`/issue/${issue.id}`}>
+        {issues.map((issue) => (                 // jeden <li> na zgłoszenie
+          <li key={issue.id}>                    {/* klucz z danych, stały między renderami */}
+            <Link href={`/issue/${issue.id}`}>   {/* adres budowany z danych */}
               [{issue.priority}] {issue.title}
             </Link>
-            {" — "}
+            {" — "}                              {/* status poza linkiem, jako zwykły tekst */}
             {issue.status}
           </li>
         ))}

@@ -1,5 +1,5 @@
-// Nested layout — rendered INSIDE RootLayout, wraps every /issue/* route.
-// Demonstrates layout composition: RootLayout > IssueLayout > Page.
+// Layout zagnieżdżony: renderuje się WEWNĄTRZ RootLayout i otacza każdą trasę /issue/*.
+// Pokazuje składanie layoutów: RootLayout > IssueLayout > strona.
 import Link from "next/link";
 
 export default function IssueLayout({ children }) {

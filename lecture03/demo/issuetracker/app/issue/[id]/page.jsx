@@ -1,18 +1,18 @@
-// Dynamic route: /issue/[id] — Server Component.
+// Trasa dynamiczna /issue/[id]: komponent serwerowy.
 import { notFound } from "next/navigation";
 import { initialIssues } from "../../data/issues";
 
-// DEMO ONLY — simulate slow data fetch. Remove in production!
+// TYLKO DEMO: symulacja wolnego pobierania danych. Usunąć w produkcji!
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export default async function IssueDetailPage({ params }) {
-  const { id } = await params;
-  await sleep(800); // makes loading.jsx appear for ~0.8 s
+  const { id } = await params; // Next.js 16: params to obiekt Promise, zawsze z await
+  await sleep(800); // dzięki temu loading.jsx jest widoczny przez ok. 0,8 s
 
-  const issue = initialIssues.find((i) => i.id === Number(id));
-  if (!issue) notFound();
+  const issue = initialIssues.find((i) => i.id === Number(id)); // napis z adresu zamieniony na liczbę
+  if (!issue) notFound(); // przerywa render i włącza granicę „nie znaleziono” z Next.js
 
   return (
     <article>

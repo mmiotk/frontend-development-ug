@@ -1,5 +1,5 @@
-// New issue form — React Hook Form + Zod variant.
-// Compare with app/new/page.jsx (React 19 Actions variant).
+// Formularz nowego zgłoszenia: wariant React Hook Form + Zod.
+// Do porównania z app/new/page.jsx (wariant z akcjami React 19).
 "use client";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,16 +10,16 @@ import { addIssue } from "../lib/store";
 export default function NewIssueRHFPage() {
   const router = useRouter();
   const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
+    register, // podpina pole: name, ref, onChange, onBlur
+    handleSubmit, // owija funkcję wysyłki walidacją
+    formState: { errors, isSubmitting }, // błędy pól i flaga wysyłania
   } = useForm({
-    resolver: zodResolver(issueSchema), // Zod schema as validator
-    defaultValues: { priority: "medium" },
+    resolver: zodResolver(issueSchema), // schemat Zod jako walidator
+    defaultValues: { priority: "medium" }, // wartość początkowa listy wyboru
   });
 
   function onSubmit(data) {
-    // data is already validated by Zod — safe to use directly.
+    // data przeszło już przez Zod, więc można je zapisać wprost
     addIssue(data);
     router.push("/");
   }

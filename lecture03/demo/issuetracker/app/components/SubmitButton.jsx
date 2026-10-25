@@ -1,11 +1,11 @@
-// SubmitButton — reads form pending state via useFormStatus.
-// MUST be a SEPARATE component rendered INSIDE <form>.
-// Cannot live in the same component that renders <form>.
-"use client";
-import { useFormStatus } from "react-dom"; // Note: react-dom, not react!
+// SubmitButton: czyta stan oczekiwania formularza przez useFormStatus.
+// MUSI być OSOBNYM komponentem renderowanym WEWNĄTRZ <form>.
+// Nie może być tym samym komponentem, który renderuje <form>.
+"use client"; // komponent wywołuje hook, więc działa w przeglądarce
+import { useFormStatus } from "react-dom"; // uwaga: react-dom, nie react!
 
 export default function SubmitButton() {
-  const { pending } = useFormStatus();
+  const { pending } = useFormStatus(); // czy formularz nadrzędny właśnie się wysyła
   return (
     <button type="submit" disabled={pending}>
       {pending ? "Submitting..." : "Submit"}
