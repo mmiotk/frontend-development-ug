@@ -211,6 +211,40 @@ W React Routerze trasy opisuje się obiektami w kodzie zamiast katalogami. Odpow
 >
 > — Maximilian Schwarzmüller, *React Key Concepts*
 
+```jsx
+// Przykład spoza demo: layout zgłoszeń w React Routerze (react-router 7.18.4)
+import { createBrowserRouter, RouterProvider, Outlet, Link, useParams } from "react-router";
+
+function IssueLayout() {                       // komponent trasy layoutu
+  return (
+    <section>
+      <p><Link to="/">← Back to issues</Link></p>
+      <Outlet />                               {/* tu trafia trasa podrzędna */}
+    </section>
+  );
+}
+
+function IssueDetail() {
+  const { id } = useParams();                  // segment :id z adresu
+  return <h1>Issue #{id}</h1>;
+}
+
+const router = createBrowserRouter([           // trasy jako tablica obiektów
+  { path: "/", element: <h1>Issue Tracker</h1> },
+  {
+    path: "/issue",
+    element: <IssueLayout />,
+    children: [{ path: ":id", element: <IssueDetail /> }],  // /issue/2 w ramce IssueLayout
+  },
+]);
+
+export default function App() {
+  return <RouterProvider router={router} />;   // → /issue/2: „← Back to issues” i „Issue #2”
+}
+```
+
+Adres `/issue` też tu istnieje i pokazuje sam link powrotu, bo trasa layoutu bez trasy podrzędnej `index` zostawia `<Outlet />` pusty.
+
 W React Routerze relację „layout otacza trasę” zapisuje się dwa razy: w tablicy tras i w komponencie przez `<Outlet />`. W App Routerze relację wyznacza położenie pliku w katalogu, a miejscem na treść jest zwykły prop `children`.
 
 > 💡 **Zapamiętaj:** <u>wspólny layout przy nawigacji nie wykonuje się ponownie</u>, dlatego zachowuje stan. Nie dostaje też `searchParams` i nie nadaje się do sprawdzania sesji. Layout zna tylko segmenty nad sobą, a aktywny segment poniżej odczytuje hook `useSelectedLayoutSegment`. Plik `template.jsx` ma budowę layoutu, ale przy każdej nawigacji powstaje od nowa.

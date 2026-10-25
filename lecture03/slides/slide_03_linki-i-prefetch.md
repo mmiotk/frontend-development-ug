@@ -216,13 +216,35 @@ export default function FilterPage() {
 
 ## Rozszerzenie: wskaźnik przejścia `useLinkStatus`
 
-Przy wolnej sieci dokumentacja proponuje hook `useLinkStatus` z `next/link`, który zwraca `pending` na czas trwającego przejścia. Hook działa tylko w komponencie potomnym `<Link>`, więc wskaźnik stoi wewnątrz linku. Gdy trasa leży już w pamięci klienta, faza oczekiwania jest pomijana, dlatego hook jest najprzydatniejszy przy `prefetch={false}`. Dokumentacja traktuje go jako rozwiązanie tymczasowe:
+Przy wolnej sieci dokumentacja proponuje hook `useLinkStatus` z `next/link`, który zwraca `pending` na czas trwającego przejścia. Gdy trasa leży już w pamięci klienta, faza oczekiwania jest pomijana, dlatego hook jest najprzydatniejszy przy `prefetch={false}`. Dokumentacja traktuje go jako rozwiązanie tymczasowe:
 
 > **„`useLinkStatus` stosuje się jako szybką łatkę po wykryciu wolnego przejścia, a potem usuwa się przyczynę przez pobieranie z wyprzedzeniem albo treść zastępczą z `loading.js`.”**
 >
 > *„Use `useLinkStatus` as a quick patch when you identify a slow transition, then iterate to fix the root cause with prefetching or a `loading.js` fallback.”*
 >
 > — dokumentacja Next.js, *useLinkStatus*
+
+```jsx
+// Przykład spoza demo: dopisek przy linku do zgłoszenia na liście
+"use client";
+import Link, { useLinkStatus } from "next/link";
+
+function PendingHint() {
+  const { pending } = useLinkStatus();         // stan przejścia najbliższego <Link> powyżej
+  return pending ? " (opening...)" : null;    // → [medium] Page loads slowly on mobile (opening...)
+}
+
+export default function IssueLink({ issue }) {
+  return (
+    <Link href={`/issue/${issue.id}`} prefetch={false}>
+      [{issue.priority}] {issue.title}
+      <PendingHint />                          {/* hook działa tylko wewnątrz <Link> */}
+    </Link>
+  );
+}
+```
+
+Przy opóźnieniu sieci 500 ms dopisek stoi przy linku ok. 1 s, aż pojawi się ekran z `loading.jsx`.
 
 > 💡 **Zapamiętaj:** <u>pobieranie z wyprzedzeniem działa tylko po buildzie i wypełnia pamięć klienta trasami widocznych linków</u>. Płaci się za to ruchem sieciowym, a kod trasy wykonuje się już przy tym pobraniu. `useRouter`, `usePathname` i `useSearchParams` działają w komponentach klienckich, a `useSearchParams` na stronie statycznej wymaga granicy `Suspense`.
 

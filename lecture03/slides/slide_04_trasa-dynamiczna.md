@@ -205,5 +205,22 @@ Nawias z trzema kropkami, `[...slug]`, przechwytuje wszystkie kolejne segmenty n
 
 Wersja z pojedynczym nawiasem nie pasuje do samego `/shop` i daje tam 404. Wariant opcjonalny wymaga ostrożności: kod zakładający tablicę dostanie pod `/shop` wartość `undefined`, a wywołanie `slug.join("/")` zgłosi wyjątek. W `issuetracker` takiego segmentu nie ma, bo każdy adres zgłoszenia ma dokładnie jeden numer.
 
+```jsx
+// Przykład spoza demo: filtr zgłoszeń w app/browse/[[...filter]]/page.jsx
+import { initialIssues } from "../../data/issues";
+
+export default async function BrowsePage({ params }) {
+  const { filter = [] } = await params;          // pod /browse filter to undefined, więc []
+  const [priority, status] = filter;             // np. ["high", "open"]
+  const issues = initialIssues.filter(
+    (i) => (!priority || i.priority === priority) && (!status || i.status === status)
+  );
+  return <p>{filter.join("/") || "all"}: {issues.length}</p>;
+}
+// → /browse → „all: 4”; /browse/high → „high: 2”; /browse/low/open → „low/open: 0”
+```
+
+Wartość domyślna `= []` w destrukturyzacji usuwa jedyny przypadek bez tablicy, więc `join` działa także pod `/browse`.
+
 > 💡 **Zapamiętaj:** <u>segment dynamiczny to napis od użytkownika</u>. Przed porównaniem z liczbą w danych sprawdza się jego format i dopiero potem konwertuje. Nietypowy zapis istniejącego zasobu przekierowuje się na adres kanoniczny, a brak zasobu kończy się `notFound()`.
 

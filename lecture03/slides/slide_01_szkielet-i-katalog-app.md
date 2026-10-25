@@ -1,8 +1,18 @@
 # Szkielet aplikacji i to, co w `app/` staje się adresem
 
+## Dwie drogi między użytkownikiem a aplikacją
+
+Aplikacja webowa wymienia informacje z użytkownikiem w dwóch kierunkach. **Adres** w pasku przeglądarki mówi, co użytkownik chce odczytać, na przykład listę albo jeden rekord. **Formularz** niesie to, co chce zapisać: dane, które trafią na serwer i zmienią stan aplikacji.
+
+Adres jest stanem, który żyje poza kodem aplikacji. Użytkownik zapisuje go w zakładce albo wysyła komuś w wiadomości i oczekuje, że po otwarciu zobaczy ten sam widok. Maximilian Schwarzmüller zauważa, że gdy ścieżka się nie zmienia, odwiedzający mogą udostępnić link tylko do strony startowej (*„can’t share links to anything but the starting page of your website”*). Stąd pierwsza klasa problemów: <u>dopasować adres do widoku</u> i ustalić, które części ekranu są wspólne dla wielu widoków. Druga dotyczy samego odczytu. Dane mogą przychodzić długo albo wcale, a adres może wskazywać rzecz, której nie ma.
+
+Trzecia klasa należy do zapisu. Między wysłaniem formularza a odpowiedzią serwera interfejs jest w stanie pośrednim, który trzeba pokazać, a po odpowiedzi trzeba pokazać jej wynik. Czwarta to zaufanie. Dane od użytkownika mogą łamać reguły aplikacji, więc przed zapisem przechodzą **walidację** (*validation*), czyli sprawdzenie tych reguł. Schwarzmüller zalicza ją do zwykłych zadań współczesnego interfejsu. Strona ma według niego między innymi „wysłać wpisane dane na serwer do sprawdzenia” (*„send that entered data to a server to validate it”*) i pokazać komunikat walidacji.
+
+Te same cztery klasy problemów ma aplikacja wielostronicowa, której każdy ekran składa serwer, i aplikacja jednostronicowa z biblioteką React Router. Frameworki różnią się tym, jakim mechanizmem na nie odpowiadają.
+
 ## Cztery pytania jednej aplikacji
 
-Aplikacja „Issue Tracker” zbiera zgłoszenia błędów. Zaczyna od statycznej listy czterech zgłoszeń, a gotowa musi odpowiedzieć na cztery pytania, każde innym mechanizmem Next.js albo Reacta:
+W aplikacji „Issue Tracker”, która zbiera zgłoszenia błędów, każda z czterech klas staje się konkretnym pytaniem. Aplikacja zaczyna od statycznej listy czterech zgłoszeń, a gotowa odpowiada na każde pytanie innym mechanizmem Next.js albo Reacta:
 
 1. **Jak adres wskazuje jedno zgłoszenie.** Adres `/issue/2` to tekst od użytkownika, który może też brzmieć `/issue/abc`. Odpowiedzią jest routing plikowy z trasą dynamiczną `[id]`.
 2. **Co widać w czasie czekania na dane i po awarii.** Wolny odczyt ani wyjątek nie mogą zostawić pustego ekranu. Tym zajmują się pliki `loading.jsx` i `error.jsx`.
@@ -77,10 +87,6 @@ Router działający tylko w przeglądarce ma słaby punkt, który Kumar pokazuje
 > — Tejas Kumar, *Fluent React*
 
 W Next.js oba routery opierają się na tym samym drzewie katalogów. Adres `/issue/2` wklejony do nowej karty obsługuje serwer, kliknięcie `<Link>` router w przeglądarce, a wynik jest ten sam.
-
-## Drzewo katalogów czy płaska lista plików
-
-Zagnieżdżone katalogi to nie jedyny zapis tras w plikach. Morten Barklund opisuje Remix 2, w którym trasa `/about/team` leży w jednym pliku `app/routes/about.team.jsx`, a kropka zastępuje ukośnik. Powodem zmiany była czytelność. Przy 30 stronach trudno ogarnąć pliki rozrzucone po wielu katalogach (*„if the files are spread across many folders, often containing only one or two files”*). App Router płaci tę cenę za to, że pliki jednej trasy leżą razem, jak trzy pliki w `app/issue/[id]/` na Rysunku 3.1.
 
 ## Pusty arkusz i dane startowe
 
@@ -182,7 +188,7 @@ Katalog może mieć własny layout i mimo to nie dawać adresu. Daniel Bugl poka
 >
 > — Daniel Bugl, *Modern Full-Stack React Projects*
 
-Layout otacza strony podkatalogów, więc `/dashboard/settings` dostaje jego ramkę, a `/dashboard` nie istnieje. Taki układ pasuje do kilku podstron ze wspólną ramką bez własnej treści.
+Layout otacza strony podkatalogów, więc `/dashboard/settings` dostaje jego ramkę, a `/dashboard` nie istnieje.
 
 ## Rysunek 3.2 — katalog `app/` po pierwszym kroku i adresy, które z niego wynikają
 
@@ -202,19 +208,9 @@ Na Rysunku 3.2 strzałka ciągła prowadzi od pliku strony do adresu, a przerywa
 
 Projekt `issuetracker` trzyma pliki pomocnicze w podkatalogach bezpośrednio w `app/`, bo plik o zwykłej nazwie nie tworzy adresu. Bez adresu zostają jednak wyłącznie takie pliki. Plik `page.jsx` w katalogu `app/data/` utworzyłby adres `/data`, bo `page`, `layout` i pozostałe nazwy plików specjalnych są zastrzeżone w każdym katalogu wewnątrz `app/`.
 
-## Rozszerzenie: trzy strategie układu katalogów
-
-Dokumentacja Next.js nie narzuca układu katalogów. Opisuje trzy strategie i radzi wybrać jedną, a potem stosować ją konsekwentnie (*„choose a strategy that works for you and your team and be consistent across the project”*). Pierwsza trzyma kod poza `app/`, a `app/` zostawia wyłącznie dla tras. Druga trzyma wspólne katalogi na najwyższym poziomie wewnątrz `app/`. Trzecia dzieli pliki według użycia: wspólne leżą w korzeniu `app/`, a te, których używa jedna trasa, trafiają do jej katalogu. Projekt `issuetracker` stosuje drugą strategię. Bugl uzależnia wybór od wielkości projektu:
-
-> **„W Next.js można też trzymać zwykłe komponenty razem z komponentami stron i layoutów. Tak należy robić w dużych projektach w przypadku komponentów używanych tylko na tych konkretnych stronach.”**
->
-> *„In Next.js, it is also possible to co-locate regular components with the page and layout components, which should be done in large-scale projects for components that are only used on those specific pages.”*
->
-> — Daniel Bugl, *Modern Full-Stack React Projects*
-
 ## Rozszerzenie: foldery prywatne `_nazwa`
 
-Podkreślnik na początku nazwy katalogu wyłącza go z routingu razem z podkatalogami, na przykład `_components`. Plik `app/_components/page.jsx` nie da adresu `/_components`, choć zwykły katalog z takim plikiem by go dał.
+Podkreślnik na początku nazwy katalogu wyłącza go z routingu razem z podkatalogami, na przykład `_components`.
 
 > **„To sygnał, że katalog jest prywatnym szczegółem implementacji i system tras ma go pomijać. Wyłącza to z routingu ten katalog i wszystkie jego podkatalogi.”**
 >
@@ -222,7 +218,16 @@ Podkreślnik na początku nazwy katalogu wyłącza go z routingu razem z podkata
 >
 > — dokumentacja Next.js, *Project Structure*
 
-Zwykłe pliki i tak nie tworzą adresów, więc dokumentacja podaje inne powody. Nazwy z podkreślnikiem sortują się w edytorze razem i chronią przed konfliktem z plikami specjalnymi przyszłych wersji Next.js. Adres zaczynający się od podkreślnika daje katalog o nazwie z `%5F`, czyli zakodowanym znakiem `_`.
+Zwykłe pliki i tak nie tworzą adresów, więc dokumentacja podaje inne powody. Nazwy z podkreślnikiem sortują się w edytorze razem i chronią przed konfliktem z plikami specjalnymi przyszłych wersji Next.js.
+
+```text
+// Przykład spoza demo: katalog prywatny obok zwykłego, po next build
+app/_components/page.jsx   → /_components → 404
+app/components/page.jsx    → /components  → 200
+app/%5Fnotes/page.jsx      → /_notes      → 200
+```
+
+Katalog `app/components/` z `issuetracker` trzyma tylko `SubmitButton.jsx`, ale pierwszy `page.jsx` dałby w nim adres. Ostatni wiersz to sposób na adres z podkreślnikiem: `%5F` jest zakodowanym znakiem `_`.
 
 ## Rozszerzenie: grupy tras `(nazwa)`
 
@@ -246,7 +251,22 @@ Adresy `/cart` i `/about` nie zdradzają, że strony leżą w dwóch grupach. Gr
 
 ## Rozszerzenie: katalog `src/` i ścieżki importów
 
-Next.js dopuszcza katalog `src/`, który oddziela kod aplikacji od konfiguracji. Stary `app/` w korzeniu sprawia jednak, że `src/app/` zostanie pominięty (*„`src/app` or `src/pages` will be ignored if `app` or `pages` are present in the root directory”*). Plik `jsconfig.json` definiuje alias `"@/*": ["./*"]`, więc import `@/app/data/issues` działa z każdego katalogu. Kod demo zostaje przy ścieżkach względnych, bo żaden plik nie leży głębiej niż dwa poziomy pod `app/`.
+Next.js dopuszcza katalog `src/`, który oddziela kod aplikacji od konfiguracji. Stary `app/` w korzeniu sprawia jednak, że `src/app/` zostanie pominięty (*„`src/app` or `src/pages` will be ignored if `app` or `pages` are present in the root directory”*).
+
+```text
+// Przykład spoza demo: src/app obok app w korzeniu projektu, po next build
+app/page.jsx               → /      → 200
+src/app/about/page.jsx     → /about → 404, bo cały src/app jest pominięty
+```
+
+Plik `jsconfig.json` definiuje alias `"@/*": ["./*"]`, czyli `@/` oznacza korzeń projektu niezależnie od miejsca pliku.
+
+```jsx
+// Przykład spoza demo: import danych aliasem w app/issue/[id]/page.jsx
+import { initialIssues } from "@/app/data/issues";  // to samo co "../../data/issues"
+```
+
+Kod demo zostaje przy ścieżkach względnych, bo żaden plik nie leży głębiej niż dwa poziomy pod `app/`.
 
 > 💡 **Zapamiętaj:** <u>router dopasowuje adres do drzewa katalogów segment po segmencie, a adres istnieje dopiero wtedy, gdy ostatni katalog ma `page.jsx`</u>. Tabelę tras Next.js buduje z tego drzewa przy `next build`, a każda trasa dostaje własną porcję kodu.
 
