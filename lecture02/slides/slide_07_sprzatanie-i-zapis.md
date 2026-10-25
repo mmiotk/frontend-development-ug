@@ -9,6 +9,7 @@ Efekt z tytułem karty zmienia dokument przeglądarki i nigdy tej zmiany nie cof
 Najprostszy przykład czegoś, co trzeba wyłączyć, to timer. Przeglądarka udostępnia dwie pary funkcji. `setTimeout` wywołuje funkcję raz, po podanym czasie, a `setInterval` wywołuje ją co podany czas, aż do odwołania. Obie zwracają identyfikator timera. Timer odwołuje się przez `clearTimeout` albo `clearInterval`.
 
 ```js
+// Przykład spoza demo: timery przeglądarki
 const id = setTimeout(() => console.log("po sekundzie"), 1000); // id: uchwyt tego timera
 clearTimeout(id); // timer odwołany przed upływem sekundy: napis się nie pojawi
 
@@ -47,6 +48,7 @@ Bugl w *Learn React Hooks* porównuje funkcję sprzątającą do metody `compone
 Przykład poza Task Board to licznik sekund `Ticker`, który co sekundę zwiększa wartość:
 
 ```jsx
+// Przykład spoza demo: licznik sekund Ticker
 "use client";
 import { useState, useEffect } from "react";
 
@@ -66,7 +68,7 @@ export default function Ticker() {
 
 Identyfikator `id` jest zmienną lokalną setupu. Funkcja sprzątająca powstaje w tym samym wywołaniu, więc ma go w domknięciu i odwołuje dokładnie ten interwał, który setup uruchomił. Bez tej linii każde ponowne pojawienie się komponentu uruchamia kolejny interwał, a poprzednie działają dalej, bo nikt ich nie odwołał.
 
-## Rysunek 2.7 — setup i sprzątanie w życiu `TaskBoard`
+## Rysunek 2.11 — setup i sprzątanie w życiu `TaskBoard`
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -76,7 +78,7 @@ flowchart LR
     N --> U["odmontowanie<br/>cleanup: 'Task Board'"]
 ```
 
-Na Rysunku 2.7 czas biegnie od lewej do prawej. Setup nigdy nie wykonuje się dwa razy z rzędu. Przed każdym kolejnym setupem React sprząta po poprzednim. Drugi prostokąt pokazuje zmianę zależności: sprzątanie ustawia `Task Board`, a zaraz potem setup wpisuje `(4) Task Board`. Ostatnie sprzątanie przychodzi przy odmontowaniu i jest jedynym, po którym nie startuje nowy setup.
+Na Rysunku 2.11 czas biegnie od lewej do prawej. Setup nigdy nie wykonuje się dwa razy z rzędu. Przed każdym kolejnym setupem React sprząta po poprzednim. Drugi prostokąt pokazuje zmianę zależności: sprzątanie ustawia `Task Board`, a zaraz potem setup wpisuje `(4) Task Board`. Ostatnie sprzątanie przychodzi przy odmontowaniu i jest jedynym, po którym nie startuje nowy setup.
 
 ## Sprzątanie w `TaskBoard`
 
@@ -107,6 +109,7 @@ Na serwerze deweloperskim (`next dev`) efekty po pierwszym montowaniu zachowują
 Dokumentacja nazywa ten cykl testem obciążeniowym, który sprawdza, czy sprzątanie jest „lustrzanym odbiciem” setupu. `Ticker` go przechodzi: po sekwencji setup, sprzątanie, setup działa jeden interwał, więc po 3,1 s w trybie ścisłym licznik pokazuje 3. Wersja bez sprzątania wygląda tak:
 
 ```jsx
+// Przykład spoza demo: Ticker bez funkcji sprzątającej
 useEffect(() => {
   setInterval(() => setSeconds((s) => s + 1), 1000); // brak return: interwału nikt nie odwoła
 }, []);
@@ -123,6 +126,7 @@ Dokumentacja (*Synchronizing with Effects*) odpowiada też na pokusę, żeby dod
 Po odświeżeniu strony lista wraca do pięciu zadań startowych. Stan Reacta żyje w pamięci karty i znika razem z nią. Trwałość daje **`localStorage`**, czyli magazyn przeglądarki przypisany do strony. MDN opisuje go dwiema cechami. Dane w `localStorage` nie mają daty wygaśnięcia i są zachowywane między sesjami przeglądarki (*„localStorage data has no expiration time”*, *„the stored data is saved across browser sessions”*). Według MDN klucze i wartości w `localStorage` są zawsze napisami. Ta cecha decyduje o tym, jak zapisuje się tablicę:
 
 ```js
+// Przykład spoza demo: localStorage i JSON
 localStorage.setItem("theme", "dark");   // zapis pod kluczem "theme"
 localStorage.getItem("theme");           // "dark"
 localStorage.getItem("missing");         // null: klucza nie ma
@@ -153,7 +157,7 @@ useEffect(() => {
 }, [tasks]); // każda operacja na liście tworzy nową tablicę, więc zapis po każdej zmianie listy
 ```
 
-Zaraz po wczytaniu pod kluczem `tasks` leży napis `[{"id":1,"text":"Przeczytaj dokumentację React 19","done":false},…]` z pięcioma zadaniami. Dodanie zadania dopisuje szósty obiekt, a zaznaczenie pierwszego zadania zmienia w nim `"done":false` na `"done":true`. Wpisywanie liter w pole zmienia tylko `text`, więc zapisu nie uruchamia. Efekt działa tylko w przeglądarce, więc brak `localStorage` na serwerze mu nie przeszkadza. Po odświeżeniu lista i tak wraca do pięciu zadań i „0 / 5 done”, bo komponent niczego z magazynu jeszcze nie czyta.
+Zaraz po wczytaniu pod kluczem `tasks` leży napis `[{"id":1,"text":"Read the React 19 docs","done":false},…]` z pięcioma zadaniami. Dodanie zadania dopisuje szósty obiekt, a zaznaczenie pierwszego zadania zmienia w nim `"done":false` na `"done":true`. Wpisywanie liter w pole zmienia tylko `text`, więc zapisu nie uruchamia. Efekt działa tylko w przeglądarce, więc brak `localStorage` na serwerze mu nie przeszkadza. Po odświeżeniu lista i tak wraca do pięciu zadań i „0 / 5 done”, bo komponent niczego z magazynu jeszcze nie czyta.
 
 Ten efekt nie ma funkcji sprzątającej. Zapis do magazynu nie zostawia niczego, co trzeba by zatrzymać. Dodatkowy cykl trybu deweloperskiego zapisuje ten sam napis pod tym samym kluczem drugi raz, co niczego nie zmienia. Po odmontowaniu komponentu zapisana lista powinna zostać.
 
@@ -176,6 +180,7 @@ W Task Board ryzyko jest jeszcze większe, bo listę zmieniają trzy procedury, 
 Z umowy o funkcji sprzątającej wynika, że funkcja efektu nie może być asynchroniczna. Banks i Porcello wyjaśniają, że funkcja `async` zawsze zwraca obiekt Promise, czyli wynik dostępny dopiero później, więc zapis `useEffect(async () => {})` jest niepoprawny. React uznaje zwróconą wartość za funkcję sprzątającą. Ostrzega wtedy w konsoli, że efekt „must not return anything besides a function, which is used for clean-up”, a przy usunięciu komponentu zgłasza `TypeError: destroy is not a function`. Kod asynchroniczny umieszcza się w funkcji wewnętrznej, wywoływanej w setupie:
 
 ```jsx
+// Przykład spoza demo: kod asynchroniczny w efekcie
 "use client";
 import { useState, useEffect } from "react";
 

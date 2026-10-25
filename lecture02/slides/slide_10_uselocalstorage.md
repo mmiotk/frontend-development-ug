@@ -51,7 +51,13 @@ useEffect(() => {
 </p>
 ```
 
-Lista w JSX iteruje teraz po `visibleTasks.map` zamiast `tasks.map`, a akapit pod listą pokazuje `{counts.pending} pending / {counts.total} total`. Przy pustym magazynie i pięciu zadaniach startowych przyciski pokazują „All (5)”, „Active (5)” i „Done (0)”. Po zaznaczeniu dwóch zadań zmieniają się na „Active (3)” i „Done (2)”, a tytuł karty na „(3) Task Board”.
+Lista w JSX iteruje teraz po `visibleTasks.map` zamiast `tasks.map`, a akapit pod listą pokazuje `{counts.pending} pending / {counts.total} total`. Przy pustym magazynie i pięciu zadaniach startowych przyciski pokazują „All (5)”, „Active (5)” i „Done (0)”.
+
+## Rysunek 2.15 — filtr po zaznaczeniu dwóch zadań
+
+![filtr All i Active](../figures/out/rys_02_15.png)
+
+Na Rysunku 2.15 oba zrzuty pokazują tę samą listę w stanie i różnią się tylko wartością `filter`. Po kliknięciu „Active” znikają dwa przekreślone wiersze, ale liczby w nawiasach i „3 pending / 5 total” zostają, bo `counts` liczy się z `tasks`, a nie z `visibleTasks`.
 
 Obiekt `counts` powstaje w każdym renderze od nowa, więc tablica `[counts]` uruchamiałaby efekt po każdym renderze. Liczba `counts.pending` porównana przez `Object.is` zmienia się tylko wtedy, gdy zmienia się liczba niewykonanych zadań. Render wykonuje przy tym najwyżej trzy przejścia `filter` po tablicy, co przy kilku zadaniach nic nie kosztuje.
 
@@ -177,7 +183,7 @@ Robin Wieruch w *The Road to React* buduje prawie identyczny hook o nazwie `useS
 
 Wieruch dodaje, że klucz przychodzi z zewnątrz, więc hook musi zakładać, że może się zmienić. Dlatego klucz trafia do tablicy zależności. Bez niego efekt mógłby zapisać wartość pod przestarzałym kluczem. U Wierucha odczyt stoi w leniwym inicjalizatorze, bo jego aplikacja nie renderuje się na serwerze. W Next.js ten sam hook potrzebuje drugiego przebiegu.
 
-## Rysunek 2.10 — co hook ukrywa przed komponentem
+## Rysunek 2.16 — co hook ukrywa przed komponentem
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -189,7 +195,7 @@ flowchart LR
     H -- "[value, setValue]<br/>jak useState" --> C
 ```
 
-Na Rysunku 2.10 komponent widzi tylko wywołanie z kluczem i wartością zapasową oraz parę, która wraca. Odczyt, parsowanie, flaga drugiego przebiegu, zapis i serializacja zostają w hooku. Komponent, który zamieni `useState` na `useLocalStorage`, zyskuje trwałość danych bez jednej linii kodu o `localStorage`. To **rozdzielenie odpowiedzialności** (*separation of concerns*): komponent odpowiada za wygląd i interakcję, a hook za przechowywanie. Gdyby lista miała kiedyś trafiać na serwer, zmiana objęłaby wnętrze hooka.
+Na Rysunku 2.16 komponent widzi tylko wywołanie z kluczem i wartością zapasową oraz parę, która wraca. Odczyt, parsowanie, flaga drugiego przebiegu, zapis i serializacja zostają w hooku. Komponent, który zamieni `useState` na `useLocalStorage`, zyskuje trwałość danych bez jednej linii kodu o `localStorage`. To **rozdzielenie odpowiedzialności** (*separation of concerns*): komponent odpowiada za wygląd i interakcję, a hook za przechowywanie. Gdyby lista miała kiedyś trafiać na serwer, zmiana objęłaby wnętrze hooka.
 
 ## Nazwa zaczyna się od `use`
 
@@ -219,9 +225,56 @@ Kod wewnątrz własnego hooka wykonuje się przy każdym renderze komponentu, kt
 
 ## Rozszerzenie: granice hooka
 
-Drugi przebieg ma swoją cenę. Po odświeżeniu przez ułamek sekundy widać wartość zapasową z HTML serwera, a dopiero potem zapisaną. Komponent, który miałby tej chwili nie pokazywać, może czekać z treścią, aż odczyt się skończy, ale hook musiałby wtedy oddać także flagę `loaded`.
+Drugi przebieg ma swoją cenę. Po odświeżeniu przez ułamek sekundy widać wartość zapasową z HTML serwera, a dopiero potem zapisaną. Komponent, który ma tej chwili nie pokazywać, czeka z listą, aż odczyt się skończy. Hook oddaje mu wtedy także flagę `loaded`.
 
-Hook nie słyszy też zmian z innych kart tej samej strony. Druga karta zapisuje swoją listę pod tym samym kluczem, a pierwsza przy najbliższej zmianie nadpisze magazyn. Przeglądarka zgłasza takie zmiany zdarzeniem `storage`, a React czyta zewnętrzne magazyny hookiem `useSyncExternalStore`, który ma osobną funkcję dla renderu na serwerze.
+```jsx
+// Przykład spoza demo: useLocalStorage oddaje też flagę loaded.
+// w useLocalStorage zamiast return [value, setValue]:
+return [value, setValue, loaded]; // trzeci element: true, gdy odczyt magazynu się skończył
+
+// w komponencie: trzecia nazwa w destrukturyzacji
+const [tasks, setTasks, loaded] = useLocalStorage("tasks", initialTasks);
+
+// w JSX, w miejscu listy: napis zastępczy do końca odczytu
+{loaded ? <ul>{/* zadania jak dotąd */}</ul> : <p>Loading tasks…</p>}
+```
+
+```text
+HTML z serwera                          → <p>Loading tasks…</p>, bez zadań
+w magazynie „Buy milk” i drugie zadanie → Loading tasks…, potem dwa zapisane zadania
+pusty magazyn                           → Loading tasks…, potem pięć zadań startowych
+```
+
+Przy zapisanej liście pięć zadań startowych nie pojawia się ani na chwilę. Wywołanie z dwiema nazwami, `[tasks, setTasks]`, działa bez zmian, bo destrukturyzacja tablicy pomija nadmiarowe elementy.
+
+Hook nie słyszy też zmian z innych kart tej samej strony. Druga karta zapisuje swoją listę pod tym samym kluczem, a pierwsza przy najbliższej zmianie nadpisze magazyn. Przeglądarka zgłasza taki zapis pozostałym kartom zdarzeniem `storage`, więc hook może go nasłuchiwać w trzecim efekcie.
+
+```js
+// Przykład spoza demo: useLocalStorage słyszy zapis z innej karty.
+// w useLocalStorage, pod efektem zapisu:
+useEffect(() => {
+  function handleStorage(e) {
+    // e.key: klucz zmieniony w innej karcie, e.newValue: nowy napis JSON
+    if (e.key === key && e.newValue) setValue(JSON.parse(e.newValue));
+  }
+  window.addEventListener("storage", handleStorage);
+  return () => window.removeEventListener("storage", handleStorage); // sprzątanie: koniec nasłuchu
+}, [key]);
+```
+
+```text
+karta B: „Buy milk” + Add        → karta A: 6 pending / 6 total, tytuł (6) Task Board
+karta B: zaznaczenie zadania 1   → karta A: 5 pending / 6 total
+zdarzenia storage                → karta A: 2, karta B: 0
+```
+
+## Rysunek 2.17 — dwie karty po dodaniu zadania w karcie B
+
+![dwie karty z tą samą listą](../figures/out/rys_02_17.png)
+
+Na Rysunku 2.17 lewy zrzut to karta, w której wpisano „Buy milk”, a prawy to karta, której nikt nie dotknął. Obie mają sześć wierszy. Prawa dostała listę tylko przez zdarzenie `storage` i własny setter, więc przeliczyła też liczniki i tytuł karty.
+
+Karta, która zapisuje, nie dostaje własnego zdarzenia, a ponowny zapis tego samego napisu w karcie A nie wywołuje go w karcie B, więc karty się nie zapętlają. React czyta takie magazyny także hookiem `useSyncExternalStore`, który ma osobną funkcję dla renderu na serwerze.
 
 > 💡 **Zapamiętaj:** własny hook to funkcja `useCoś`, która wywołuje inne hooki. Wykonuje się przy każdym renderze komponentu, który go wywołuje, więc musi być czysty jak sam komponent.
 

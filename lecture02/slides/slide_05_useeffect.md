@@ -20,6 +20,10 @@ Banks i Porcello ujmują to od strony funkcji. Komponent `Checkbox` w ich przyk�
 
 Efektu ubocznego nie wpisuje się bezpośrednio w ciało komponentu z dwóch powodów. Pierwszy: React może wywołać render wielokrotnie, więc nie wiadomo, ile razy wykona się kod w ciele komponentu. Drugi powód dotyczy Next.js: pierwszy render komponentu klienckiego wykonuje się na serwerze, gdzie nie ma obiektu `document`.
 
+![xkcd 1312](../figures/memes/xkcd_1312_haskell.png)
+
+*Przerywnik: xkcd 1312 „Haskell”. Autor: Randall Munroe, licencja CC BY-NC 2.5, <https://xkcd.com/1312/>.* Program bez efektów ubocznych niczego poza sobą nie zmienia, dlatego React wyznacza im osobne miejsce po renderze.
+
 ## Efekt to synchronizacja
 
 Dokumentacja Reacta definiuje efekty przez to, co je wywołuje:
@@ -94,7 +98,13 @@ useEffect(() => {
 }, [pending]); // efekt wykona się ponownie tylko po renderze, w którym pending się zmieniło
 ```
 
-Zaraz po wczytaniu strony zakładka pokazuje jeszcze tytuł z `metadata`, bez licznika. Licznik pojawia się przy pierwszej zmianie `pending`: po zaznaczeniu jednego zadania zakładka pokazuje `(4) Task Board`, a po dodaniu zadania `(5) Task Board`. Efekty w jednym komponencie można mnożyć: każdy `useEffect` to osobna synchronizacja z własną tablicą zależności.
+Zaraz po wczytaniu strony zakładka pokazuje jeszcze tytuł z `metadata`, bez licznika. Licznik pojawia się przy pierwszej zmianie `pending`, na przykład po dodaniu zadania jako `(5) Task Board`. Efekty w jednym komponencie można mnożyć: każdy `useEffect` to osobna synchronizacja z własną tablicą zależności.
+
+## Rysunek 2.7 — tytuł karty przed pierwszą zmianą listy i po niej
+
+![tytuł karty przed zaznaczeniem i po nim](../figures/out/rys_02_07.png)
+
+Na Rysunku 2.7 nad każdym zrzutem stoi tytuł karty odczytany z `document.title` w wersji produkcyjnej. Lewy zrzut zrobiono zaraz po wczytaniu: licznik „0 / 5 done” jest już na stronie, a karta ma nadal tytuł z `metadata`. Prawy pokazuje stan po zaznaczeniu zadania 1, z przekreśleniem, „1 / 5 done” i `(4) Task Board` w karcie.
 
 ## Efekty działają tylko w przeglądarce
 
@@ -116,7 +126,7 @@ renderToString(<PageTitle title="SSR" />); // "<h1>SSR</h1>"; konsola: tylko "re
 
 Linijka `document.title = ...` wpisana bezpośrednio przed `return` wykonałaby się także podczas renderu na serwerze, gdzie obiektu `document` nie ma. Efekt po raz pierwszy wykonuje się w przeglądarce, po hydratacji, czyli podpięciu Reacta do HTML z serwera, więc nie może wpłynąć na ten HTML.
 
-## Rysunek 2.5 — tytuł karty od wczytania do pierwszej zmiany
+## Rysunek 2.8 — tytuł karty od wczytania do pierwszej zmiany
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -128,7 +138,7 @@ flowchart LR
     K --> E2["efekt: pending 5 → 4<br/>(4) Task Board"]
 ```
 
-Na Rysunku 2.5 pierwsze dwa prostokąty to droga strony z serwera do przeglądarki. Efekt nie bierze w niej udziału. Po montowaniu efekt ustawia `(5) Task Board`, ale znacznik `<title>` w nagłówku strony należy do drzewa, które Next.js buduje z obiektu `metadata` w `layout.jsx`. W wersji produkcyjnej Next.js 16.4.0 tekst tego znacznika wraca do wartości z `metadata` około 2 ms po pierwszym efekcie, a w trybie deweloperskim także w czasie krótszym niż 10 ms.
+Na Rysunku 2.8 pierwsze dwa prostokąty to droga strony z serwera do przeglądarki. Efekt nie bierze w niej udziału. Po montowaniu efekt ustawia `(5) Task Board`, ale znacznik `<title>` w nagłówku strony należy do drzewa, które Next.js buduje z obiektu `metadata` w `layout.jsx`. W wersji produkcyjnej Next.js 16.4.0 tekst tego znacznika wraca do wartości z `metadata` około 2 ms po pierwszym efekcie, a w trybie deweloperskim także w czasie krótszym niż 10 ms.
 
 Dlatego zaraz po wczytaniu karta pokazuje „Task Board — Demo L02”. Licznik w zakładce widać dopiero po pierwszej zmianie `pending`, gdy efekt wykona się ponownie. Tytuł potrzebny od pierwszego bajtu strony ustawia się więc na serwerze przez `metadata`, a efekt zostawia się do zmian w trakcie pracy.
 
@@ -143,13 +153,14 @@ Pomocne jest jedno pytanie z tej samej strony dokumentacji. Czy kod ma się wyko
 Pytanie o przyczynę jest trudniejsze wtedy, gdy zdarzenie zostawia ślad w stanie. Przypuśćmy, że po zaznaczeniu ostatniego zadania aplikacja ma pokazać gratulacje. Efekt zależny od `pending` wygląda na naturalne miejsce:
 
 ```jsx
-// Przykład poza demo, w TaskBoard obok efektu tytułu: logika jednego zdarzenia umieszczona w efekcie (błąd)
+// Przykład spoza demo: gratulacje w efekcie obok efektu tytułu (logika jednego zdarzenia w efekcie, błąd)
 useEffect(() => {
   if (pending === 0) alert("All tasks done!"); // efekt zna liczbę, ale nie powód jej zmiany
 }, [pending]);
+// → cztery zadania zaznaczone, piąte usunięte przyciskiem „Delete”: okno „All tasks done!”
 ```
 
-Efekt widzi tylko liczbę. Usunięcie ostatniego niewykonanego zadania także daje `pending === 0` i wywoła gratulacje, choć nikt niczego nie skończył. Gdyby lista była zapisywana w przeglądarce i wczytywana po odświeżeniu strony, komunikat pokazywałby się przy każdym wczytaniu listy bez niewykonanych zadań, bo efekt wykonuje się po pierwszym renderze z zerem. Dokumentacja streszcza to regułą:
+Efekt widzi tylko liczbę, więc gratuluje także po usunięciu ostatniego niewykonanego zadania, choć nikt niczego nie skończył. Gdyby lista była zapisywana w przeglądarce i wczytywana po odświeżeniu strony, komunikat pokazywałby się przy każdym wczytaniu listy bez niewykonanych zadań, bo efekt wykonuje się po pierwszym renderze z zerem. Dokumentacja streszcza to regułą:
 
 > **„Efektów używa się tylko dla kodu, który ma się wykonać dlatego, że komponent został wyświetlony użytkownikowi.”**
 >
@@ -157,7 +168,17 @@ Efekt widzi tylko liczbę. Usunięcie ostatniego niewykonanego zadania także da
 >
 > — dokumentacja React, *You Might Not Need an Effect*
 
-Gratulacje należą więc do `toggleTask`. Procedura zna nową listę, którą sama oblicza, i wie, że przyczyną jest zaznaczenie.
+Gratulacje należą więc do `toggleTask`. Procedura zna nową listę, którą sama oblicza, i wie, że przyczyną jest zaznaczenie:
+
+```jsx
+// Przykład spoza demo: gratulacje w procedurze zaznaczenia
+function toggleTask(id) {
+  const next = tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
+  setTasks(next);
+  if (next.every((t) => t.done)) alert("All tasks done!"); // every: true, gdy warunek spełnia każdy element
+}
+// → zaznaczenie piątego zadania: okno „All tasks done!”; usunięcie ostatniego niewykonanego: brak okna
+```
 
 ## Rozszerzenie: efekt przed malowaniem ekranu
 
@@ -169,7 +190,52 @@ Dokumentacja `useEffect` w React 19 rozróżnia efekty według tego, co je wywo�
 >
 > — dokumentacja React, *useEffect*
 
-Pierwsze wykonanie efektu tytułu, zaraz po montowaniu, nie wynika z żadnej interakcji. Każde następne wynika już z kliknięcia, bo `pending` zmienia się wyłącznie przy zaznaczeniu, dodaniu albo usunięciu zadania. Te wykonania należą więc do opisanej grupy. Dla zmiany `document.title` kolejność nie ma znaczenia. Ma ją dla `alert`, który blokuje stronę. Okno wywołane w efekcie po kliknięciu może się pojawić, zanim przekreślenie trafi na ekran. Dokumentacja radzi w takim przypadku odłożyć pracę przez `setTimeout`. Odwrotną potrzebę, czyli efekt wykonany zawsze przed malowaniem, obsługuje `useLayoutEffect`. Dokumentacja pisze, że ogromna większość efektów go nie potrzebuje (*„this shouldn't be needed for the vast majority of Effects”*). Przykładem wyjątku jest zmierzenie i ustawienie dymku podpowiedzi, zanim zobaczy go użytkownik.
+Pierwsze wykonanie efektu tytułu, zaraz po montowaniu, nie wynika z żadnej interakcji. Każde następne wynika już z kliknięcia, bo `pending` zmienia się wyłącznie przy zaznaczeniu, dodaniu albo usunięciu zadania. Kolejność widać po funkcji `requestAnimationFrame`, którą przeglądarka wywołuje tuż przed malowaniem następnej klatki ekranu:
+
+```jsx
+// Przykład spoza demo: efekt po kliknięciu a następna klatka ekranu
+function toggleTask(id) {
+  requestAnimationFrame(() => console.log("frame")); // wywołanie tuż przed malowaniem klatki
+  setTasks(tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
+}
+useEffect(() => {
+  console.log("effect", pending);
+}, [pending]);
+// → zaznaczenie pierwszego zadania: effect 4, potem frame
+```
+
+Dla zmiany `document.title` kolejność nie ma znaczenia. Ma ją dla `alert`, który blokuje stronę. Okno z procedury `toggleTask` otwiera się nawet przed renderem: piąte pole jest już zaznaczone, a jego tekst jeszcze nie jest przekreślony. Dokumentacja radzi w takim przypadku odłożyć pracę przez `setTimeout`:
+
+```jsx
+// Przykład spoza demo: gratulacje odłożone za malowanie ekranu
+if (next.every((t) => t.done)) setTimeout(() => alert("All tasks done!"), 0); // 0 ms: po bieżącej pracy przeglądarki
+// → okno po zaznaczeniu piątego zadania: na stronie pięć przekreśleń (bez setTimeout cztery)
+```
+
+## Rysunek 2.9 — strona w chwili okna „All tasks done!”
+
+![zaznaczenia i przekreślenia w chwili okna](../figures/out/rys_02_09.png)
+
+Na Rysunku 2.9 słupki pokazują stan strony w chwili, gdy okno `alert` ją zatrzymało. Trzy próby dały ten sam wynik. Niebieski słupek liczy zmianę, którą przeglądarka nanosi sama, a pomarańczowy zmianę, która wymaga renderu Reacta.
+
+Odwrotną potrzebę, czyli efekt wykonany zawsze przed malowaniem, obsługuje `useLayoutEffect`. Dokumentacja pisze, że ogromna większość efektów go nie potrzebuje (*„this shouldn't be needed for the vast majority of Effects”*). Wyjątkiem jest pomiar elementu, którego wynik ma się pokazać na ekranie od razu:
+
+```jsx
+// Przykład spoza demo: wysokość listy zmierzona przed malowaniem ekranu
+import { useState, useEffect, useLayoutEffect } from "react";
+
+const [height, setHeight] = useState(0);
+useLayoutEffect(() => {
+  // DOM jest już zatwierdzony, a ekran jeszcze nie namalowany; offsetHeight to wysokość w pikselach
+  setHeight(document.querySelector("ul").offsetHeight);
+}, [tasks]);
+
+// w JSX pod listą:
+<p>List height: {height}px</p>
+// → pięć zadań: List height: 110px; po dodaniu szóstego: 132px; po usunięciu dwóch: 88px
+```
+
+Pierwsza klatka po kliknięciu „Add” pokazuje już 132px. Na serwerze efekt się nie wykonuje, więc HTML strony ma „List height: 0px” aż do hydratacji.
 
 > 💡 **Zapamiętaj:** efekt synchronizuje komponent ze światem poza Reactem. Wykonuje się po renderze i tylko w przeglądarce, a wartość, którą da się obliczyć ze stanu, nie potrzebuje efektu.
 

@@ -19,7 +19,13 @@ const [text, setText] = useState("");
 <p>Typed so far: {text}</p>                  {/* ten sam stan drugi raz, litera po literze */}
 ```
 
-Akapit pod polem czyta ten sam stan co pole, więc po wpisaniu „Ku” pokazuje „Typed so far: Ku”. Przycisk „Add” nie ma jeszcze procedury kliknięcia, więc tekst zostaje w polu.
+Przycisk „Add” nie ma jeszcze procedury kliknięcia, więc tekst zostaje w polu.
+
+## Rysunek 2.2 — pole po wpisaniu „Bu”
+
+![pole i akapit](../figures/out/rys_02_02.png)
+
+Na Rysunku 2.2 pole i akapit pokazują to samo „Bu”, bo czytają jedną zmienną `text`.
 
 ## Zdarzenie i procedura obsługi
 
@@ -39,21 +45,21 @@ Różnicę widać na dwóch przyciskach:
 // Przykład spoza TaskBoard: przekazanie funkcji i jej wywołanie.
 function Hello() {
   function handleClick(e) {
-    console.log("kliknięto:", e.type);       // e: obiekt zdarzenia, e.type to "click"
+    console.log("clicked:", e.type);        // e: obiekt zdarzenia, e.type to "click"
   }
   function handleWrong() {
-    console.log("wywołane w renderze");
+    console.log("called during render");
   }
   return (
     <>
-      <button onClick={handleClick}>Dobrze</button>   {/* React wywoła funkcję po kliknięciu */}
-      <button onClick={handleWrong()}>Źle</button>    {/* wywołanie już w renderze; prop dostaje undefined */}
+      <button onClick={handleClick}>Good</button>  {/* React wywoła funkcję po kliknięciu */}
+      <button onClick={handleWrong()}>Bad</button>   {/* wywołanie już w renderze; prop dostaje undefined */}
     </>
   );
 }
 ```
 
-Komunikat „wywołane w renderze” pojawia się w konsoli od razu, bez żadnego kliknięcia. Kliknięcie przycisku „Źle” nie robi potem nic, bo `handleWrong()` zwraca `undefined` i taka wartość trafia do `onClick`. Dokumentacja tłumaczy przyczynę: JavaScript w nawiasach klamrowych JSX wykonuje się od razu (*„JavaScript inside the JSX `{` and `}` executes right away”*), więc nawiasy wywołania uruchamiają funkcję podczas renderu. Gorzej, gdy wywołana tak funkcja zmienia stan. W liczniku z `useState(0)` zapis `onClick={setCount(count + 1)}` ustawia stan w każdym renderze, a każde ustawienie wywołuje kolejny render. React przerywa tę pętlę wyjątkiem „Too many re-renders. React limits the number of renders to prevent an infinite loop.”
+Komunikat „called during render” pojawia się w konsoli od razu, bez żadnego kliknięcia. Kliknięcie przycisku „Bad” nie robi potem nic, bo `handleWrong()` zwraca `undefined` i taka wartość trafia do `onClick`. Dokumentacja tłumaczy przyczynę: JavaScript w nawiasach klamrowych JSX wykonuje się od razu (*„JavaScript inside the JSX `{` and `}` executes right away”*), więc nawiasy wywołania uruchamiają funkcję podczas renderu. Gorzej, gdy wywołana tak funkcja zmienia stan. W liczniku z `useState(0)` zapis `onClick={setCount(count + 1)}` ustawia stan w każdym renderze, a każde ustawienie wywołuje kolejny render. React przerywa tę pętlę wyjątkiem „Too many re-renders. React limits the number of renders to prevent an infinite loop.”
 
 Procedura dostaje od Reacta jeden argument, **obiekt zdarzenia**. Dokumentacja pisze, że zgodnie z konwencją nazywa się go `e` i odczytuje z niego informacje o zdarzeniu. Banks i Porcello wyjaśniają jego najważniejsze pole: `event.target` to referencja do elementu DOM, który zgłosił zdarzenie. Dla pola tekstowego `e.target.value` jest więc jego bieżącą treścią.
 
@@ -74,10 +80,10 @@ Najkrótszy przykład nie potrzebuje Reacta:
 ```js
 // Funkcja zwraca funkcję, która pamięta parametr id.
 function makeDelete(id) {
-  return () => console.log(`usuń zadanie ${id}`);
+  return () => console.log(`delete task ${id}`);
 }
 const deleteThird = makeDelete(3);
-deleteThird(); // "usuń zadanie 3", choć makeDelete już się zakończyła
+deleteThird(); // "delete task 3", choć makeDelete już się zakończyła
 ```
 
 Wywołanie `makeDelete(3)` dawno się skończyło, a zwrócona funkcja nadal widzi `id` równe 3. W komponencie działa to tak samo. Każdy render tworzy własne procedury obsługi, a każda z nich pamięta propsy, stan i zmienne lokalne z renderu, w którym powstała. Dokumentacja ujmuje to krótko: procedury są deklarowane wewnątrz komponentu, więc mają dostęp do jego propsów (*„they have access to the component's props”*). Strzałka w `onChange` widzi `setText` z tego samego renderu, a strzałki w wierszach listy zapamiętają identyfikatory swoich zadań.
@@ -123,18 +129,18 @@ Przekazanie `value={text}` odwraca ten układ. Pole przestaje decydować o swoje
 
 Schwarzmüller nazywa ten układ **wiązaniem dwukierunkowym** (*two-way binding*): wartość jest ustawiana przez pole i odczytywana do pola z tego samego źródła. Zapis wygląda na nieskończoną pętlę, ale zmiana w polu wywołuje jeden render, a render tylko przepisuje do pola wartość, która już tam jest. Korzyść widać, gdy treść pola trzeba zmienić z kodu. Schwarzmüller pokazuje przycisk „Reset”, który wywołuje `setEmail('')`. Bez wiązania stan byłby pusty, a pole na ekranie nadal pokazywałoby ostatni wpis. W Task Board po kliknięciu „Add” pole ma się wyczyścić, a do tego wystarczy `setText("")`.
 
-## Rysunek 2.2 — jedna litera w polu kontrolowanym
+## Rysunek 2.3 — jedna litera w polu kontrolowanym
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
 flowchart LR
-    K["naciśnięcie klawisza<br/>w polu New task"] --> E["onChange<br/>e.target.value = 'Ku'"]
-    E --> S["setText('Ku')"]
-    S --> R["render TaskBoard<br/>text = 'Ku'"]
-    R --> V["input value='Ku'<br/>p: Typed so far: Ku"]
+    K["naciśnięcie klawisza<br/>w polu New task"] --> E["onChange<br/>e.target.value = 'Bu'"]
+    E --> S["setText('Bu')"]
+    S --> R["render TaskBoard<br/>text = 'Bu'"]
+    R --> V["input value='Bu'<br/>p: Typed so far: Bu"]
 ```
 
-Na Rysunku 2.2 pole zawiera już literę „K”, a użytkownik naciska „u”. Przeglądarka zgłasza zdarzenie, w którym `e.target.value` ma wartość `'Ku'`. Procedura `onChange` przekazuje ją do settera, React renderuje komponent, a JSX ustawia polu `value='Ku'` i wypisuje ten sam tekst w akapicie. Nowy tekst trzeba odczytać z `e.target`. Procedura powstała w poprzednim renderze, więc zmienna `text`, którą widzi jako domknięcie, ma wartość z tamtego renderu, czyli samo „K”.
+Na Rysunku 2.3 pole zawiera już literę „B”, a użytkownik naciska „u”. Przeglądarka zgłasza zdarzenie, w którym `e.target.value` ma wartość `'Bu'`. Procedura `onChange` przekazuje ją do settera, React renderuje komponent, a JSX ustawia polu `value='Bu'`. Nowy tekst trzeba odczytać z `e.target`. Procedura powstała w poprzednim renderze, więc zmienna `text`, którą widzi jako domknięcie, ma wartość z tamtego renderu, czyli samo „K”.
 
 ## `onChange` w Reakcie i `change` w HTML
 
@@ -180,7 +186,7 @@ function handleChangeLater(e) {
 
 W obu przypadkach render przywraca w polu treść inną niż ta, którą użytkownik właśnie wpisał.
 
-`TaskBoard` przestrzega tego warunku w miejscu, które łatwo przeoczyć. Usuwanie spacji można by wpisać do `onChange` jako `setText(e.target.value.trim())`. Wtedy spacja wpisana po słowie „Kupić” znikałaby od razu, bo stan dostałby napis bez niej, a render wpisałby go z powrotem do pola. Drugiego słowa nie dałoby się oddzielić od pierwszego. Dlatego `trim()`, metoda usuwająca spacje z brzegów napisu, stoi w procedurze dodawania zadania i działa dopiero przy kliknięciu „Add”. <u>Przekształcenie treści należy do chwili jej użycia, a `onChange` przepisuje wartość bez zmian</u>.
+`TaskBoard` przestrzega tego warunku w miejscu, które łatwo przeoczyć. Usuwanie spacji można by wpisać do `onChange` jako `setText(e.target.value.trim())`. Wtedy spacja wpisana po słowie „Buy” znikałaby od razu, bo stan dostałby napis bez niej, a render wpisałby go z powrotem do pola. Drugiego słowa nie dałoby się oddzielić od pierwszego. Dlatego `trim()`, metoda usuwająca spacje z brzegów napisu, stoi w procedurze dodawania zadania i działa dopiero przy kliknięciu „Add”. <u>Przekształcenie treści należy do chwili jej użycia, a `onChange` przepisuje wartość bez zmian</u>.
 
 ## Pole wyboru, ten sam kontrakt
 
@@ -206,9 +212,26 @@ Schwarzmüller i Banks z Porcello pokazują też drugą drogę: pole bez `value`
 
 ## Rozszerzenie: delegowanie zdarzeń
 
-Zapis `onChange={...}` przypomina atrybut HTML, ale React nie dopina tej funkcji do węzła `<input>`. Mechanizm opiera się na tym, że zdarzenie w przeglądarce nie kończy się na elemencie, który je zgłosił. Przechodzi kolejno przez jego przodków w drzewie DOM, aż do korzenia dokumentu. To przejście w górę nazywa się **bąbelkowaniem** (*bubbling*).
+Zapis `onChange={...}` przypomina atrybut HTML, ale React nie dopina tej funkcji do węzła `<input>`. Mechanizm opiera się na tym, że zdarzenie przechodzi od elementu, który je zgłosił, kolejno przez jego przodków w drzewie DOM, aż do korzenia dokumentu. To przejście w górę nazywa się **bąbelkowaniem** (*bubbling*). Procedura przy rodzicu dostaje więc także kliknięcia jego dzieci:
 
-Kumar w *Fluent React* opisuje, jak React z tego korzysta. Zamiast słuchacza przy każdym przycisku React trzyma jeden słuchacz danego typu zdarzenia w korzeniu aplikacji. Gdy zdarzenie tam dotrze, React ustala, z którego komponentu pochodzi, i wywołuje zdefiniowane w nim procedury. Takie rozwiązanie nazywa się **delegowaniem zdarzeń** (*event delegation*). Kumar uzasadnia je mniejszym zużyciem pamięci i krótszym przygotowaniem strony, bo zamiast setek słuchaczy wystarcza jeden na typ zdarzenia.
+```jsx
+// Przykład spoza demo: kliknięcie „Add” dociera do procedury rodzica
+<div onClick={(e) => console.log("div:", e.target.textContent)}> {/* e.target: kliknięty element */}
+  <input value={text} onChange={(e) => setText(e.target.value)} placeholder="New task..." />
+  <button>Add</button>                                            {/* przycisk bez własnej procedury */}
+</div>
+// → kliknięcie „Add”: div: Add
+```
+
+Kumar w *Fluent React* opisuje, jak React z tego korzysta. Zamiast słuchacza przy każdym przycisku React trzyma słuchacze każdego typu zdarzenia w korzeniu aplikacji. Gdy zdarzenie tam dotrze, React ustala, z którego komponentu pochodzi, i wywołuje zdefiniowane w nim procedury. Takie rozwiązanie nazywa się **delegowaniem zdarzeń** (*event delegation*). Kumar uzasadnia je mniejszym zużyciem pamięci i krótszym przygotowaniem strony. Słuchaczy widać w konsoli Chrome DevTools:
+
+```js
+// Przykład spoza demo: gdzie wiszą słuchacze zdarzeń pola „New task...”
+Object.keys(getEventListeners(document.querySelector("input"))); // → ["invalid"]: invalid nie bąbelkuje
+getEventListeners(document).input.length; // → 2: jeden dla zejścia zdarzenia w dół drzewa, drugi dla bąbelkowania
+```
+
+W Next.js korzeniem aplikacji jest cały dokument. Pole z `onChange` nie ma własnego słuchacza zdarzeń `input` ani `change`.
 
 Z delegowania wynika niski koszt strzałek. Nowa strzałka w każdym renderze nie oznacza nowego słuchacza w przeglądarce. Kumar zauważa, że przy elementach wbudowanych, takich jak `button` czy `input`, React po prostu podmienia starą funkcję na nową i niczego nie porównuje.
 

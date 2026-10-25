@@ -19,6 +19,7 @@ Banks i Porcello pokazują, po co ten mechanizm istnieje, na komponencie z polem
 O tym, czy zależność „się zmieniła”, rozstrzyga `Object.is`, to samo porównanie, którego setter używa do decyzji o renderze. Dla zależności liczy się jego zachowanie przy obiektach. Funkcja też jest obiektem.
 
 ```js
+// Przykład spoza demo: porównanie dwóch funkcji przez Object.is
 Object.is(() => 1, () => 1); // false: dwie funkcje o tym samym kodzie to dwa różne obiekty
 const f = () => 1;
 Object.is(f, f);             // true: ta sama funkcja, czyli ten sam adres
@@ -102,7 +103,7 @@ Z tą zależnością litery i zaznaczanie nie dodają wpisów, a dodanie zadania
 
 Są trzy sposoby naprawy. Pierwszy to zależność od wartości prostej wyprowadzonej z danych, jak `tasks.length` albo `pending`. Drugi to zapamiętanie tablicy między renderami, tak żeby przy niezmienionych danych zachowała ten sam adres. To narzędzie optymalizacji wydajności, potrzebne dopiero przy kosztownych obliczeniach. Trzeci, opisany przez Banksa i Porcello, dotyczy wartości, która nie zależy od niczego w komponencie: deklaruje się ją poza funkcją komponentu. Taka tablica powstaje raz, przy wczytaniu modułu, i ma ten sam adres przez cały czas działania aplikacji.
 
-## Rysunek 2.6 — decyzja po renderze
+## Rysunek 2.10 — decyzja po renderze
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -114,7 +115,7 @@ flowchart LR
     A["activeTasks: nowa tablica z filter<br/>zawsze różne"] -.-> C
 ```
 
-Na Rysunku 2.6 ciągłe strzałki pokazują decyzję, którą React podejmuje po każdym renderze. Przerywane strzałki to dwie przykładowe zależności po wpisaniu litery w pole. Liczba `pending` ma tę samą wartość co przed chwilą, więc porównanie daje równość i efekt zostaje pominięty. Tablica `activeTasks` zawsze trafia na gałąź „różna”.
+Na Rysunku 2.10 ciągłe strzałki pokazują decyzję, którą React podejmuje po każdym renderze. Przerywane strzałki to dwie przykładowe zależności po wpisaniu litery w pole. Liczba `pending` ma tę samą wartość co przed chwilą, więc porównanie daje równość i efekt zostaje pominięty. Tablica `activeTasks` zawsze trafia na gałąź „różna”.
 
 ## Tablica opisuje kod
 
@@ -127,6 +128,7 @@ Strona *Removing Effect Dependencies* odwraca też kolejność pracy z tablicą.
 Te same reguły obowiązują funkcje. Schwarzmüller przypomina, że za każdym razem, gdy wykonuje się kod z definicją funkcji, w pamięci powstaje nowy obiekt funkcji. Jego przykład to komponent `Alert`, w którym efekt wywołuje funkcję zadeklarowaną w ciele komponentu, a tablica jest pusta.
 
 ```jsx
+// Przykład spoza demo: komponent Alert z funkcją wywoływaną w efekcie
 import { useState, useEffect } from "react";
 
 function Alert() {
@@ -156,6 +158,7 @@ Niezależnie od wpisanej treści konsola po dwóch sekundach wypisuje jeden raz 
 Dopisanie funkcji do tablicy zmienia jedną linię:
 
 ```jsx
+// Przykład spoza demo: komponent Alert z funkcją w tablicy zależności
 useEffect(function () {
   setAlert();
 }, [setAlert]); // nowa funkcja w każdym renderze, więc efekt po każdym renderze
@@ -168,7 +171,7 @@ Tablica `[setAlert]` ma jednak ten sam problem co `[activeTasks]`. W React 19.3.
 Dokumentacja (*Removing Effect Dependencies*) opisuje ten sam problem na obiekcie. Komponent czatu buduje w renderze obiekt `options` i przekazuje go efektowi, który łączy się z serwerem. W skrócie, z umowną funkcją `connect`:
 
 ```jsx
-// Przykład spoza TaskBoard, na wzór dokumentacji React, w ciele komponentu czatu:
+// Przykład spoza demo: na wzór dokumentacji React, w ciele komponentu czatu:
 // serverUrl i roomId to jego propsy (napisy), connect to umowna funkcja łącząca z serwerem.
 const options = { serverUrl, roomId }; // nowy obiekt przy każdym renderze
 useEffect(() => {

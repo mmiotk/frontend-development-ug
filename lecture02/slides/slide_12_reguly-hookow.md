@@ -105,7 +105,7 @@ console.log(render(Board)); // TypeError: Cannot read properties of undefined (r
 
 Pierwszy render zakłada cztery komórki. W drugim warunek jest fałszywy i wszystkie wywołania przesuwają się o jedną pozycję w górę. `text` czyta komórkę 0, czyli `0` z pominiętego hooka. `inputRef` dostaje komórkę stanu `text`. `useEffect` dostaje komórkę refa, która nie ma pola `deps`, więc `cell.deps.length` czyta `length` z `undefined`. <u>Hook nie wie, którą komórkę dostał; zna tylko jej numer</u>.
 
-## Rysunek 2.12 — hooki `TaskBoard` w kolejności wywołań
+## Rysunek 2.19 — hooki `TaskBoard` w kolejności wywołań
 
 Końcowy `TaskBoard` razem z `useTasks` i `useLocalStorage` wywołuje osiem hooków. Licznik renderów zniknął z kodu po pomiarze, więc na liście go nie ma.
 
@@ -115,7 +115,7 @@ flowchart LR
     A["1 useState<br/>tasks"] --> B["2 useState<br/>loaded"] --> C["3 useEffect<br/>odczyt"] --> D["4 useEffect<br/>zapis"] --> E["5 useState<br/>filter"] --> F["6 useState<br/>text"] --> G["7 useRef<br/>inputRef"] --> H["8 useEffect<br/>tytuł"]
 ```
 
-Na Rysunku 2.12 każdy prostokąt to pozycja na liście, którą React prowadzi dla egzemplarza `TaskBoard`. Pozycje 1–4 pochodzą z `useLocalStorage`, pozycja 5 z `useTasks`, a pozycje 6–8 z samego komponentu. Sam `TaskBoard` zawiera cztery wywołania (`useTasks`, `useState`, `useRef`, `useEffect`), ale `useTasks` nie zajmuje własnej pozycji, tylko wnosi pięć hooków ze środka. Przy pierwszym renderze React zakłada osiem pozycji. Przy każdym następnym oczekuje tych samych ośmiu w tej samej kolejności i odczytuje je po kolei.
+Na Rysunku 2.19 każdy prostokąt to pozycja na liście, którą React prowadzi dla egzemplarza `TaskBoard`. Pozycje 1–4 pochodzą z `useLocalStorage`, pozycja 5 z `useTasks`, a pozycje 6–8 z samego komponentu. Sam `TaskBoard` zawiera cztery wywołania (`useTasks`, `useState`, `useRef`, `useEffect`), ale `useTasks` nie zajmuje własnej pozycji, tylko wnosi pięć hooków ze środka. Przy pierwszym renderze React zakłada osiem pozycji. Przy każdym następnym oczekuje tych samych ośmiu w tej samej kolejności i odczytuje je po kolei.
 
 ## Czwarta akcja: „Clear done”
 
@@ -211,6 +211,12 @@ export default function TaskBoard({ initialTasks }) {
 }
 ```
 
+## Rysunek 2.20 — wersja końcowa przed „Clear done” i po nim
+
+![lista przed i po Clear done](../figures/out/rys_02_20.png)
+
+Na Rysunku 2.20 obie strony pochodzą z wersji końcowej, której kod stoi wyżej. Po kliknięciu znikają oba zaznaczone zadania, „All” spada z 5 do 3, a „Done” do 0. Liczba niewykonanych zadań się nie zmienia, więc efekt z tytułem karty nie wykonuje się ponownie.
+
 ## Hook w warunku
 
 Błędny wariant `TaskBoard.jsx` ma zaraz pod wywołaniem `useTasks` warunek:
@@ -223,7 +229,7 @@ if (counts.total > 0) {
 }
 ```
 
-Warunek czyta `counts.total`, bo po wydzieleniu hooka komponent nie ma już zmiennej `tasks`. Dopóki lista ma zadania, komponent wywołuje dziewięć hooków, a dodatkowy `useState` zajmuje pozycję 6. Aplikacja działa. Po zaznaczeniu wszystkich zadań i kliknięciu „Clear done” następny render wywołuje osiem hooków, w układzie z Rysunku 2.12. Od pozycji 6 wszystko przesuwa się o jedną w górę:
+Warunek czyta `counts.total`, bo po wydzieleniu hooka komponent nie ma już zmiennej `tasks`. Dopóki lista ma zadania, komponent wywołuje dziewięć hooków, a dodatkowy `useState` zajmuje pozycję 6. Aplikacja działa. Po zaznaczeniu wszystkich zadań i kliknięciu „Clear done” następny render wywołuje osiem hooków, w układzie z Rysunku 2.19. Od pozycji 6 wszystko przesuwa się o jedną w górę:
 
 | Pozycja | Render z zadaniami | Render po „Clear done” |
 |---|---|---|
@@ -270,7 +276,29 @@ Wtyczka sprawdza dwie klasyczne reguły. Reguła `rules-of-hooks` pilnuje miejsc
 
 Ten sam mechanizm stoi za zakazem hooka po wczesnym `return`. Zabezpieczenie `if (!initialTasks) return null;` wstawione na początku `TaskBoard`, nad wywołaniem `useTasks`, wygląda niewinnie. Gdy strona przekaże pustą wartość, render kończy się przed wszystkimi hookami. Gdyby przy następnym renderze dane już były, React dostałby osiem wywołań tam, gdzie poprzednio nie było żadnego.
 
-Ten przypadek zachowuje się inaczej niż hook w warunku. Gdy komponent nadrzędny podaje `TaskBoard` raz listę, a raz `undefined`, serwer deweloperski nie pokazuje tabeli z kolejnością hooków ani żadnego wpisu w konsoli. Przy przejściu od ośmiu hooków do zera lista po prostu znika, a przy przejściu od zera do ośmiu React zakłada pozycje od nowa, jak przy pierwszym renderze. Render zakończony przed pierwszym hookiem nie zostawia żadnej pozycji do porównania, więc nie ma czego zgłosić. Taki błąd najpewniej łapie linter. Wskazuje go przy każdym wywołaniu hooka pod wczesnym `return`, komunikatem „React Hook "useTasks" is called conditionally” i dalej „Did you accidentally call a React Hook after an early return?”. Takie zabezpieczenie stawia się pod ostatnim hookiem albo w komponencie nadrzędnym, który nie renderuje `TaskBoard` bez danych.
+Ten przypadek zachowuje się inaczej niż hook w warunku. Gdy komponent nadrzędny podaje `TaskBoard` raz listę, a raz `undefined`, serwer deweloperski nie pokazuje tabeli z kolejnością hooków ani żadnego wpisu w konsoli. Przy przejściu od ośmiu hooków do zera lista po prostu znika, a przy przejściu od zera do ośmiu React zakłada pozycje od nowa, jak przy pierwszym renderze. Render zakończony przed pierwszym hookiem nie zostawia żadnej pozycji do porównania, więc nie ma czego zgłosić. Taki błąd najpewniej łapie linter. Wskazuje go przy każdym wywołaniu hooka pod wczesnym `return`, komunikatem „React Hook "useTasks" is called conditionally” i dalej „Did you accidentally call a React Hook after an early return?”. Takie zabezpieczenie stawia się pod ostatnim hookiem.
+
+```jsx
+// Przykład spoza demo: zabezpieczenie przed brakiem danych pod ostatnim hookiem TaskBoard.
+const {
+  visibleTasks, filter, setFilter, counts, addTask, toggleTask, deleteTask, clearDone,
+} = useTasks(initialTasks ?? []); // hook zawsze; ?? podstawia [] za undefined
+
+const [text, setText] = useState("");
+const inputRef = useRef(null);
+useEffect(() => { /* tytuł karty jak dotąd */ }, [counts.pending]);
+
+if (!initialTasks) return null; // wczesny return dopiero pod ósmym hookiem
+```
+
+```text
+zadanie 1 zaznaczone, potem dane: lista → undefined → lista
+undefined   → TaskBoard nie renderuje niczego, konsola bez ostrzeżeń Reacta
+lista       → pięć zadań, zadanie 1 dalej zaznaczone, 4 pending / 5 total
+linter      → 0 zgłoszeń reguły rules-of-hooks
+```
+
+W każdym renderze wywołuje się wszystkie osiem hooków, więc pozycje i stan listy przetrwają przerwę w danych. Druga droga to warunek w komponencie nadrzędnym, który nie renderuje `TaskBoard` bez danych.
 
 > 💡 **Zapamiętaj:** React rozpoznaje hooki wyłącznie po kolejności wywołań. Hooki wywołuje się zawsze, w tej samej kolejności, na najwyższym poziomie komponentu albo własnego hooka, a warunek stawia się wewnątrz hooka.
 

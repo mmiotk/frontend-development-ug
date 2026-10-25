@@ -17,6 +17,7 @@ Efekt zapisu odkłada listę do magazynu po każdej zmianie, ale nikt jej stamt�
 Taka funkcja nazywa się **funkcją inicjalizującą** (*initializer function*), a potocznie **leniwym inicjalizatorem** (*lazy initializer*), bo praca odkłada się do chwili, w której React jej potrzebuje. Dokumentacja pokazuje różnicę na funkcji `createInitialTodos`, która buduje listę startową. Tutaj dostaje ona wpis w konsoli, żeby było widać każde wywołanie. Dwa zapisy różnią się parą nawiasów:
 
 ```jsx
+// Przykład spoza demo: wartość początkowa z funkcji createInitialTodos
 function createInitialTodos() {
   console.log("createInitialTodos"); // jeden wpis = jedno wywołanie
   return [{ id: 1, text: "Todo 1" }];
@@ -39,13 +40,14 @@ Wymóg czystości ma konkretny powód. Tryb ścisły wywołuje inicjalizator prz
 Odczyt magazynu może się nie udać, więc inicjalizator obejmuje go blokiem `try/catch`. Kod w `try` wykonuje się normalnie. Gdy rzuci wyjątek, reszta `try` jest pomijana, a sterowanie przechodzi do `catch`. Gdy obiekt błędu nie jest potrzebny, `catch` zapisuje się bez nawiasów.
 
 ```js
+// Przykład spoza demo: try/catch
 try {
   JSON.parse("{broken");      // rzuca SyntaxError
   console.log("nie dojdzie"); // pominięte
 } catch {
-  console.log("błąd złapany"); // tu trafia sterowanie
+  console.log("error caught"); // tu trafia sterowanie
 }
-console.log("program działa dalej"); // wynik: "błąd złapany", "program działa dalej"
+console.log("program continues"); // wynik: "error caught", "program continues"
 ```
 
 W `app/components/TaskBoard.jsx` wywołanie `useState(initialTasks)` zastępuje się wersją z funkcją:
@@ -75,7 +77,7 @@ Blok `try/catch` chroni też przed uszkodzonym wpisem. Magazyn może zawierać n
 Odczyt dałoby się też zapisać jako efekt, który wczytuje listę z magazynu do stanu:
 
 ```jsx
-// BŁĄD: nieskończona pętla renderów
+// Przykład spoza demo: odczyt listy w efekcie, BŁĄD: nieskończona pętla renderów
 useEffect(() => {
   const stored = localStorage.getItem("tasks");
   if (stored) setTasks(JSON.parse(stored)); // JSON.parse daje za każdym razem NOWĄ tablicę
@@ -98,7 +100,7 @@ Komunikat podaje przyczynę: komponent wywołuje `setState` w efekcie, który ni
 
 React zakłada, że jego pierwszy render w przeglądarce da dokładnie ten sam wynik co HTML z serwera. Dokumentacja `hydrateRoot`, funkcji Reacta, która podpina aplikację do HTML z serwera, każe traktować każdą niezgodność jako błąd do naprawienia. Wyjaśnia też, dlaczego React nie sprawdza całego HTML dokładnie: niezgodności zdarzają się w większości aplikacji rzadko, a walidacja całego znacznikowania byłaby zbyt kosztowna. W trybie deweloperskim React ostrzega o niezgodnościach, ale nie gwarantuje, że różnice w atrybutach zostaną poprawione.
 
-## Rysunek 2.8 — dwa pierwsze rendery `TaskBoard`
+## Rysunek 2.12 — dwa pierwsze rendery `TaskBoard`
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -108,11 +110,17 @@ flowchart LR
     H --> X["różnica z HTML<br/>React przebudowuje drzewo"]
 ```
 
-Na Rysunku 2.8 ten sam inicjalizator wykonuje się w dwóch środowiskach. Na serwerze odwołanie do `localStorage` rzuca wyjątek, więc `catch` zwraca pięć zadań startowych i z nich powstaje HTML. W przeglądarce, podczas hydratacji, inicjalizator wykonuje się ponownie i znajduje w magazynie zapisaną listę, na przykład sześć zadań. Każde środowisko liczy poprawnie według danych, które ma. Rozjazd powstaje dopiero wtedy, gdy React zestawia oba wyniki i oczekuje, że będą identyczne.
+Na Rysunku 2.12 ten sam inicjalizator wykonuje się w dwóch środowiskach. Na serwerze odwołanie do `localStorage` rzuca wyjątek, więc `catch` zwraca pięć zadań startowych i z nich powstaje HTML. W przeglądarce, podczas hydratacji, inicjalizator wykonuje się ponownie i znajduje w magazynie zapisaną listę, na przykład sześć zadań. Każde środowisko liczy poprawnie według danych, które ma. Rozjazd powstaje dopiero wtedy, gdy React zestawia oba wyniki i oczekuje, że będą identyczne.
 
 ## Niezgodność w konsoli
 
-Przy pierwszej wizycie magazyn jest pusty i oba rendery dają pięć zadań, więc niezgodności nie ma. Po dodaniu „Kupić mleko”, zaznaczeniu pierwszego zadania i odświeżeniu strony lista ma sześć wierszy, pierwszy przekreślony, a pod nią „1 / 6 done”. Konsola na serwerze deweloperskim pokazuje wtedy „Hydration failed because the server rendered HTML didn't match the client.”. Wskazana różnica to jeden element `<li>` więcej w przeglądarce niż w HTML z serwera. Ten sam komunikat ciągnie się dalej: *„As a result this tree will be regenerated on the client”*. React buduje więc drzewo od nowa po stronie klienta i na ekranie lista wygląda poprawnie. W wersji produkcyjnej (`next build`) ten sam przypadek zgłasza się jako „Minified React error #418”.
+Przy pierwszej wizycie magazyn jest pusty i oba rendery dają pięć zadań, więc niezgodności nie ma. Po dodaniu „Buy milk”, zaznaczeniu pierwszego zadania i odświeżeniu strony lista ma sześć wierszy, pierwszy przekreślony, a pod nią „1 / 6 done”. Konsola na serwerze deweloperskim pokazuje wtedy „Hydration failed because the server rendered HTML didn't match the client.”. Okno błędów porównuje oba drzewa i jako pierwszą różnicę wskazuje pierwszy wiersz listy: przeglądarka ma tam element `<s>` (zadanie przekreślone), a HTML z serwera zwykły tekst „Read the React 19 docs”. React buduje drzewo od nowa po stronie klienta i na ekranie lista wygląda poprawnie. W wersji produkcyjnej (`next build`) ten sam przypadek zgłasza się jako „Minified React error #418”.
+
+## Rysunek 2.13 — niezgodność w oknie błędów Next.js
+
+![okno błędu hydratacji](../figures/out/rys_02_13.png)
+
+Na Rysunku 2.13 serwer deweloperski zebrał komunikat w oknie błędów, które otwiera się z plakietki „1 Issue” w rogu strony. Etykieta „Recoverable Error” oznacza, że React poradził sobie sam: odbudował drzewo w przeglądarce, a strona pod oknem działa dalej.
 
 Niezgodność ma też objaw poza konsolą: tytuł karty po wczytaniu zależy od zawartości magazynu. Magazyn z listą identyczną z `initialTasks` zostawia w karcie „Task Board — Demo L02”. Sześć zapisanych zadań, z pierwszym wykonanym, daje „(5) Task Board”.
 
@@ -153,6 +161,7 @@ Leniwy inicjalizator nadal jest właściwym narzędziem dla kosztownej wartości
 Dokumentacja Next.js wymienia jeszcze dwie drogi. Pierwsza wyłącza renderowanie na serwerze dla wybranego komponentu przez `dynamic(() => import(...), { ssr: false })`. Druga to atrybut `suppressHydrationWarning`, który wycisza ostrzeżenie dla jednego elementu.
 
 ```jsx
+// Przykład spoza demo: dwie drogi omijania niezgodności
 "use client"; // ssr: false wolno użyć tylko w komponencie klienckim
 import dynamic from "next/dynamic";
 

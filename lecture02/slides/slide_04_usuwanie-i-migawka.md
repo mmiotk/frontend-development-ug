@@ -46,6 +46,12 @@ const doneCount = tasks.filter((t) => t.done).length;
 
 Licznik powstaje z `tasks` w każdym renderze, więc każda operacja na liście od razu zmienia jego wynik. Przy sześciu zadaniach i dwóch zaznaczonych pokazuje „2 / 6 done”, a po usunięciu jednego z zaznaczonych „1 / 5 done”. Strzałka `() => deleteTask(task.id)` pamięta `task` ze swojego przebiegu `map`, więc każdy wiersz usuwa dokładnie swoje zadanie.
 
+## Rysunek 2.5 — lista z przyciskami „Delete” i licznikiem
+
+![lista z licznikiem 2 / 6 done](../figures/out/rys_02_05.png)
+
+Na Rysunku 2.5 zadania 1 i 2 są zaznaczone i przekreślone. Dodane „Buy milk” stoi na końcu jako szósty wiersz. Przycisk „Delete” jest w każdym wierszu, bo powstaje w tym samym przebiegu `map` co pole wyboru.
+
 Predykat `(t) => t.id !== id` przepuszcza każde zadanie o innym identyfikatorze. Stara tablica zostaje bez zmian, a nowa ma o jeden element mniej i wskazuje te same obiekty zadań co stara. Gdyby identyfikator nie pasował do żadnego zadania, `filter` zwróciłby nową tablicę o tej samej zawartości. React uznałby ją za zmianę, bo to inny obiekt, i wyrenderowałby tę samą listę jeszcze raz. Taki render jest zbędny, lecz nic nie psuje. Zadania 3, 4 i 5 zachowują po usunięciu swoje klucze, więc z DOM znika dokładnie jeden węzeł `<li>`.
 
 Predykat porównuje identyfikator, a nie pozycję na liście, bo pozycja po usunięciu się przesuwa:
@@ -93,7 +99,11 @@ function deleteTask(id) {
 
 Przy trzech zadaniach wystarczy zaznaczyć dwa i usunąć jedno z zaznaczonych. Licznik pokazuje wtedy „2 / 2 done”, choć zaznaczone jest tylko jedno pole. Wartość liczona w renderze nie może się rozjechać z listą, bo za każdym razem powstaje z aktualnej listy. <u>Jeśli coś da się obliczyć ze stanu, nie tworzy się dla tego nowego stanu</u>.
 
-## Rysunek 2.4 — co jest stanem, a co z niego wynika
+![xkcd 2200](../figures/memes/xkcd_2200_unreachable_state.png)
+
+*Przerywnik: xkcd 2200 „Unreachable State”. Autor: Randall Munroe, licencja CC BY-NC 2.5, <https://xkcd.com/2200/>.* Licznik w osobnym stanie dochodzi do stanu „nieosiągalnego”: „2 / 2 done” przy jednym zaznaczonym polu.
+
+## Rysunek 2.6 — co jest stanem, a co z niego wynika
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -105,7 +115,7 @@ flowchart LR
     D2 --> J
 ```
 
-Na Rysunku 2.4 po lewej stoją tylko dwie zmienne stanu, czyli wszystko, co React pamięta za `TaskBoard`. Środkowe prostokąty to wartości pochodne. Powstają w każdym renderze od nowa i znikają po jego zakończeniu. Wszystkie strzałki prowadzą w prawo, do JSX jednego konkretnego renderu. Żadna strzałka nie wraca od wartości pochodnej do stanu.
+Na Rysunku 2.6 po lewej stoją tylko dwie zmienne stanu, czyli wszystko, co React pamięta za `TaskBoard`. Środkowe prostokąty to wartości pochodne. Powstają w każdym renderze od nowa i znikają po jego zakończeniu. Wszystkie strzałki prowadzą w prawo, do JSX jednego konkretnego renderu. Żadna strzałka nie wraca od wartości pochodnej do stanu.
 
 ## Migawka: co widzi procedura obsługi kliknięcia
 
@@ -113,7 +123,7 @@ Funkcja `addTask` wywołuje dwa settery jeden po drugim: `setTasks(...)` i `setT
 
 ```jsx
 // Przykład w TaskBoard: odczyt stanu tuż po wywołaniu settera.
-// newTask to obiekt nowego zadania, na przykład { id: 6, text: "Kupić mleko", done: false }.
+// newTask to obiekt nowego zadania, na przykład { id: 6, text: "Buy milk", done: false }.
 function handleAdd() {
   setTasks([...tasks, newTask]);
   console.log(tasks.length); // 5, nie 6: ta procedura widzi tasks ze swojego renderu
@@ -174,7 +184,7 @@ Aktualizator podlega innej regule niż procedura, która go wywołuje. Dokumenta
 Tryb ścisły, który w trybie deweloperskim podwójnie wywołuje funkcję komponentu, obejmuje te same funkcje, które mają być czyste. Podwaja więc także aktualizatory i inicjalizatory. `TaskBoard` aktualizatora nie używa, więc jego procedury tego nie odczują. Podwojenie widać na aktualizatorze, który zmienia stary stan. React bierze wynik jednego wywołania, a drugi odrzuca, więc czysta funkcja daje ten sam efekt. Nieczysta się zdradza:
 
 ```jsx
-// Przykład spoza TaskBoard: const [tasks, setTasks] = useState([{ id: 1, text: "Mleko", done: false }]).
+// Przykład spoza TaskBoard: const [tasks, setTasks] = useState([{ id: 1, text: "Milk", done: false }]).
 // ŹLE: aktualizator zmienia obiekt ze starego stanu.
 function handleBangWrong() {
   setTasks((prev) => {
@@ -188,7 +198,7 @@ function handleBang() {
 }
 ```
 
-Pierwsza wersja po jednym kliknięciu zmienia „Mleko” w „Mleko!!” w trybie deweloperskim i w „Mleko!” w wersji produkcyjnej, bo tam tryb ścisły nie działa. Dwa wykrzykniki to sygnał, że funkcja zmienia dane spoza siebie. Druga wersja daje „Mleko!” w obu trybach. Dokumentacja streszcza zasadę. Czyste muszą być tylko funkcje komponentu, inicjalizatory i aktualizatory, a procedur obsługi zdarzeń React nigdy nie wywołuje dwukrotnie (*„React will never call your event handlers twice”*). Dlatego mutacja w procedurze, taka jak `task.done = !task.done`, przechodzi przez tryb ścisły niezauważona.
+Pierwsza wersja po jednym kliknięciu zmienia „Milk” w „Milk!!” w trybie deweloperskim i w „Milk!” w wersji produkcyjnej, bo tam tryb ścisły nie działa. Dwa wykrzykniki to sygnał, że funkcja zmienia dane spoza siebie. Druga wersja daje „Milk!” w obu trybach. Dokumentacja streszcza zasadę. Czyste muszą być tylko funkcje komponentu, inicjalizatory i aktualizatory, a procedur obsługi zdarzeń React nigdy nie wywołuje dwukrotnie (*„React will never call your event handlers twice”*). Dlatego mutacja w procedurze, taka jak `task.done = !task.done`, przechodzi przez tryb ścisły niezauważona.
 
 > 💡 **Zapamiętaj:** stan to minimum danych, które się zmieniają, a wszystko, co z niego wynika, liczy się w renderze. Procedura widzi stan z migawki swojego renderu. Seria zmian tej samej zmiennej wymaga aktualizatora `setX((prev) => ...)`, a aktualizator musi być czysty.
 

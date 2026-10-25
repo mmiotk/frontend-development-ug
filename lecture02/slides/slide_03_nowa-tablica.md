@@ -15,8 +15,8 @@ const b = [...a, 3];        // [1, 2, 3]
 console.log(a, a === b);    // [1, 2] false: a bez zmian, b to inny obiekt
 
 // Rozwinięcie obiektu: pola kopiowane po kolei, późniejsze nadpisują wcześniejsze.
-const task = { id: 1, text: "Mleko", done: false };
-const copy = { ...task, done: true }; // { id: 1, text: "Mleko", done: true }
+const task = { id: 1, text: "Milk", done: false };
+const copy = { ...task, done: true }; // { id: 1, text: "Milk", done: true }
 ```
 
 Kolejność ma znaczenie. W `{ ...task, done: true }` pole `done` stoi po rozwinięciu, więc nadpisuje wartość skopiowaną z `task`. Zapis `{ done: true, ...task }` dałby z powrotem `done: false`. Oryginał w obu przypadkach zostaje nietknięty.
@@ -26,7 +26,7 @@ Kolejność ma znaczenie. W `{ ...task, done: true }` pole `done` stoi po rozwin
 Dwie drobne metody przygotowują dane nowego zadania:
 
 ```js
-"  Kupić mleko  ".trim(); // "Kupić mleko": spacje z początku i końca znikają
+"  Buy milk  ".trim(); // "Buy milk": spacje z początku i końca znikają
 "   ".trim();             // "": same spacje dają pusty napis
 !"   ".trim();            // true: pusty napis jest fałszywy, więc ! daje true
 Date.now();               // np. 1792337908573: milisekundy od 1 stycznia 1970 roku
@@ -51,7 +51,7 @@ function addTask() {
 // akapit <p>Typed so far: {text}</p> z poprzedniej wersji usuwa się
 ```
 
-Dla wpisu „  Kupić mleko  ” procedura dopisuje szósty wiersz „Kupić mleko” bez spacji i czyści pole. Akapit „Typed so far” służył tylko do pokazania, że stan `text` nadąża za każdą literą, więc w tej wersji wypada.
+Dla wpisu „  Buy milk  ” procedura dopisuje szósty wiersz „Buy milk” bez spacji i czyści pole. Akapit „Typed so far” służył tylko do pokazania, że stan `text` nadąża za każdą literą, więc w tej wersji wypada.
 
 Nowe zadanie dostaje `id: Date.now()`. Dwa kliknięcia „Add” w tej samej milisekundzie są w praktyce niemożliwe, więc w tej aplikacji liczba wystarcza jako unikalny klucz. Nie jest to identyfikator odporny na kolizje ani bezpieczny kryptograficznie. W aplikacji z serwerem identyfikator nadaje zwykle baza danych.
 
@@ -122,7 +122,7 @@ function toggleTask(id) {
 
 **Operator warunkowy** `warunek ? a : b` daje `a`, gdy warunek jest prawdziwy, i `b` w przeciwnym razie. Zadanie z `done: true` dostaje więc treść owiniętą w `<s>`, czyli przekreśloną, a pozostałe wiersze się nie zmieniają. Strzałka w `onChange` jest potrzebna, bo sam zapis `toggleTask(task.id)` wykonałby się w trakcie renderu. Każdy wiersz dostaje własną strzałkę, która jako domknięcie zna `task` ze swojego przebiegu `map`. Banks i Porcello pokazują ten sam przypadek: zmianę jednego obiektu w tablicy obiektów bez zmiany tablicy źródłowej.
 
-## Rysunek 2.3 — tablica przed zaznaczeniem zadania 2 i po nim
+## Rysunek 2.4 — tablica przed zaznaczeniem zadania 2 i po nim
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -142,7 +142,7 @@ flowchart LR
     B1 -- "{ ...t, done: !t.done }" --> B2
 ```
 
-Na Rysunku 2.3 lewa ramka to tablica sprzed kliknięcia, a prawa to wynik `map`. Ciągła strzałka prowadzi od zadania 2 do jego kopii z odwróconą flagą `done`. Przerywane strzałki oznaczają, że pozostałe cztery zadania nie są kopiowane. Nowa tablica wskazuje te same obiekty co stara. Powstają więc dokładnie dwa nowe obiekty: tablica i jedno zadanie. Stara tablica i stary obiekt zadania 2 zostają w pamięci nienaruszone.
+Na Rysunku 2.4 lewa ramka to tablica sprzed kliknięcia, a prawa to wynik `map`. Ciągła strzałka prowadzi od zadania 2 do jego kopii z odwróconą flagą `done`. Przerywane strzałki oznaczają, że pozostałe cztery zadania nie są kopiowane. Nowa tablica wskazuje te same obiekty co stara. Powstają więc dokładnie dwa nowe obiekty: tablica i jedno zadanie. Stara tablica i stary obiekt zadania 2 zostają w pamięci nienaruszone.
 
 Ta technika ma nazwę **współdzielenia struktury**: nowa wersja danych korzysta z niezmienionych części starej, zamiast kopiować wszystko. Przy pięciu zadaniach oszczędność jest pomijalna, ale przy tysiącu zadań zmiana jednego z nich nadal tworzy tylko jedną nową tablicę i jeden nowy obiekt.
 
@@ -177,7 +177,7 @@ Dokumentacja Reacta (*Updating Objects in State*) wymienia powody, dla których 
 - **Optymalizacje.** Strategie optymalizacji w Reakcie pomijają pracę, gdy poprzednie propsy lub stan są takie same jak następne. Bez mutacji wystarcza porównanie `prevObj === obj`: jeśli to ten sam obiekt, nic w nim nie mogło się zmienić. React potrafi wtedy pominąć render komponentu, który dostał te same obiekty co poprzednio, ale to osobna technika optymalizacji, z której `TaskBoard` nie korzysta.
 - **Zmiana wymagań.** Cofanie i ponawianie zmian, historia albo przywrócenie formularza do wcześniejszego stanu są łatwe, gdy stare kopie stanu zostają w pamięci.
 
-Samouczek Reacta (*Tutorial: Tic-Tac-Toe*) ujmuje to tak: „niemutowalność sprawia, że komponenty bardzo tanio sprawdzają, czy ich dane się zmieniły” (*„Immutability makes it very cheap for components to compare whether their data has changed or not”*). Gdyby każdy wiersz był osobnym komponentem, na przykład `TaskItem` z propsem `task`, to na Rysunku 2.3 wiersz zadania 1 dostałby po kliknięciu ten sam obiekt co wcześniej. Jedno porównanie wystarczyłoby, żeby pominąć jego pracę.
+Samouczek Reacta (*Tutorial: Tic-Tac-Toe*) ujmuje to tak: „niemutowalność sprawia, że komponenty bardzo tanio sprawdzają, czy ich dane się zmieniły” (*„Immutability makes it very cheap for components to compare whether their data has changed or not”*). Gdyby każdy wiersz był osobnym komponentem, na przykład `TaskItem` z propsem `task`, to na Rysunku 2.4 wiersz zadania 1 dostałby po kliknięciu ten sam obiekt co wcześniej. Jedno porównanie wystarczyłoby, żeby pominąć jego pracę.
 
 Dalszy powód z tej listy dotyczy rozwoju Reacta. Dokumentacja pisze, że nowe funkcje biblioteki zakładają, że stan jest wartością stałą w obrębie jednego renderu (*„The new React features we're building rely on state being treated like a snapshot”*). Mutowanie wcześniejszych wersji stanu może zablokować korzystanie z tych funkcji.
 
@@ -186,7 +186,7 @@ Dalszy powód z tej listy dotyczy rozwoju Reacta. Dokumentacja pisze, że nowe f
 Niemutowalność ma skutek, który ujawnia się przy drugiej zmiennej stanu. Przypuśćmy, że `TaskBoard` dostaje panel edycji i zapamiętuje w stanie zaznaczone zadanie. Są na to dwa sposoby:
 
 ```jsx
-// Przykład spoza TaskBoard, w komponencie, który ma już stan tasks.
+// Przykład spoza demo: zaznaczone zadanie w drugiej zmiennej stanu, w komponencie ze stanem tasks.
 // ŹLE: stan powiela obiekt, który leży też w tasks.
 const [selectedTask, setSelectedTask] = useState(null);
 // po edycji tasks w stanie zostaje stara kopia obiektu
@@ -213,6 +213,7 @@ Lista zadań w `TaskBoard` ma dwa poziomy: tablicę i obiekty zadań. Gdyby zada
 Płaski stan trzyma każdy obiekt raz, w słowniku według identyfikatora. Zamiast zagnieżdżonych obiektów-dzieci element przechowuje tylko ich identyfikatory:
 
 ```js
+// Przykład spoza demo: zadania pogrupowane w projekty, w dwóch kształtach stanu.
 // Zagnieżdżony: zadanie siedzi wewnątrz projektu.
 const nested = { projects: [{ id: "p1", tasks: [{ id: 1, done: false }] }] };
 
@@ -235,7 +236,21 @@ Skoro płytka kopia zostawia wspólne obiekty, nasuwa się kopia pełna. Przegl�
 >
 > — MDN Web Docs, *Window: structuredClone() method*
 
-Wersja `toggleTask` może wywołać `structuredClone(tasks)`, zmienić flagę w kopii i przekazać ją do `setTasks`. Żadna wcześniejsza wersja stanu nie zostanie wtedy naruszona. Ma to jednak swoją cenę. Kopiowane jest wszystko: na Rysunku 2.3 każda przerywana strzałka zamieniłaby się w ciągłą, a jedno kliknięcie tworzyłoby sześć nowych obiektów zamiast dwóch. Znika też współdzielenie struktury. Zadanie 1 dostaje nowy obiekt, choć jego treść się nie zmieniła, więc porównanie `prevObj === obj` uznałoby je za zmienione. Algorytm ma wreszcie ograniczenia: MDN podaje, że obiektów `Function` nie da się nim skopiować, a próba kończy się wyjątkiem `DataCloneError`. Kopia przez `map` i rozwinięcie tworzy nowe obiekty tylko na drodze do zmienionego pola.
+Wersja `toggleTask` mogłaby skopiować całą listę, zmienić flagę w kopii i przekazać ją do `setTasks`. Żadna wcześniejsza wersja stanu nie zostanie wtedy naruszona. Różnicę wobec `map` widać na pięciu zadaniach z `app/data/initialTasks.js`:
+
+```js
+// Przykład spoza demo: głęboka kopia listy zadań obok kopii przez map
+const copy = structuredClone(tasks); // nowa tablica i pięć nowych obiektów zadań
+copy[1].done = true;                 // zmiana w kopii, oryginał nietknięty
+console.log(tasks[1].done, copy[0] === tasks[0]); // → false false
+
+const viaMap = tasks.map((t) => (t.id === 2 ? { ...t, done: true } : t));
+console.log(viaMap[0] === tasks[0]); // → true: niezmienione zadanie 1 to ten sam obiekt
+
+structuredClone({ ...tasks[0], onDelete: () => {} }); // → wyjątek DataCloneError: ()=>{} could not be cloned.
+```
+
+Głęboka kopia zamienia na Rysunku 2.4 każdą przerywaną strzałkę w ciągłą. Jedno kliknięcie tworzy sześć nowych obiektów zamiast dwóch, a porównanie `prevObj === obj` uznaje niezmienione zadanie 1 za zmienione. Funkcji algorytm nie kopiuje wcale, co MDN opisuje jako ograniczenie klonowania strukturalnego.
 
 > 💡 **Zapamiętaj:** dodawanie to `[...tasks, nowe]`, podmiana jednego elementu to `map` z `{ ...t, pole: nowaWartość }`. Oryginał zostaje nietknięty.
 

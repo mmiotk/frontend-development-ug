@@ -1,21 +1,31 @@
 # Lista zadań, która zaczyna pamiętać
 
+## Pamięć, zmiana i świat poza ekranem
+
+Interfejs, który zmienia się pod wpływem użytkownika, stawia przed każdym frameworkiem podobne problemy. Pierwsza klasa problemów to **pamięć między renderami**. Komponent jest funkcją wywoływaną przy każdym renderze od nowa, więc jego zmienne lokalne nie dożywają następnego wywołania. Wpisany tekst albo odhaczone zadanie trzeba przechować poza tą funkcją.
+
+Druga klasa to **wykrycie zmiany**. Framework musi się dowiedzieć, że zapamiętana wartość jest inna, bo inaczej ekran zostanie przy starych danych. Tejas Kumar w *Fluent React* opisuje kompilator Svelte. Według niego wystarczy tam „przypisać wartość do zmiennej, a Svelte zajmie się resztą” (*„you just assign to the variable, and Svelte takes care of the rest”*). React wymaga jawnego zgłoszenia zmiany i porównuje starą wartość z nową. Dane zmienia się więc tak, żeby różnica była widoczna w porównaniu: powstaje nowa wartość, a stara zostaje nietknięta. Część pamięci nie powinna przy tym wywoływać renderu wcale, na przykład uchwyt do pola tekstowego albo numer uruchomionego timera.
+
+Trzecia klasa dotyczy **świata poza interfejsem**: tytułu karty, pamięci przeglądarki i timerów. Komponent synchronizuje się z nimi po renderze i sprząta po sobie, gdy znika. Kumar porównuje Reacta z Angularem, Solidem i Svelte. Wszystkie dają funkcje wywoływane na kolejnych etapach życia komponentu. Służą one do tego, żeby „uruchamiać efekty uboczne, zwalniać zasoby albo aktualizować coś po zmianie propsów” (*„run side effects, clean up resources, or make updates based on changes in props”*). Czwarta klasa pojawia się, gdy tę samą logikę ze stanem powtarza kilka komponentów. Wydziela się ją do osobnej funkcji, a każdy komponent dostaje własną kopię stanu.
+
+Na pamięć React odpowiada hookiem `useState`, na wykrycie zmiany setterem z porównaniem `Object.is`, a na pamięć bez renderu refem z `useRef`. Świat poza interfejsem obsługuje efekt z funkcją sprzątającą, a powtarzaną logikę własny hook, który podlega tym samym regułom co hooki wbudowane.
+
 ## Lista, która niczego nie pamięta
 
-**Task Board** to lista zadań w Next.js. Pierwsza wersja wyświetla pięć zadań. Nie da się dopisać nowego, odhaczyć wykonanego ani usunąć zbędnego. Zakładka przeglądarki nie wie, ile pracy zostało, a odświeżenie strony przywraca wszystko do punktu wyjścia. Komponent musi więc zapamiętywać dane między kolejnymi wywołaniami, a część z nich przenosić poza Reacta: do tytułu karty i do pamięci przeglądarki.
+Na liście zadań **Task Board** w Next.js każda z tych klas ma konkretną postać. Pierwsza wersja wyświetla pięć zadań. Nie da się dopisać nowego, odhaczyć wykonanego ani usunąć zbędnego. Zakładka przeglądarki nie wie, ile pracy zostało, a odświeżenie strony przywraca wszystko do punktu wyjścia.
 
 ## Pliki aplikacji
 
-Projekt powstaje kreatorem `create-next-app` w wersji 16.4.0, bez Tailwinda, lintera i React Compilera, czyli narzędzia, które samo dopisuje do komponentów optymalizacje. Aplikacja ma pokazywać samego Reacta, bez dodatków. Zadania startowe leżą w zwykłym module `app/data/initialTasks.js`:
+Projekt powstaje kreatorem `create-next-app` w wersji 16.4.0, bez Tailwinda, lintera i React Compilera, czyli narzędzia, które samo dopisuje do komponentów optymalizacje. Zadania startowe leżą w zwykłym module `app/data/initialTasks.js`:
 
 ```js
 // Zwykły moduł z danymi: bez pobierania z sieci, bez Reacta.
 export const initialTasks = [
-  { id: 1, text: "Przeczytaj dokumentację React 19", done: false },
-  { id: 2, text: "Zbuduj komponent TaskBoard",        done: false },
-  { id: 3, text: "Napisz własny hook",                done: false },
-  { id: 4, text: "Zrozum useEffect i cleanup",        done: false },
-  { id: 5, text: "Użyj useRef do focusu",             done: false },
+  { id: 1, text: "Read the React 19 docs",           done: false },
+  { id: 2, text: "Build the TaskBoard component",    done: false },
+  { id: 3, text: "Write a custom hook",              done: false },
+  { id: 4, text: "Understand useEffect and cleanup", done: false },
+  { id: 5, text: "Use useRef for focus",             done: false },
 ];
 ```
 
@@ -79,11 +89,11 @@ let count = 0;
 const button = document.querySelector("button");
 button.addEventListener("click", () => {
   count = count + 1;                           // 1. zmiana danych
-  button.textContent = `Kliknięcia: ${count}`; // 2. ręczny zapis do DOM
+  button.textContent = `Clicks: ${count}`; // 2. ręczny zapis do DOM
 });
 ```
 
-Zmiana węzła DOM od razu zmienia wyświetlaną stronę. Kod imperatywny, czyli lista kroków do wykonania, musi pamiętać o kroku 2 przy każdej zmianie danych. Gdy ta sama liczba pojawia się w trzech miejscach strony, każde z nich trzeba przepisać osobno. Ten sam licznik w Reakcie wygląda tak:
+Kod imperatywny, czyli lista kroków do wykonania, musi pamiętać o kroku 2 przy każdej zmianie danych. Ten sam licznik w Reakcie wygląda tak:
 
 ```jsx
 // Ten sam licznik w Reakcie: setter zgłasza zmianę, JSX opisuje wynik.
@@ -93,15 +103,15 @@ function Counter() {
   // useState(0) daje parę: bieżącą wartość count i setter setCount, który ją zmienia
   // () => ... to funkcja strzałkowa, krótki zapis funkcji wywoływanej po kliknięciu
   const [count, setCount] = useState(0);
-  return <button onClick={() => setCount(count + 1)}>Kliknięcia: {count}</button>;
+  return <button onClick={() => setCount(count + 1)}>Clicks: {count}</button>;
 }
 ```
 
-Kroku 2 tu nie ma. JSX opisuje, jak przycisk wygląda dla dowolnej wartości `count`, a przepisaniem wyniku do DOM zajmuje się React. Zostaje tylko krok 1, ale w innej postaci: zamiast przypisania do zmiennej pada wywołanie `setCount`. Oba programy po dwóch kliknięciach pokazują „Kliknięcia: 2”. Różnią się tym, kto pilnuje zgodności ekranu z danymi.
+Kroku 2 tu nie ma. JSX opisuje, jak przycisk wygląda dla dowolnej wartości `count`, a przepisaniem wyniku do DOM zajmuje się React. Zostaje tylko krok 1, ale w innej postaci: zamiast przypisania do zmiennej pada wywołanie `setCount`. Oba programy po dwóch kliknięciach pokazują „Clicks: 2”. Różnią się tym, kto pilnuje zgodności ekranu z danymi.
 
 ## Propsy płyną z zewnątrz, stan należy do komponentu
 
-Szkielet pokazuje pięć zadań, ale nie pozwala niczego zmienić. Lista ma rosnąć po kliknięciu „Add”, zadanie ma zmieniać status po zaznaczeniu pola, a pole tekstowe ma pamiętać wpisane litery. Takie dane nazywa się **stanem** (*state*). Robin Wieruch w *The Road to React* rozdziela oba pojęcia według celu. Propsy przekazują informacje w dół drzewa, a stan służy do „zmiany informacji w czasie” (*„to modify information over time”*). Maximilian Schwarzmüller w *React Key Concepts* ujmuje tę samą różnicę słowami „dane zewnętrzne” i „dane wewnętrzne”.
+Lista ma rosnąć po kliknięciu „Add”, zadanie ma zmieniać status po zaznaczeniu pola, a pole tekstowe ma pamiętać wpisane litery. Takie dane nazywa się **stanem** (*state*). Robin Wieruch w *The Road to React* rozdziela oba pojęcia według celu. Propsy przekazują informacje w dół drzewa, a stan służy do „zmiany informacji w czasie” (*„to modify information over time”*). Maximilian Schwarzmüller w *React Key Concepts* ujmuje tę samą różnicę słowami „dane zewnętrzne” i „dane wewnętrzne”.
 
 ## Dlaczego zwykła zmienna nie wystarczy
 
@@ -111,7 +121,7 @@ Najprostszy pomysł to zmienna `let tasks = initialTasks` w ciele komponentu, kt
 // Ilustracja spoza demo: zwykła zmienna zamiast stanu.
 function TaskBoard({ initialTasks }) {
   let tasks = initialTasks; // powstaje od nowa przy każdym wywołaniu komponentu
-  const newTask = { id: 6, text: "Kupić mleko", done: false };
+  const newTask = { id: 6, text: "Buy milk", done: false };
   return (
     // [...tasks, newTask]: nowa tablica ze starymi elementami i newTask na końcu
     <button onClick={() => { tasks = [...tasks, newTask]; }}> {/* React o zmianie nie wie */}
@@ -126,11 +136,9 @@ Po kliknięciu zmienna ma już sześć elementów, ale przycisk nadal pokazuje �
 1. **Zmienne lokalne nie przetrwają między renderami.** Gdy React renderuje komponent drugi raz, robi to od zera i nie bierze pod uwagę zmian w zmiennych lokalnych.
 2. **Zmiana zmiennej lokalnej nie wywołuje renderu.** React nie wie, że powinien ponownie wywołać komponent z nowymi danymi.
 
-Schwarzmüller zauważa, że React nie śledzi zwykłych zmiennych ani zmian ich wartości, więc nie mają one wpływu na interfejs.
+Oba braki usuwa stan. <u>Stan to dane, które React przechowuje za komponent i po których zmianie renderuje go ponownie</u>.
 
 Stan różni się od propsów jeszcze jedną cechą. Dokumentacja pisze, że stan jest „w pełni prywatny dla komponentu, który go deklaruje” (*„fully private to the component declaring it”*), i dodaje, że rodzic nie może go zmienić. `Home` przekazuje `initialTasks`, ale nie ma dostępu do listy, którą `TaskBoard` zbuduje z tej wartości.
-
-Potrzebne są więc dwie rzeczy: **pamięć poza funkcją komponentu**, która przetrwa kolejne wywołania, i **sposób zgłoszenia zmiany**, po którym React ponownie wywoła komponent. <u>Stan to dane, które React przechowuje za komponent i po których zmianie renderuje go ponownie</u>.
 
 ## Hook: funkcja, która podłącza komponent do Reacta
 
@@ -142,7 +150,7 @@ Oba wymagania spełnia `useState`. To pierwszy **hook** (*Hook*), czyli specjaln
 >
 > — Maximilian Schwarzmüller, *React Key Concepts*
 
-Alex Banks i Eve Porcello w *Learning React* tłumaczą samą nazwę. Hook pozwala „podpiąć” (*hook up*) funkcjonalność do komponentu. Według dokumentacji Reacta hooki pozwalają korzystać z różnych funkcji Reacta z poziomu komponentów (*„Hooks let you use different React features from your components”*). Nazwy wszystkich hooków zaczynają się od `use`, a wywołuje się je w ciele komponentu, nie w procedurach obsługi zdarzeń.
+Alex Banks i Eve Porcello w *Learning React* tłumaczą samą nazwę. Hook pozwala „podpiąć” (*hook up*) funkcjonalność do komponentu. Według dokumentacji Reacta hooki pozwalają korzystać z różnych funkcji Reacta z poziomu komponentów (*„Hooks let you use different React features from your components”*).
 
 ## Pierwszy hook w `TaskBoard`
 
@@ -204,7 +212,7 @@ Dokumentacja (*Choosing the State Structure*) radzi grupować w jednej zmiennej 
 
 ## Setter pyta, czy wartość jest nowa
 
-Setter niczego nie rysuje. Zgłasza Reactowi zmianę, a dalej idzie znany ciąg: render, czyli wywołanie funkcji `TaskBoard`, w którym `useState` zwraca już nową wartość, i zatwierdzenie (*commit*) różnic w DOM. Z tego podziału wynika miejsce każdego hooka. `useState` działa w renderze: oddaje wartość i setter. Setter działa poza renderem, w procedurze obsługi zdarzenia. Stan żyje w Reakcie, a DOM jest jego odbiciem po ostatnim zatwierdzeniu.
+Setter niczego nie rysuje. Zgłasza Reactowi zmianę, a dalej idzie znany ciąg: render, czyli wywołanie funkcji `TaskBoard`, w którym `useState` zwraca już nową wartość, i zatwierdzenie (*commit*) różnic w DOM. `useState` działa w renderze: oddaje wartość i setter. Setter działa poza renderem, w procedurze obsługi zdarzenia.
 
 Przed renderem React wykonuje jedno sprawdzenie, którego nie widać w kodzie komponentu. Funkcja `Object.is` porównuje nową wartość z bieżącą podobnie jak `===`: liczby i napisy po treści, a tablice i obiekty po tym, czy to ten sam obiekt w pamięci. Gdy wynik to `true`, React uznaje, że nic się nie zmieniło, i renderu nie wykonuje.
 
@@ -247,7 +255,7 @@ Ten przypadek daje **mutacja**, czyli zmiana istniejącej tablicy zamiast utworz
 {/* ŹLE (w JSX TaskBoard, pod listą): push zmienia istniejącą tablicę,
     a setter dostaje ten sam obiekt. Object.is zwraca true, więc React pomija render. */}
 <button onClick={() => {
-  tasks.push({ id: 99, text: "Mutacja!", done: false });
+  tasks.push({ id: 99, text: "Mutation!", done: false });
   setTasks(tasks);
 }}>Push</button>
 ```

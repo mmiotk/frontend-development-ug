@@ -84,7 +84,7 @@ Stan należy do egzemplarza komponentu, który wywołał `useTasks`. Hooki z ni�
 
 Dokumentacja (*Reusing Logic with Custom Hooks*) dodaje cechę, która sprawia, że łańcuch działa. Wartości reaktywne przekazywane z jednego hooka do drugiego pozostają aktualne (*„You can pass reactive values from one Hook to another, and they stay up-to-date”*). `useTasks` przy każdym renderze dostaje od `useLocalStorage` bieżące `tasks` i liczy z nich listę oraz liczniki od nowa. Nie trzeba niczego ręcznie synchronizować, bo każdy render przechodzi przez cały łańcuch.
 
-## Rysunek 2.11 — `TaskBoard` → `useTasks` → `useLocalStorage`
+## Rysunek 2.18 — `TaskBoard` → `useTasks` → `useLocalStorage`
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -95,7 +95,7 @@ flowchart LR
     UT -->|"obiekt: 7 pól"| TB
 ```
 
-Na Rysunku 2.11 strzałki w prawo to wywołania, a strzałki w lewo to wartości oddawane wyżej. `useLocalStorage` zwraca parę jak `useState`, bo z zewnątrz ma wyglądać jak stan, a flagę `loaded` zostawia u siebie. `useTasks` zwraca obiekt z siedmioma polami. `TaskBoard` nie wie, że lista trafia do `localStorage`.
+Na Rysunku 2.18 strzałki w prawo to wywołania, a strzałki w lewo to wartości oddawane wyżej. `useLocalStorage` zwraca parę jak `useState`, bo z zewnątrz ma wyglądać jak stan, a flagę `loaded` zostawia u siebie. `useTasks` zwraca obiekt z siedmioma polami. `TaskBoard` nie wie, że lista trafia do `localStorage`.
 
 ## Odchudzony `TaskBoard`
 
@@ -150,7 +150,7 @@ Kod `useTasks` wykonuje się przy każdym renderze `TaskBoard`, także przy każ
 Nie wszystko w `useTasks` korzysta z Reacta. Hooki wywołują tylko dwie pierwsze linie. Wyliczenie `visibleTasks` z listy i filtra to zwykłe przekształcenie tablicy. Dokumentacja (*Reusing Logic with Custom Hooks*) rozstrzyga taki przypadek krótko: funkcje, które nie wywołują hooków, nie muszą być hookami (*„Functions that don't call Hooks don't need to be Hooks”*). Jej przykład to `getSorted(items)` w miejsce `useSorted(items)`.
 
 ```js
-// logika filtra z useTasks jako zwykła funkcja: dane w argumentach, wynik w return
+// Przykład spoza demo: logika filtra z useTasks jako zwykła funkcja, dane w argumentach, wynik w return
 export function getVisibleTasks(tasks, filter) {
   if (filter === "active") return tasks.filter((t) => !t.done);
   if (filter === "done") return tasks.filter((t) => t.done);
@@ -166,9 +166,33 @@ Bugl w *Learn React Hooks* radzi, żeby najpierw napisać komponent, a hook wydz
 
 Dokumentacja przestrzega też przed wydzielaniem hooka z każdego powtórzonego fragmentu. Trochę powtórzeń jest w porządku, a hook opakowujący jedno wywołanie `useState` jest prawdopodobnie zbędny.
 
-Ta sama strona podaje sygnał w drugą stronę. Każdy efekt oznacza wyjście poza Reacta, więc przy każdym napisanym efekcie można zapytać, czy nie byłby czytelniejszy w hooku, który nazywa zamiar. `useLocalStorage` jest przykładem tej sytuacji: nazwa mówi, gdzie trafia wartość.
+![xkcd 974](../figures/memes/xkcd_974_the_general_problem.png)
 
-Dokumentacja ostrzega za to przed hookami opakowującymi sam `useEffect` pod ogólną nazwą. Nazwa hooka ma mówić, co robi, a nie kiedy się wykonuje.
+*Przerywnik: xkcd 974 „The General Problem”. Autor: Randall Munroe, licencja CC BY-NC 2.5, <https://xkcd.com/974/>.* Hook wydzielony na zapas, zanim ten sam kod pojawi się w drugim komponencie, jest takim systemem do podawania dowolnych przypraw.
+
+Ta sama strona podaje sygnał w drugą stronę. Każdy efekt oznacza wyjście poza Reacta, więc przy każdym napisanym efekcie można zapytać, czy nie byłby czytelniejszy w hooku, który nazywa zamiar. `useLocalStorage` jest przykładem tej sytuacji: nazwa mówi, gdzie trafia wartość. Tak samo da się wydzielić efekt z tytułem karty.
+
+```js
+// Przykład spoza demo: efekt z tytułem karty jako hook nazwany od zamiaru.
+import { useEffect } from "react";
+
+export function usePendingTitle(pending) {
+  useEffect(() => {
+    document.title = pending > 0 ? `(${pending}) Task Board` : "Task Board";
+    return () => { document.title = "Task Board"; }; // sprzątanie przy odmontowaniu
+  }, [pending]);
+}
+
+// w TaskBoard zamiast całego efektu z tytułem:
+usePendingTitle(counts.pending);
+```
+
+```text
+dwa z pięciu zadań zaznaczone → tytuł karty: (3) Task Board
+wszystkie zaznaczone          → tytuł karty: Task Board
+```
+
+Wywołanie zostaje w `TaskBoard`, bo tytuł dotyczy tej strony, a tablica zależności i sprzątanie chowają się w hooku. Dokumentacja ostrzega za to przed hookami opakowującymi sam `useEffect` pod ogólną nazwą, bo nazwa hooka ma mówić, co robi, a nie kiedy się wykonuje.
 
 > 💡 **Zapamiętaj:** własne hooki można składać, a stan każdego z nich należy do komponentu, który wywołał łańcuch. Do hooka trafia logika potrzebna każdemu widokowi danych, w komponencie zostaje to, co dotyczy konkretnego ekranu.
 

@@ -25,6 +25,7 @@ Ref ma jedną cechę wspólną ze stanem i jedną odmienną. Tak jak stan, przet
 Najkrótszy komponent z refem do węzła DOM ma pole i przycisk, który przenosi do niego kursor.
 
 ```jsx
+// Przykład spoza demo: fokus po kliknięciu
 import { useRef } from "react";
 
 function SearchBox() {
@@ -84,6 +85,7 @@ Pole „New task...” dostaje prop `ref`.
 Wywołanie fokusu w `addTask` korzysta z operatora `?.` (*optional chaining*). Odczyt pola albo wywołanie metody przez `?.` sprawdza najpierw, czy wartość po lewej nie jest `null` ani `undefined`. Jeśli jest, całe wyrażenie daje `undefined` zamiast błędu.
 
 ```js
+// Przykład spoza demo: operator ?.
 const box = { current: null };
 box.current?.focus(); // undefined: current to null, focus() się nie wykonuje
 box.current.focus();  // TypeError: Cannot read properties of null (reading 'focus')
@@ -135,6 +137,7 @@ Według tej reguły `inputRef` jest wzorcowym refem. Węzeł pola potrzebny jest
 Ref może przechowywać dowolną wartość. Dokumentacja `useRef` podaje typowy przykład spoza DOM: identyfikator zwrócony przez `setInterval`, potrzebny później do `clearInterval`. Stoper w najprostszej postaci wygląda tak.
 
 ```jsx
+// Przykład spoza demo: stoper z identyfikatorem interwału w refie
 import { useState, useRef } from "react";
 
 function Stopwatch() {
@@ -162,7 +165,7 @@ function Stopwatch() {
 
 Dwie procedury dzielą tu jedną wartość, która ma przetrwać rendery wywołane przez `setTicks`. Zmienna lokalna `let id` by nie wystarczyła, bo każdy render tworzy ją od nowa i `handleStop` z nowego renderu nie widziałby identyfikatora zapisanego przez `handleStart` z poprzedniego. Stan by zadziałał, ale zapis identyfikatora wywołałby zbędny render. Interwał co 10 ms podnosi licznik o 1, więc po uruchomieniu i 100 ms licznik pokazuje 10. Po kliknięciu „Stop” liczba stoi: 60 ms później nadal jest to 10. Sama obsługa `setInterval` i sprzątanie timera przy odmontowaniu należą do efektów, ref tylko przechowuje identyfikator.
 
-## Rysunek 2.9 — stan i ref w `TaskBoard`
+## Rysunek 2.14 — stan i ref w `TaskBoard`
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -174,7 +177,7 @@ flowchart LR
     I -. "zmiana current<br/>nie daje renderu" .-> R
 ```
 
-Na Rysunku 2.9 górna ścieżka to stan. Zmiana `text` przez setter prowadzi do renderu, a JSX odczytuje nową wartość. Dolna ścieżka to ref. React wypełnia `inputRef` po commicie, a procedura `addTask` korzysta z niego już poza renderem. Przerywana strzałka oznacza połączenie, którego nie ma: zmiana `current` nie uruchamia renderu, więc JSX nie może na niej polegać.
+Na Rysunku 2.14 górna ścieżka to stan. Zmiana `text` przez setter prowadzi do renderu, a JSX odczytuje nową wartość. Dolna ścieżka to ref. React wypełnia `inputRef` po commicie, a procedura `addTask` korzysta z niego już poza renderem. Przerywana strzałka oznacza połączenie, którego nie ma: zmiana `current` nie uruchamia renderu, więc JSX nie może na niej polegać.
 
 ## Granica: ref w trakcie renderu
 
@@ -203,15 +206,16 @@ return (
 );
 ```
 
-Gdyby licznik był stanem, jego zwiększenie wywoływałoby kolejny render, a ten kolejne zwiększenie. Ref unika tej pętli, ale łamie obie połowy zakazu: zapisuje `current` w renderze i pokazuje go w JSX. Pod `next dev`, czyli na serwerze deweloperskim, licznik startuje od 2 i rośnie o 2 przy każdej literze. W wersji produkcyjnej, po `next build && next start`, startuje od 1 i rośnie o 1. Różnicę robi tryb ścisły, który podwaja wywołanie funkcji komponentu, a z nim zapis w renderze.
+Gdyby licznik był stanem, jego zwiększenie wywoływałoby kolejny render, a ten kolejne zwiększenie. Ref unika tej pętli, ale łamie obie połowy zakazu: zapisuje `current` w renderze i pokazuje go w JSX. Pod `next dev`, czyli na serwerze deweloperskim, licznik zaraz po wczytaniu pokazuje 4 i rośnie o 2 przy każdej literze. W wersji produkcyjnej, po `next build && next start`, pokazuje po wczytaniu 2 i rośnie o 1. Przyrost na literę wynika z trybu ścisłego, który w dev podwaja wywołanie funkcji komponentu, a z nim zapis w renderze. Start nie jest równy przyrostowi, bo po montowaniu efekt czytający magazyn wywołuje `setLoaded(true)`, co daje jeszcze jeden render. Wychodzą dwa przebiegi po dwa wywołania w dev i dwa przebiegi po jednym w wersji produkcyjnej.
 
-Ten sam zapis psuje hydratację. Serwer renderuje komponent raz i wysyła „Renders: 1”, a przeglądarka w trybie ścisłym dochodzi do 2, więc konsola zgłasza przy każdym wczytaniu „Hydration failed because the server rendered text didn't match the client”. To drugi powód, dla którego licznik nie zostaje w aplikacji. Po pomiarze jego trzy linie znikają z `TaskBoard.jsx`, a z nimi ostrzeżenie. W projekcie z ESLintem wtyczka `eslint-plugin-react-hooks` w wersji 7.1.1 zgłasza taki kod komunikatem „Cannot access refs during render”. Rendery w prawdziwej aplikacji liczy Profiler z React DevTools, który mierzy je z zewnątrz komponentu.
+Ten sam zapis psuje hydratację. Serwer renderuje komponent raz i wysyła „Renders: 1”. Pod `next dev` przeglądarka w trybie ścisłym już w pierwszym renderze hydratacji dochodzi do 2. Przy każdym wczytaniu strona zgłasza więc „Hydration failed because the server rendered text didn't match the client”, a różnica w `<p>` to `+ 2` (klient) i `- 1` (serwer). W wersji produkcyjnej pierwszy render w przeglądarce daje 1, czyli tyle co HTML z serwera, więc ostrzeżenia nie ma, a „2” pojawia się dopiero po `setLoaded(true)`. To drugi powód, dla którego licznik nie zostaje w aplikacji. Po pomiarze jego trzy linie znikają z `TaskBoard.jsx`, a z nimi ostrzeżenie. W projekcie z ESLintem wtyczka `eslint-plugin-react-hooks` w wersji 7.1.1 zgłasza taki kod komunikatem „Cannot access refs during render”. Rendery w prawdziwej aplikacji liczy Profiler z React DevTools, który mierzy je z zewnątrz komponentu.
 
 ## Rozszerzenie: wartość początkowa refa
 
 Argument `useRef` zachowuje się podobnie jak argument `useState`. Dokumentacja pisze, że React zapisuje początkową wartość refa raz i ignoruje ją przy kolejnych renderach (*„React saves the initial ref value once and ignores it on the next renders”*). Samo wyrażenie w nawiasie wykonuje się jednak przy każdym renderze. `useRef(0)` nic nie kosztuje, ale `useRef(new VideoPlayer())` z przykładu w dokumentacji tworzyłby kosztowny obiekt przy każdym renderze i od razu go wyrzucał. Dokumentacja podaje na to wzorzec z pustym refem i warunkiem:
 
 ```jsx
+// Przykład spoza demo: wartość początkowa refa
 import { useRef } from "react";
 
 class VideoPlayer {} // zaślepka kosztownego obiektu z przykładu w dokumentacji
