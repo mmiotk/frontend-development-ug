@@ -158,15 +158,7 @@ await Promise.all([1, 2, 3].map(() => addWithAwait()));  // [1, 1, 1]
 
 `addArticle` nie ma w środku `await`, więc odczyt `nextId`, zwiększenie licznika i `push` wykonują się jednym ciągiem: 20 równoległych żądań `POST` daje 20 artykułów o różnych numerach. Wersja z bazą danych, która najpierw odczytuje największy numer, czeka na wynik, a potem zapisuje rekord, zachowuje się jak `addWithAwait`. Dlatego numer nadaje sama baza, na przykład kolumną z automatycznym licznikiem.
 
-## Rozszerzenie: granice magazynu w pamięci
-
-Pamięć procesu ma dwie granice. Pierwsza to restart: wszystko, co dodano, znika. Druga to liczba procesów, bo obiekt globalny jest wspólny tylko w obrębie jednego procesu Node.js. Dwa serwery produkcyjne uruchomione obok siebie, tak jak dwie instancje za jednym adresem, mają dwa magazyny i dwa liczniki. Artykuł wysłany do pierwszego dostaje `id` 4 i jest widoczny tylko tam, a kolejny wysłany do drugiego też dostaje `id` 4. Platformy, które uruchamiają aplikację w wielu kopiach, potrzebują więc bazy danych poza procesem aplikacji.
-
-Obiekt globalny ma też koszt. Każdy moduł w procesie może go odczytać i nadpisać, więc nazwa `articleStore` musi być unikalna, a cała logika zostaje w funkcjach modułu. Kod spoza `lib/store.js` nie sięga do `globalThis.articleStore` bezpośrednio.
-
-## Rozszerzenie: kiedy wraca Webpack
-
-Starszy bundler, **Webpack**, włącza się flagą `--webpack` przy `next dev` albo `next build`. Dokumentacja wymienia dwie sytuacje, w których jest potrzebny. Pierwsza to platforma bez natywnych modułów Turbopacka, na przykład FreeBSD. Druga to projekt z własną funkcją `webpack()` w `next.config.js`: przewodnik aktualizacji do wersji 16 ostrzega, że `next build` z Turbopackiem przerwie się wtedy celowo, zamiast po cichu zignorować konfigurację. Komunikat zaczyna się od słów „This build is using Turbopack, with a `webpack` config” i podpowiada jawną flagę albo pusty obiekt `turbopack: {}`. Taką funkcję dopisują też niektóre wtyczki, więc błąd może się pojawić w projekcie, którego konfiguracji nikt nie zmieniał. Wybór bundlera zmienia przy tym liczbę kopii modułów serwera, czyli dokładnie to, od czego zależy magazyn w zwykłej zmiennej.
-
 > 💡 **Zapamiętaj:** <u>stan wspólny dla Route Handlerów i stron trzyma się poza zmienną modułu</u>, bo pod Turbopackiem moduł ładuje się w kilku paczkach. Magazyn na `globalThis` przeżywa przeładowanie pliku, ale jest osobny w każdym procesie serwera.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r01_projekt-i-magazyn.md`](rozszerzenia/r01_projekt-i-magazyn.md)

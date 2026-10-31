@@ -207,29 +207,7 @@ Po dwóch wysłaniach przycisk pokazuje „Sent 2”. Gdy rodzic ukryje komponen
 
 W `issuetracker` ma to praktyczny skutek. Komunikat „Issue #5 added!” znika po przejściu na listę i powrocie na `/new`, bo strona formularza montuje się od nowa. Stan akcji przechowuje więc wynik ostatniego wysłania. Dane, które mają przetrwać nawigację, leżą w magazynie `store.js`, poza komponentem.
 
-## Rozszerzenie: błąd powiązany z polem
-
-Komunikat „Error: Title must not be empty.” stoi nad formularzem i nic nie łączy go z polem tytułu, więc czytnik ekranu, program odczytujący stronę głosem, nie powie, którego pola dotyczy. Do tego powiązania służą dwa atrybuty ARIA, czyli atrybuty opisujące stronę dla technologii wspomagających. **`aria-invalid="true"`** oznacza pole jako niepoprawne. **`aria-errormessage`** wskazuje przez `id` element z treścią błędu. MDN stawia przy drugim atrybucie warunek:
-
-> **„Atrybut `aria-errormessage` powinien być używany tylko wtedy, gdy wartość obiektu jest niepoprawna, czyli gdy `aria-invalid` ma wartość `true`.”**
->
-> *„The `aria-errormessage` attribute should only be used when the value of an object is not valid; when `aria-invalid` is set to `true`.”*
->
-> — MDN, *ARIA: aria-errormessage attribute*
-
-Demo tych atrybutów nie ma. W poniższym fragmencie komunikat przenosi się pod pole i dostaje `id`.
-
-```jsx
-<input
-  id="title"
-  name="title"
-  aria-invalid={state.error ? "true" : undefined}           // undefined: brak atrybutu
-  aria-errormessage={state.error ? "title-error" : undefined}
-/>
-{state.error && <p id="title-error">{state.error}</p>}
-```
-
-Wartość `undefined` sprawia, że React w ogóle nie wstawia atrybutu do HTML-u, więc poprawne pole nie wskazuje komunikatu, którego nie ma. MDN dodaje, że element z treścią błędu musi być widoczny, gdy atrybut obowiązuje.
-
 > 💡 **Zapamiętaj:** `useActionState(akcja, stanPoczątkowy)` zwraca `[state, formAction, isPending]`. Akcja to reducer `(prevState, formData)`: to, co zwróci, staje się nowym stanem, a kolejne wywołania czekają w kolejce. Błędy do poprawienia zwraca się jako stan.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r08_useactionstate.md`](rozszerzenia/r08_useactionstate.md)

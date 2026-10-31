@@ -43,6 +43,6 @@ tymczasowy `useCart`, którego w projekcie już nie ma.
 
 ## Uwagi
 
-- Napis „Ładowanie rekomendacji...” widać tylko pod `npm run dev`; po `next build` strona `/` jest statyczna.
+- Napis „Loading recommendations...” widać tylko pod `npm run dev`; po `next build` strona `/` jest statyczna.
 - Stan koszyka żyje w pamięci otwartej strony; po F5 koszyk jest pusty (trwałość to wykład 05).
 - Wersje przypięte w `package.json`: Next.js 16.4.0, React 19.3.0; Node.js >= 20.9.

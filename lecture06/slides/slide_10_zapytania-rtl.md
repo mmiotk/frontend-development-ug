@@ -198,33 +198,7 @@ Dla `SearchBar` funkcja `logRoles` wypisuje `searchbox:` i `Name "Szukaj kontakt
 
 Zapytanie `getByRole('searchbox')` pilnuje przy tym semantyki elementu. Zmiana typu pola na `text` zmienia rolę na `textbox` i dwa testy `SearchBar` padają, choć na ekranie różnicy prawie nie widać.
 
-## Rozszerzenie: zawężanie przez `within`
-
-Gdy na stronie pasuje kilka elementów, obszar wyszukiwania zawęża funkcja `within`:
-
-```jsx
-import { render, screen, within } from '@testing-library/react';
-
-test('within narrows the search', () => {
-  render(
-    <>
-      <ul aria-label="A"><li>1</li><li>2</li></ul>
-      <ul aria-label="B"><li>3</li></ul>
-    </>
-  );
-  // screen.getByRole('list') rzuciłby błąd: dwie listy
-  const list = screen.getByRole('list', { name: 'A' });
-  expect(within(list).getAllByRole('listitem')).toHaveLength(2); // długość zwróconej tablicy
-});
-```
-
-`within(list)` zwraca te same zapytania co `screen`, ale przypięte do jednego elementu. Samo `screen.getByRole('list')` kończy się tu błędem „Found multiple elements with the role "list"”. Zawężenie przydaje się na stronie z dwiema listami albo dwoma formularzami o tych samych etykietach.
-
-## Rozszerzenie: pełna kolejność zapytań i sita `getByRole`
-
-W pełnej kolejności dokumentacji, w grupie dostępnej dla wszystkich użytkowników, stoją po `getByRole` **`getByLabelText`** do pól formularza, **`getByPlaceholderText`**, **`getByText`** do elementów nieinteraktywnych i **`getByDisplayValue`**. Przy placeholderze dokumentacja zaznacza, że nie zastępuje on etykiety (*„A placeholder is not a substitute for a label”*). Niżej stoją zapytania semantyczne `getByAltText` i `getByTitle`. Na samym końcu jest `getByTestId`, który szuka po atrybucie `data-testid`. Dokumentacja zaleca go tylko wtedy, gdy elementu nie da się dopasować po roli ani tekście, bo użytkownik tego atrybutu nie widzi ani nie słyszy. Wprowadzenie do React Testing Library nazywa go „furtką awaryjną” (*„escape hatch”*).
-
-Na Rysunku 6.10 przycisk wewnątrz `<div style="display: none">` odpada na pierwszym sicie: `queryByRole('button')` zwraca `null`, a `getByRole('button', { hidden: true })` go znajduje. Na drugim odpada `<input type="password">`, który według specyfikacji nie ma roli domyślnej, więc pole hasła znajduje się przez `getByLabelText`. Role porównuje się dosłownie, więc zapytanie o `checkbox` nie zwróci przełącznika z rolą `switch`, a opcja `level` zawęża nagłówki do jednego poziomu.
-
 > 💡 **Zapamiętaj:** element szuka się najpierw po roli i nazwie dostępnej, pole formularza po etykiecie, a `getByTestId` zostaje na ostateczność, bo użytkownik tego atrybutu nie widzi ani nie słyszy.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r10_zapytania-rtl.md`](rozszerzenia/r10_zapytania-rtl.md)

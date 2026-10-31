@@ -103,7 +103,7 @@ Next.js tego pliku nie czyta, więc build działa bez zmian. Każde pole odpowia
 
 1. **`plugins: [react()]`** uczy Vitesta JSX. Bez niej pierwszy znacznik `<` w pliku testu byłby błędem składni.
 2. **`environment: 'jsdom'`** podstawia imitację przeglądarki. Dokumentacja Vitesta podaje, że domyślnym środowiskiem jest Node.js. Bez tego pola pierwszy `render` kończy się błędem `ReferenceError: document is not defined`.
-3. **`setupFiles`** wskazuje plik, który według dokumentacji uruchamia się przed każdym plikiem testów (*„They will be run before each test file”*).
+3. **`setupFiles`** wskazuje plik, który według dokumentacji uruchamia się przed każdym plikiem testów (*„They will run before each test file in the same process”*).
 4. **`globals: true`** udostępnia `test`, `expect` i `vi` bez importu, tak jak w przykładzie z `sign`.
 
 Domyślnie Vitest nie udostępnia globalnych funkcji, żeby kod był jawny (*„By default, vitest does not provide global APIs for explicitness”*). Włączenie `globals: true` ma jeszcze jeden skutek. Funkcja `cleanup` usuwa wyrenderowane drzewo po teście. Dokumentacja React Testing Library podaje, że wywołuje się sama tylko wtedy, gdy framework wstrzykuje globalną funkcję `afterEach()` (*„injects a global afterEach() function”*). Bez `globals: true` drugi test w pliku trafiałby na elementy z pierwszego.
@@ -186,26 +186,7 @@ Ten sam przewodnik zaczyna od ostrzeżenia o granicy całego zestawu:
 
 Testy E2E (*end-to-end*) uruchamiają prawdziwą przeglądarkę na działającym serwerze. Z granicy wynika reguła podziału kodu. Komponent `async` tylko pobiera dane i przekazuje je dalej. Wszystko, co da się kliknąć, wpisać albo pomylić, trafia do komponentu synchronicznego z danymi w propsach. W `contacts-app` strona `HomePage` jest komponentem klienckim, a dane leżą w `lib/contacts.js`, więc każdy komponent aplikacji mieści się w Vitest.
 
-## Rozszerzenie: happy-dom i potok CI
-
-Jsdom nie jest jedyną imitacją przeglądarki. Dokumentacja Vitesta wymienia obok niego **happy-dom**. Według niej uchodzi on za szybszy od jsdom, ale brakuje mu części API (*„considered to be faster than jsdom, but lacks some API”*). `contacts-app` zostaje przy jsdom, które wskazuje przewodnik Next.js. Brak API w happy-dom wyszedłby dopiero w teście, który go użyje.
-
-Skrypt `test` zachowuje się inaczej w potoku CI (*continuous integration*), czyli przy automatycznym uruchamianiu testów po każdym wysłaniu kodu do repozytorium. Vitest 2.1.9 włącza obserwowanie tylko wtedy, gdy nie jest ustawiona zmienna środowiskowa `CI`, więc z `CI=true` przechodzi testy raz i kończy się kodem 0. Skrypt `test:run` zapisuje tę intencję jawnie, bez zależności od zmiennej ustawianej przez dostawcę CI.
-
-## Rozszerzenie: pokrycie kodu i jego granica
-
-Banks i Porcello definiują **pokrycie kodu** (*code coverage*) jako raport o liczbie linii faktycznie sprawdzonych testami (*„the process of reporting on how many lines of code have actually been tested”*). Vitest liczy je po dodaniu flagi `--coverage`. Dokumentacja wymienia dwóch dostawców, `v8` (domyślny) i `istanbul`, a każdy wymaga osobnego pakietu. `contacts-app` go nie instaluje, więc `vitest run --coverage` kończy się komunikatem `MISSING DEPENDENCY  Cannot find dependency '@vitest/coverage-v8'`.
-
-Z pakietem `@vitest/coverage-v8` 2.1.9 przykład z `sign` daje dla `sign.js` 100% instrukcji i 50% rozgałęzień. Test sprawdza tylko liczbę dodatnią, więc gałąź `n < 0` nie wykonała się ani razu. Drugi przykład pokazuje granicę miary:
-
-```js
-test('bez asercji', () => {
-  sign(-1); // obie gałęzie się wykonują...
-  sign(1);  // ...ale żaden wynik nie jest sprawdzany
-});
-```
-
-Ten test daje 100% we wszystkich kolumnach i przechodzi, choć niczego nie porównuje. <u>Pokrycie mówi, które linie się wykonały, a nie, czy ktoś sprawdził ich wynik</u>. Banks i Porcello piszą, że ta miara pomaga zdecydować, kiedy testów jest dość (*„It provides a metric that can help you decide when you've written enough tests”*). Decyzję podejmuje jednak człowiek, który wie, które zachowania są ważne dla użytkownika.
-
 > 💡 **Zapamiętaj:** test komponentu w Next.js potrzebuje runnera (Vitest), imitacji przeglądarki (jsdom) i biblioteki do renderowania i wyszukiwania elementów (React Testing Library z `jest-dom`). `npm run test` obserwuje pliki i powtarza tylko testy powiązane ze zmianą, a `npm run test:run` przechodzi wszystko raz i zwraca kod wyjścia.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r08_vitest-konfiguracja.md`](rozszerzenia/r08_vitest-konfiguracja.md)

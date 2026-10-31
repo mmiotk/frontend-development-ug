@@ -240,39 +240,7 @@ W tym formularzu reset nie jest widoczny, bo `router.push("/")` i tak opuszcza s
 - **Sukces znaczy brak wyjątku.** Akcja, która zwraca obiekt z komunikatem błędu, też kończy się dla Reacta sukcesem. Pola czyszczą się więc także wtedy, gdy użytkownik ma poprawić dane. Zachowanie wpisu po takim błędzie wymaga zwrócenia wartości pól w wyniku akcji i podania ich jako `defaultValue`.
 - **Tylko pola niekontrolowane.** Pola z `value` ze stanu React nie rusza, bo jego wartość wyznacza stan komponentu. Taki stan trzeba wyczyścić samemu.
 
-## Rozszerzenie: kilka przycisków w jednym formularzu
-
-Formularz może też mieć więcej niż jedną akcję. Przycisk z atrybutem `formAction` nadpisuje akcję całego formularza, więc „Submit” i „Save draft” mogą wywołać dwie różne funkcje z tymi samymi polami. Demo tego nie używa:
-
-```jsx
-<form action={submitIssue}>
-  <input name="title" />
-  <button type="submit">Submit</button>
-  {/* formAction: ten przycisk wywoła saveDraft zamiast submitIssue */}
-  <button formAction={saveDraft}>Save draft</button>
-</form>
-```
-
-Gdy oba przyciski robią to samo i różnią się jednym parametrem, wystarczy atrybut `name` na przycisku. MDN opisuje go tak:
-
-> **„Nazwa przycisku, wysyłana w parze z jego wartością `value` jako część danych formularza, gdy formularz zostanie wysłany tym przyciskiem.”**
->
-> *„The name of the button, submitted as a pair with the button's `value` as part of the form data, when that button is used to submit the form.”*
->
-> — MDN Web Docs, *&lt;button&gt;: The Button element*
-
-Przykład spoza projektu zastępuje listę priorytetów dwoma przyciskami:
-
-```jsx
-<form action={action}>
-  <input name="title" />
-  {/* para priority=medium albo priority=high, zależnie od klikniętego przycisku */}
-  <button type="submit" name="priority" value="medium">Submit</button>
-  <button type="submit" name="priority" value="high">Submit as urgent</button>
-</form>
-```
-
-Kliknięcie „Submit as urgent” daje w akcji `FormData` z parami `title` i `priority` równym `"high"`. Klawisz Enter w polu tekstowym wysyła formularz tak, jakby kliknięto pierwszy przycisk wysyłania, więc akcja dostaje wtedy `"medium"`. Ta sama operacja z innym parametrem to `name` i `value` na przyciskach, a inna operacja, jak zapis szkicu, to `formAction` z osobną funkcją.
-
 > 💡 **Zapamiętaj:** <u>`<form action={fn}>` wywołuje `fn(formData)` w ramach przejścia</u>. React sam zbiera wartości pól, ale tylko tych, które mają atrybut `name`. Po akcji, która nie rzuciła wyjątku, pola niekontrolowane wracają do wartości domyślnych.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r07_form-action.md`](rozszerzenia/r07_form-action.md)

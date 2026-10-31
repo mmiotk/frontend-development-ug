@@ -12,7 +12,7 @@ export default function CartItem({ item }) {
     <li>
       <strong>{item.name}</strong>
       {' — '}
-      {item.price.toFixed(2)} zł
+      {item.price.toFixed(2)} PLN
       {' × '}
       <input
         type="number"
@@ -23,9 +23,9 @@ export default function CartItem({ item }) {
         }
       />
       {' = '}
-      <strong>{(item.price * item.qty).toFixed(2)} zł</strong>
+      <strong>{(item.price * item.qty).toFixed(2)} PLN</strong>
       {' '}
-      <button onClick={() => dispatch({ type: 'REMOVE_ITEM', id: item.id })}>Usuń</button>
+      <button onClick={() => dispatch({ type: 'REMOVE_ITEM', id: item.id })}>Remove</button>
     </li>
   );
 }

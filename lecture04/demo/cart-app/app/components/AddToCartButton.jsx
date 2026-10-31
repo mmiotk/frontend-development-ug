@@ -29,8 +29,8 @@ export default function AddToCartButton({ product }) {
 
   return (
     <>
-      <button onClick={handleAdd}>Dodaj do koszyka</button>
-      {error && <span> Błąd: {error}</span>}
+      <button onClick={handleAdd}>Add to cart</button>
+      {error && <span> Error: {error}</span>}
     </>
   );
 }

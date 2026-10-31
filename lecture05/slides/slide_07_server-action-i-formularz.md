@@ -201,35 +201,7 @@ export default function NewArticlePage() {
 
 Usunięcie `"use server"` z `lib/actions.js` robi z pliku zwykły moduł, który bundler dokleja do kodu przeglądarki razem z importami. Next.js 16.4.0 przerywa wtedy budowanie strony `/new` komunikatem „You're importing a module that depends on "revalidatePath". This API is only available in Server Components in the App Router, but you are using it in the Pages Router”. Wzmianka o Pages Routerze myli, bo projekt go nie używa. Przyczyną jest brakująca dyrektywa.
 
-## Rozszerzenie: dodatkowy argument akcji
-
-Formularz edycji potrzebuje identyfikatora artykułu, którego użytkownik nie wpisuje. Przewodnik Next.js o formularzach pokazuje na to metodę `bind`. Metoda tworzy nową funkcję z ustalonymi z góry pierwszymi argumentami.
-
-```js
-function save(id, text) {
-  return `zapis ${id}: ${text}`;
-}
-const saveSeven = save.bind(null, 7); // pierwszy argument ustalony z góry
-saveSeven("nowa treść");              // "zapis 7: nowa treść"
-```
-
-Zapis `updateArticle.bind(null, article.id)` daje więc akcję, która dostaje identyfikator przed `FormData`. Według przewodnika `bind` działa w komponentach serwerowych i klienckich i wspiera progresywne wzbogacanie, czyli działanie formularza bez JavaScriptu. Alternatywą jest pole `<input type="hidden" name="id">`, którego wartość staje się częścią wyrenderowanego HTML-a i nie jest kodowana. W obu przypadkach identyfikator przychodzi od klienta, więc akcja sprawdza, czy wolno go zmienić.
-
-## Rozszerzenie: ukryte pola i formularz przed hydratacją
-
-Pola formularza przychodzą jako napisy. `<input type="number">` z wartością 42 daje napis `"42"`, a pole pliku daje obiekt `File`, także wtedy, gdy nic nie wybrano. React dokłada do formularza z akcją ukryte pola `$ACTION_REF_1`, `$ACTION_1:0`, `$ACTION_1:1` i `$ACTION_KEY`, które stoją w `FormData` przed polami `title` i `body`. `createArticle` wybiera pola jawnie, po jednym, więc dodatkowe klucze nie mają znaczenia. Dzięki nim przeglądarka bez JavaScriptu wie, którą akcję wywołać, i wysyła zwykły formularz HTML. Dokumentacja `useActionState` opisuje skutek.
-
-> **„W połączeniu z funkcją serwerową `useActionState` pozwala pokazać odpowiedź serwera, zanim zakończy się hydratacja.”**
->
-> *„When used with a Server Function, `useActionState` allows the server's response to be shown before hydration (when React attaches to server-rendered HTML) completes.”*
->
-> — dokumentacja React, *useActionState*
-
-Przed hydratacją nie działa natomiast `SubmitButton`. `useFormStatus` nie ma czego zgłosić, więc przycisk nie blokuje się w czasie wysyłki, a dwa szybkie kliknięcia mogą zapisać dwa artykuły o tej samej treści.
-
-## Rozszerzenie: identyfikatory po wdrożeniu
-
-Identyfikator akcji jest częścią artefaktów budowania. Według przewodnika nowe wdrożenie zwykle generuje nowe identyfikatory, a Next.js zmienia je najrzadziej co 14 dni, nawet bez zmian w kodzie. Użytkownik z otwartą kartą starej wersji wyśle identyfikator, którego serwer już nie zna, i dostanie błąd „Failed to find Server Action” z kodem 409. Odświeżenie strony pobiera nowe identyfikatory.
-
 > 💡 **Zapamiętaj:** Server Action to funkcja `async` z `"use server"`, którą build zamienia w przeglądarce na odnośnik wysyłający `POST` pod adres strony. Argumenty przychodzą z treści tego żądania, więc kontroluje je klient.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r07_server-action-i-formularz.md`](rozszerzenia/r07_server-action-i-formularz.md)

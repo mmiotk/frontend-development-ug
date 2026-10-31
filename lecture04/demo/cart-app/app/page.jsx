@@ -8,7 +8,7 @@ import RecommendedSection from './components/RecommendedSection';
 export default function HomePage() {
   return (
     <main>
-      <h1>Sklep kawowy</h1>
+      <h1>Coffee shop</h1>
       <CartSummary />
       <ProductList />
       <hr />

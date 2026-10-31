@@ -30,7 +30,7 @@ title.safeParse("ab ");     // success: false, komunikat "Title too short"
 z.string().min(3).trim().safeParse("ab "); // → { success: true, data: "ab" }
 ```
 
-Ostatnia linia pokazuje, że kolejność w łańcuchu ma znaczenie. **`.trim()`** jest przekształceniem (dokumentacja Zod umieszcza je w grupie *„transforms”* z komentarzem *„trim whitespace”*) i zmienia napis dla wszystkich reguł stojących za nim. Postawione na końcu obcina spacje dopiero po sprawdzeniu długości, więc tytuł „ab ” przechodzi jako „ab”.
+Ostatnia linia pokazuje, że kolejność w łańcuchu ma znaczenie. **`.trim()`** jest przekształceniem (dokumentacja Zod pokazuje je pod zdaniem *„To perform some simple string transforms”* z komentarzem *„trim whitespace”*) i zmienia napis dla wszystkich reguł stojących za nim. Postawione na końcu obcina spacje dopiero po sprawdzeniu długości, więc tytuł „ab ” przechodzi jako „ab”.
 
 Ręczny warunek z poprzedniej wersji akcji odrzucał tytuł z samych spacji, bo wywoływał `title.trim()`. Schemat bez `.trim()` tego nie robi: `z.string().min(3)` przepuszcza trzy spacje, bo to trzy znaki. Przejście z `if` na schemat zgubiłoby więc regułę bez żadnego komunikatu. <u>Przekształcenie stoi w łańcuchu przed regułami, które mają widzieć jego wynik</u>.
 
@@ -324,24 +324,7 @@ z.string().safeParse(null).error.issues[0].message; // → "Expected string, rec
 
 Rozróżnienie ma znaczenie dla formularzy. `formData.get("title")` dla pola bez atrybutu `name` zwraca `null`, więc zadziała `invalid_type_error`, a nie `required_error`. Schemat zgłoszenia nie ustawia żadnego z nich, dlatego po utracie atrybutu `name` pod polem zamiast „Title must be at least 3 characters.” pojawi się „Expected string, received null”. Komunikat o typie przy polu tekstowym oznacza, że wartość w ogóle nie przyszła z formularza.
 
-## Rozszerzenie: atrybuty HTML jako trzeci poziom sprawdzania
-
-Atrybuty HTML `required`, `minlength` i `maxlength` sprawdza sama przeglądarka, zanim w ogóle wywoła akcję. W JSX zapisuje się je przy polu tytułu w `app/new/page.jsx`.
-
-```jsx
-// Przykład spoza demo: reguły tytułu w atrybutach pola.
-// required: pole niepuste; minLength i maxLength: liczba znaków, spacje też się liczą
-<input id="title" name="title" type="text" required minLength={3} maxLength={100} />
-```
-
-```text
-„ab” + Submit    → dymek „Please lengthen this text to 3 characters or more (you are currently using 2 characters).”, akcja się nie wykonuje
-puste + Submit   → dymek „Please fill out this field.”
-„   ” + Submit   → akcja się wykonuje, pod polem „Title must be at least 3 characters.”
-105 znaków       → w polu zostaje 100
-```
-
-Treść dymku pochodzi od przeglądarki (tu Chromium w wersji angielskiej). Trzy spacje przechodzą oba atrybuty i zatrzymuje je dopiero `.trim()` w schemacie. Atrybuty chronią dane tak samo słabo jak kod w przeglądarce, bo żądanie można wysłać z pominięciem formularza.
-
 > 💡 **Zapamiętaj:** schemat Zod parsuje dane: zwraca nowy obiekt o znanym kształcie albo opis błędów, a reguły sprawdza w kolejności łańcucha, więc `.trim()` stoi przed `.min()`. W akcji formularza używa się `safeParse()` i zapisuje `result.data`. Walidacja chroni dane dopiero po stronie serwera.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r10_walidacja-zod.md`](rozszerzenia/r10_walidacja-zod.md)

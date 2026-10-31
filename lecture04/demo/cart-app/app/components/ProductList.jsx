@@ -8,11 +8,11 @@ import AddToCartButton from './AddToCartButton';
 export default function ProductList() {
   return (
     <section>
-      <h2>Produkty</h2>
+      <h2>Products</h2>
       <ul>
         {products.map(product => (
           <li key={product.id}>
-            {product.name} — {product.price.toFixed(2)} zł
+            {product.name} — {product.price.toFixed(2)} PLN
             {' '}
             <AddToCartButton product={product} />
           </li>

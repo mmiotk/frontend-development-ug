@@ -10,11 +10,11 @@ export default function RecommendedProducts({ recommendedPromise }) {
 
   return (
     <section>
-      <h3>Polecamy również</h3>
+      <h3>You may also like</h3>
       <ul>
         {recommended.map(p => (
           <li key={p.id}>
-            {p.name} — {p.price.toFixed(2)} zł
+            {p.name} — {p.price.toFixed(2)} PLN
           </li>
         ))}
       </ul>

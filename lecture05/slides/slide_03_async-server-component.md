@@ -187,29 +187,7 @@ flowchart LR
 
 Na Rysunku 5.3 oba warianty dotyczą strony, która obok listy pokazuje wyróżniony artykuł z `/api/articles/1`. W lewej ramce drugie żądanie startuje dopiero po powrocie pierwszego, więc render czeka na sumę obu czasów. W prawej ramce oba żądania wychodzą jednocześnie, a render czeka tylko na wolniejsze. `HomePage` ma jedno żądanie, więc kaskady nie ma, ale pojawia się ona przy drugim `await` dopisanym pod pierwszym.
 
-## Rozszerzenie: status 200 z dokumentem HTML
-
-Nagłówek `Content-Type` pozwala wyłapać przypadek, którego `res.ok` nie widzi. Strona 404 z literówki ma nagłówek `Content-Type: text/html; charset=utf-8`, a odpowiedzi Route Handlera `application/json`. Żądanie pod adres strony `/new` zamiast pod adres API dostaje status 200 i `res.ok` równe `true`, bo strona istnieje. Dopiero `res.json()` zgłasza ten sam błąd „Unexpected token '<'” co przy literówce. Sprawdzenie `res.headers.get("content-type")` przed `res.json()` pozwala rzucić własny wyjątek z nazwą otrzymanego typu, który wskazuje przyczynę zamiast skutku.
-
-## Rozszerzenie: wynik każdego żądania osobno
-
-Dla wyróżnionego artykułu zasada „wszystko albo nic” z `Promise.all` jest zbyt surowa, bo lista mogłaby się wyświetlić bez niego. Dokumentacja Next.js wskazuje na taki przypadek `Promise.allSettled`, którego działanie opisuje MDN:
-
-> **„Zwrócony obiekt Promise zostaje spełniony, gdy rozstrzygną się wszystkie wejściowe obiekty Promise, a jego wartością jest tablica obiektów opisujących wynik każdego z nich.”**
->
-> *„This returned promise fulfills when all of the input's promises settle […], with an array of objects that describe the outcome of each promise.”*
->
-> — MDN Web Docs, *Promise.allSettled()*
-
-Każdy obiekt ma pole `status` z wartością `"fulfilled"` albo `"rejected"`. Spełniony niesie wynik w `value`, odrzucony powód w `reason`. Wywołanie z jednym spełnionym i jednym odrzuconym obiektem Promise daje statusy `["fulfilled", "rejected"]`, więc strona wyświetla listę, a w miejscu wyróżnienia komunikat.
-
-## Rozszerzenie: limit czasu dla `fetch`
-
-`res.ok` pomaga, gdy odpowiedź przyszła. Wywołanie `fetch` bez limitu czeka natomiast tak długo jak serwer, a razem z nim czeka render strony. Według MDN metoda statyczna `AbortSignal.timeout()` zwraca sygnał, który sam przerywa operację po zadanym czasie wyjątkiem `TimeoutError`. Zapis `fetch(url, { signal: AbortSignal.timeout(100) })` do serwera odpowiadającego po 300 ms kończy się wyjątkiem „TimeoutError: The operation was aborted due to timeout”. W `fetchArticles` taki sygnał zamienia zawieszoną stronę na zwykły wyjątek.
-
-## Rozszerzenie: zmienna, której zabrakło
-
-Zapis `process.env.BASE_URL ?? "http://localhost:3000"` zakłada, że API leży pod tym samym adresem co strona. Serwer uruchomiony na innym porcie albo na innej maszynie bez ustawionej zmiennej wysyła więc żądanie pod `localhost:3000`, gdzie nic nie nasłuchuje. W Node.js 24 takie wywołanie kończy się wyjątkiem „TypeError: fetch failed”, a jego pole `cause` ma kod `ECONNREFUSED`, czyli odmowę połączenia. Komunikat nie wspomina o zmiennej środowiskowej, więc przyczyny szuka się w konfiguracji, a nie w kodzie strony. Zmienna jest przy tym czytelna tylko na serwerze: w komponencie klienckim `process.env.BASE_URL` ma wartość `undefined`, bo do przeglądarki trafiają wyłącznie zmienne z przedrostkiem `NEXT_PUBLIC_`, wpisywane w pliki przy budowaniu.
-
 > 💡 **Zapamiętaj:** <u>komponent serwerowy może być funkcją `async` i czekać na dane przez `await`</u>, bez efektu i stanu ładowania. Na serwerze `fetch` potrzebuje pełnego adresu i sprawdzenia `res.ok`, bo status 404 nie odrzuca obiektu Promise.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r03_async-server-component.md`](rozszerzenia/r03_async-server-component.md)

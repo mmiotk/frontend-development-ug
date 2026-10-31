@@ -4,7 +4,7 @@
 
 Strona sklepu z reducerem działa, ale cały interfejs siedzi w jednym pliku `app/page.jsx`. Lista produktów, pozycje koszyka, pole ilości i suma mieszczą się w jednej funkcji `HomePage`. Taki komponent trudno czytać i nie da się go użyć w innym miejscu.
 
-Naturalny krok to podział na mniejsze części: listę produktów z przyciskami „Dodaj do koszyka”, nagłówek z liczbą sztuk, sumą i przyciskiem czyszczenia oraz wiersz koszyka z polem ilości i przyciskiem „Usuń”. Sklep ma też mieć osobną stronę `/cart` z pełną listą pozycji. Przykłady poniżej nazywają trzy pierwsze części `ProductList`, `CartSummary` i `CartItem`.
+Naturalny krok to podział na mniejsze części: listę produktów z przyciskami „Add to cart”, nagłówek z liczbą sztuk, sumą i przyciskiem czyszczenia oraz wiersz koszyka z polem ilości i przyciskiem „Remove”. Sklep ma też mieć osobną stronę `/cart` z pełną listą pozycji. Przykłady poniżej nazywają trzy pierwsze części `ProductList`, `CartSummary` i `CartItem`.
 
 Każda z tych części potrzebuje czegoś z koszyka. Nagłówek czyta pozycje, żeby policzyć sumę. Lista produktów potrzebuje funkcji `dispatch`, żeby wysłać `ADD_ITEM`. Wiersz potrzebuje `dispatch` do zmiany ilości i usunięcia. Strona `/cart` potrzebuje i pozycji, i `dispatch`. Stan musi więc mieszkać w komponencie, który jest przodkiem ich wszystkich.
 
@@ -16,7 +16,7 @@ Każde wywołanie hooka stanu tworzy osobny stan, przypisany do miejsca komponen
 // Przycisk zmienia stan HomePage, a OwnBadge ma własny, osobny stan.
 function OwnBadge() {
   const [n] = useState(0);   // bez settera: nikt poza OwnBadge nie może zmienić n
-  return <span>koszyk: {n}</span>;
+  return <span>cart: {n}</span>;
 }
 function HomePage() {
   const [a, setA] = useState(0);
@@ -25,7 +25,7 @@ function HomePage() {
 // Po kliknięciu „+”: nadal „koszyk: 0”.
 ```
 
-Kliknięcie zmienia `a`, ale napis pokazuje `n` z innego komponentu, więc zostaje „koszyk: 0”. Sklep, w którym `ProductList` i `CartSummary` trzymałyby każdy własny `useReducer`, miałby dokładnie ten problem: dwa niezależne koszyki. Kliknięcie „Dodaj” zmieniłoby koszyk listy, a nagłówek dalej pokazywałby zero.
+Kliknięcie zmienia `a`, ale napis pokazuje `n` z innego komponentu, więc zostaje „cart: 0”. Sklep, w którym `ProductList` i `CartSummary` trzymałyby każdy własny `useReducer`, miałby dokładnie ten problem: dwa niezależne koszyki. Kliknięcie „Add to cart” zmieniłoby koszyk listy, a nagłówek dalej pokazywałby zero.
 
 ## Podnoszenie stanu w trzech krokach
 
@@ -46,7 +46,7 @@ Dokumentacja (*Sharing State Between Components*) rozpisuje tę zmianę na trzy 
 Ten sam licznik po podniesieniu stanu działa poprawnie, bo napis i przycisk czytają jedną wartość z rodzica:
 
 ```jsx
-function Badge({ n }) { return <span>koszyk: {n}</span>; }
+function Badge({ n }) { return <span>cart: {n}</span>; }
 function AddBtn({ onAdd }) { return <button onClick={onAdd}>+</button>; }
 function HomePage() {
   const [n, setN] = useState(0);   // jeden stan u wspólnego przodka
@@ -61,7 +61,7 @@ Ta sama strona dokumentacji zauważa, że „podniesienie stanu często zmienia 
 
 ## Przekazywanie przez propsy warstwa po warstwie
 
-Poniższy kod nie należy do projektu demo. Pokazuje stronę główną po podniesieniu stanu. Przycisk „Dodaj do koszyka” wydziela się w nim do hipotetycznego komponentu `AddButton`. Dostaje on produkt i `dispatch`, a po kliknięciu wysyła `ADD_ITEM`:
+Poniższy kod nie należy do projektu demo. Pokazuje stronę główną po podniesieniu stanu. Przycisk „Add to cart” wydziela się w nim do hipotetycznego komponentu `AddButton`. Dostaje on produkt i `dispatch`, a po kliknięciu wysyła `ADD_ITEM`:
 
 ```jsx
 // Spoza demo: HomePage trzyma reducer i podaje go w dół przez propsy.
@@ -77,7 +77,7 @@ export default function HomePage() {
 
 // Hipotetyczny przycisk: jedyny komponent, który naprawdę wywołuje dispatch.
 function AddButton({ product, dispatch }) {
-  return <button onClick={() => dispatch({ type: 'ADD_ITEM', product })}>Dodaj do koszyka</button>;
+  return <button onClick={() => dispatch({ type: 'ADD_ITEM', product })}>Add to cart</button>;
 }
 
 // ProductList sam nie używa dispatch, tylko oddaje go przyciskom.
@@ -153,17 +153,7 @@ Oba stanowiska da się zestawić na jednym przykładzie. Wersja z propsami pokaz
 
 Dokumentacja wymienia cztery typowe zastosowania kontekstu. Są to motyw wyglądu, zalogowany użytkownik, bieżąca trasa w bibliotece routingu oraz zarządzanie stanem, który zmienia wiele odległych komponentów. O ostatnim przypadku pisze, że stan bliżej korzenia aplikacji często łączy się z reducerem, żeby przekazać go w dół bez nadmiernego wysiłku. Koszyk należy do tej ostatniej grupy, a jego reducer już istnieje.
 
-## Rozszerzenie: jedno źródło prawdy dla każdego stanu
-
-Podnoszenie stanu wynika z ogólniejszej zasady. Według dokumentacji Reacta każdy osobny kawałek stanu ma komponent, który jest jego właścicielem (*„For each unique piece of state, you will choose the component that "owns" it”*). Zasada nazywa się **jednym źródłem prawdy** (*single source of truth*). Dokumentacja zastrzega, że nie chodzi o trzymanie całego stanu w jednym miejscu. Chodzi o to, żeby każdy kawałek stanu miał dokładnie jednego właściciela.
-
-W sklepie właścicieli jest więcej niż jeden. Koszyk należy do komponentu na samej górze. Wartość wpisywana w pole ilości mogłaby należeć do samego wiersza, gdyby wiersz pozwalał edytować liczbę przed zatwierdzeniem. Nikt poza tym wierszem jej nie potrzebuje, więc podnoszenie jej wyżej dodałoby tylko pośredników.
-
-Ta sama strona dokumentacji opisuje też proces. Stan przenosi się w dół albo z powrotem w górę, dopóki nie wiadomo, gdzie ma mieszkać. Dokumentacja pisze, że to zwykła część pracy (*„This is all part of the process!”*). Decyzja o miejscu stanu zmienia się więc razem z listą komponentów, które go czytają.
-
-## Rozszerzenie: druga alternatywa, kompozycja
-
-Zanim sięgnie się po kontekst, dokumentacja proponuje kompozycję: rodzic buduje dzieci sam i przekazuje je przez `children`, więc pośrednik znika z łańcucha propsów. Metoda ma dwie granice. Rodzic przejmuje wiedzę, która wcześniej należała do listy, bo musi znać przyciski i sposób budowania wierszy. Kompozycja skraca też łańcuch tylko w obrębie jednej strony, a `/cart` leży poza nią.
-
 > 💡 **Zapamiętaj:** stan dzielony przez kilka komponentów podnosi się do najbliższego wspólnego przodka. Propsy są pierwszym wyborem przy jednym lub dwóch poziomach. Kontekst wchodzi wtedy, gdy łańcuch pośredników robi się długi albo gdy wspólny przodek, jak layout w Next.js, nie może przekazać propsów.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r04_prop-drilling.md`](rozszerzenia/r04_prop-drilling.md)

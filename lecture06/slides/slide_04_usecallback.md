@@ -155,21 +155,7 @@ Strona przekazuje w dół jeszcze trzecią funkcję: `setQuery` jako `onChange` 
 
 Gwarancja znika przy pozornie niewinnej zmianie zapisu. Wersja `onChange={(q) => setQuery(q)}` działa identycznie, ale tworzy nową funkcję strzałkową przy każdym renderze strony. Dla `SearchBar` bez `memo` nie ma to znaczenia. Dla komponentu w `memo` byłby to ten sam błąd, który psuł wiersze listy.
 
-## Rozszerzenie: co React robi z funkcją na elemencie HTML
-
-Kumar wyjaśnia, dlaczego nowa funkcja na przycisku nic nie kosztuje. React nie podpina jej bezpośrednio do węzła przycisku. Nasłuchuje wszystkich zdarzeń jednego rodzaju w korzeniu aplikacji i stamtąd wywołuje właściwą funkcję. Nowa funkcja po renderze po prostu zastępuje starą, bez żadnego porównania.
-
-## Rozszerzenie: funkcja zwracana z własnego hooka
-
-Dokumentacja zaleca, żeby własny hook owijał w `useCallback` każdą funkcję, którą zwraca. Jej przykładem jest hook nawigacji z funkcjami `navigate` i `goBack`, obie z zależnością `[dispatch]`. Uzasadnienie brzmi:
-
-> **„Dzięki temu konsumenci twojego hooka mogą w razie potrzeby optymalizować własny kod.”**
->
-> *„This ensures that the consumers of your Hook can optimize their own code when needed.”*
->
-> — dokumentacja Reacta, *useCallback*
-
-Autor hooka nie wie, czy ktoś przekaże jego funkcję do komponentu w `memo` albo do tablicy zależności efektu. Stabilna tożsamość zostawia tę decyzję użytkownikowi hooka.
-
 > 💡 **Zapamiętaj:** `useCallback` zwraca tę samą funkcję, dopóki nie zmieni się żadna zależność. Gdy funkcja czyta stan tylko po to, żeby policzyć następny, używa się aktualizatora `prev =>` i zależność znika.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r04_usecallback.md`](rozszerzenia/r04_usecallback.md)

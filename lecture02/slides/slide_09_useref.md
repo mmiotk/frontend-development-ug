@@ -210,26 +210,7 @@ Gdyby licznik był stanem, jego zwiększenie wywoływałoby kolejny render, a te
 
 Ten sam zapis psuje hydratację. Serwer renderuje komponent raz i wysyła „Renders: 1”. Pod `next dev` przeglądarka w trybie ścisłym już w pierwszym renderze hydratacji dochodzi do 2. Przy każdym wczytaniu strona zgłasza więc „Hydration failed because the server rendered text didn't match the client”, a różnica w `<p>` to `+ 2` (klient) i `- 1` (serwer). W wersji produkcyjnej pierwszy render w przeglądarce daje 1, czyli tyle co HTML z serwera, więc ostrzeżenia nie ma, a „2” pojawia się dopiero po `setLoaded(true)`. To drugi powód, dla którego licznik nie zostaje w aplikacji. Po pomiarze jego trzy linie znikają z `TaskBoard.jsx`, a z nimi ostrzeżenie. W projekcie z ESLintem wtyczka `eslint-plugin-react-hooks` w wersji 7.1.1 zgłasza taki kod komunikatem „Cannot access refs during render”. Rendery w prawdziwej aplikacji liczy Profiler z React DevTools, który mierzy je z zewnątrz komponentu.
 
-## Rozszerzenie: wartość początkowa refa
-
-Argument `useRef` zachowuje się podobnie jak argument `useState`. Dokumentacja pisze, że React zapisuje początkową wartość refa raz i ignoruje ją przy kolejnych renderach (*„React saves the initial ref value once and ignores it on the next renders”*). Samo wyrażenie w nawiasie wykonuje się jednak przy każdym renderze. `useRef(0)` nic nie kosztuje, ale `useRef(new VideoPlayer())` z przykładu w dokumentacji tworzyłby kosztowny obiekt przy każdym renderze i od razu go wyrzucał. Dokumentacja podaje na to wzorzec z pustym refem i warunkiem:
-
-```jsx
-// Przykład spoza demo: wartość początkowa refa
-import { useRef } from "react";
-
-class VideoPlayer {} // zaślepka kosztownego obiektu z przykładu w dokumentacji
-
-function Video() {
-  const playerRef = useRef(null); // tani argument: null
-  if (playerRef.current === null) {
-    playerRef.current = new VideoPlayer(); // obiekt powstaje tylko w pierwszym renderze
-  }
-  return <p>player ready</p>;
-}
-```
-
-Zapis do `current` w renderze jest tu wyjątkiem od zakazu odczytu i zapisu refa w trakcie renderu. Dokumentacja dopuszcza go, bo wynik jest zawsze ten sam, a warunek wykonuje się tylko przy inicjalizacji (*„the result is always the same, and the condition only executes during initialization”*).
-
 > 💡 **Zapamiętaj:** ref przetrwa każdy render, a jego zmiana nie wywołuje renderu. Czyta się go i zapisuje w procedurach obsługi zdarzeń i w efektach, a nie w renderze.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r09_useref.md`](rozszerzenia/r09_useref.md)

@@ -139,25 +139,7 @@ Fokus przechodzi klawiszem Tab przez elementy w kolejności kodu HTML: pole wysz
 
 Przy obsłudze klawiaturą widać w `contacts-app` jeden problem z fokusem. Po Tab do przycisku „Usun kontakt Anna Kowalska” i naciśnięciu Enter React usuwa wiersz razem z przyciskiem, który miał fokus. Fokus trafia na `<body>`, więc obrys znika. Następny Tab przenosi w Chromium fokus na przycisk Piotra, ale do tego czasu fokus nie wskazuje żadnego elementu. Poprawką byłoby przeniesienie fokusu z kodu, przez ref i `focus()`, na następny przycisk albo na nagłówek listy.
 
-## Rozszerzenie: omijanie bloków
-
-Kryterium WCAG 2.4.1 *Bypass Blocks* wymaga sposobu ominięcia bloków powtarzanych na wielu stronach, na przykład nawigacji. W3C wymienia wśród technik wystarczających link na początku strony prowadzący do głównej treści, punkty orientacyjne ARIA i nagłówki na początku sekcji. `contacts-app` ma jedną stronę bez nawigacji, a `<main>` i tak jest punktem orientacyjnym.
-
-## Rozszerzenie: kontrast tekstu
-
-Kryterium WCAG 1.4.3 *Contrast (Minimum)* wymaga kontrastu tekstu z tłem co najmniej 4,5:1, a dla dużego tekstu 3:1. W3C zaznacza, że kryterium obejmuje też tekst zastępczy pól (*placeholder*). Plik `globals.css` w `contacts-app` jest pusty, więc tekst jest czarny na białym tle, z kontrastem 21:1. Granicę widać na polu wyszukiwania. Domyślny kolor tekstu zastępczego „wpisz imie lub email...” w Chromium 154 to `rgb(117, 117, 117)`, co na białym tle daje kontrast 4,61:1. Jaśniejszy szary `#a9a9a9` w regule `::placeholder` dałby 2,35:1 i złamałby kryterium.
-
-## Rozszerzenie: zmiana trasy w Next.js
-
-Przy nawigacji przez `next/link` strona się nie przeładowuje, więc czytnik nie ogłasza nowej strony sam. Next.js dodaje do tego **route announcer**, czyli element, który odczytuje nazwę nowej strony:
-
-> **„Route announcer w Next.js szuka nazwy strony do ogłoszenia, sprawdzając najpierw `document.title`, potem element `<h1>`, a na końcu ścieżkę URL.”**
->
-> *„The Next.js route announcer looks for the page name to announce by first inspecting document.title, then the <h1> element, and finally the URL pathname.”*
->
-> — dokumentacja Next.js, *Accessibility*
-
-Dokumentacja zaleca unikalny, opisowy tytuł każdej strony. Podaje też, że Next.js dołącza wtyczkę `eslint-plugin-jsx-a11y`, która ostrzega między innymi przed brakującym tekstem alternatywnym obrazów.
-
 > 💡 **Zapamiętaj:** najpierw właściwy element HTML, potem nazwa dla tego, co jej nie ma, najlepiej z widocznego tekstu i w języku strony. Komunikat, który czytnik ma ogłosić, stoi w regionie na żywo obecnym od pierwszego renderu.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r12_dostepnosc.md`](rozszerzenia/r12_dostepnosc.md)

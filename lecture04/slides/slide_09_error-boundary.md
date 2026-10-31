@@ -102,7 +102,7 @@ export default class ErrorBoundary extends Component {
 
   render() {
     if (this.state.hasError) {
-      return <p>Wystąpił błąd: {this.state.error?.message}</p>;
+      return <p>Something went wrong: {this.state.error?.message}</p>;
     }
     return this.props.children;
   }
@@ -111,7 +111,7 @@ export default class ErrorBoundary extends Component {
 
 Konstruktor i `render` działają tak jak w liczniku. Nowe są dwie metody, które React wywołuje sam, gdy któryś potomek rzuci wyjątek. `getDerivedStateFromError` zwraca stan z flagą `hasError` i obiektem błędu, a `render` pokazuje wtedy komunikat z treścią błędu. Dopóki nic się nie psuje, granica jest niewidoczna, bo oddaje `this.props.children` bez zmian.
 
-Operator `?.` w `this.state.error?.message` zabezpiecza odczyt na wypadek wyjątku, który nie jest obiektem `Error`. Dokumentacja `Component` przypomina, że JavaScript pozwala rzucić dowolną wartość, także napis, a nawet `null` (*„JavaScript allows to `throw` any value, including strings or even `null`”*). Po `throw null` zwykłe `error.message` samo rzuciłoby wyjątek w komunikacie zastępczym, a z `?.` komunikat kończy się na „Wystąpił błąd:”.
+Operator `?.` w `this.state.error?.message` zabezpiecza odczyt na wypadek wyjątku, który nie jest obiektem `Error`. Dokumentacja `Component` przypomina, że JavaScript pozwala rzucić dowolną wartość, także napis, a nawet `null` (*„JavaScript allows to `throw` any value, including strings or even `null`”*). Po `throw null` zwykłe `error.message` samo rzuciłoby wyjątek w komunikacie zastępczym, a z `?.` komunikat kończy się na „Something went wrong:”.
 
 Plik zaczyna się od `'use client'`, bo granica trzyma stan i przełącza widok w przeglądarce, a stan mają tylko komponenty klienckie. Metoda statyczna nie widzi `this`, więc `getDerivedStateFromError` nie może niczego zapisać ani wysłać. Może tylko wyliczyć nowy stan z błędu.
 
@@ -141,7 +141,7 @@ flowchart LR
     R["wyjątek w renderze potomka"] --> EB{"ErrorBoundary"}
     P["odrzucony Promise<br/>czytany przez use()"] --> EB
     T["wyjątek w przejściu<br/>z useTransition"] --> EB
-    EB --> FB["Wystąpił błąd: {message}"]
+    EB --> FB["Something went wrong: {message}"]
     G["wyjątek w samodzielnym<br/>startTransition"] -. "✗" .-> EB
     H["wyjątek w onClick"] -. "✗" .-> EB
     A["setTimeout"] -. "✗" .-> EB
@@ -166,7 +166,7 @@ function SaveButton() {
 }
 ```
 
-Gdy `save()` zwraca odrzucony Promise, `<ErrorBoundary><SaveButton /></ErrorBoundary>` pokazuje „Wystąpił błąd: Zapis nieudany”. Ślad komponentów w `componentDidCatch` zaczyna się wtedy od `SaveButton`. React zgłasza błąd przejścia w renderze komponentu, do którego przejście należy, więc wyjątek trafia do drzewa w tym samym miejscu co błąd renderu i przejmuje go najbliższa granica nad przyciskiem. Ten sam przycisk z `startTransition` zaimportowanym z `react` zostaje na ekranie, a wyjątek dociera do przeglądarki jako niezłapany błąd strony. Dokumentacja `useTransition` podaje przyczynę:
+Gdy `save()` zwraca odrzucony Promise, `<ErrorBoundary><SaveButton /></ErrorBoundary>` pokazuje „Something went wrong: Zapis nieudany”. Ślad komponentów w `componentDidCatch` zaczyna się wtedy od `SaveButton`. React zgłasza błąd przejścia w renderze komponentu, do którego przejście należy, więc wyjątek trafia do drzewa w tym samym miejscu co błąd renderu i przejmuje go najbliższa granica nad przyciskiem. Ten sam przycisk z `startTransition` zaimportowanym z `react` zostaje na ekranie, a wyjątek dociera do przeglądarki jako niezłapany błąd strony. Dokumentacja `useTransition` podaje przyczynę:
 
 > **„Ponieważ samodzielna funkcja nie jest związana z żadnym komponentem, granica błędów nie może obsłużyć błędów z jej przejścia.”**
 >
@@ -184,20 +184,7 @@ Granica nie chroni samej siebie. Błąd w jej komunikacie zastępczym trafia do 
 
 Zwykły `try/catch` nie zastąpi granicy także w komponencie nadrzędnym. Blok `try` wokół `return <RecommendedProducts … />` nie złapie błędu dziecka, bo zwrócenie elementu niczego jeszcze nie renderuje. Dziecko renderuje się później, a jego błąd idzie w górę drzewa komponentów, omijając ten blok. <u>Błąd renderu dziecka łapie tylko granica błędów nad nim.</u>
 
-## Rozszerzenie: jak granica wraca do pracy
-
-Granica w sklepie nie ma przycisku ponowienia. Flaga `hasError` raz ustawiona zostaje, dopóki egzemplarz granicy żyje. Poprawione dziecko niczego nie zmienia, bo `render` granicy dalej widzi `hasError: true`. Stan da się wyczyścić z zewnątrz, zmieniając `key`:
-
-```jsx
-// nowy key: React odmontowuje starą granicę i montuje nową, ze stanem początkowym
-<ErrorBoundary key={attempt}>
-  <Flaky />
-</ErrorBoundary>
-```
-
-Z tym samym `key` granica po naprawie dziecka nadal pokazuje „Wystąpił błąd: raz”. Po zmianie `key` React tworzy nowy egzemplarz klasy, a ten renderuje już poprawne dziecko.
-
-Biblioteka `react-error-boundary`, polecana przez dokumentację Reacta, ma ponowienie wbudowane. Według jej README treść zastępcza dostaje funkcję `resetErrorBoundary`, która czyści błąd i ponawia render poddrzewa, a prop `resetKeys` robi to samo po zmianie wskazanej wartości.
-
 > 💡 **Zapamiętaj:** granica błędów to klasa z `getDerivedStateFromError` (czysta, zwraca stan) i opcjonalnie `componentDidCatch` (logowanie). Łapie błędy renderu poddrzewa i przejść z `useTransition`, ale nie błędy z procedur obsługi zdarzeń ani z samodzielnej funkcji `startTransition`. Po awarii granica nie wraca sama, potrzebuje nowego `key`.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r09_error-boundary.md`](rozszerzenia/r09_error-boundary.md)

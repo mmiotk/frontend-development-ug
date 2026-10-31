@@ -11,9 +11,9 @@ export default function CartPage() {
   if (cart.items.length === 0) {
     return (
       <main>
-        <h1>Koszyk</h1>
-        <p>Koszyk jest pusty.</p>
-        <Link href="/">Wróć do sklepu</Link>
+        <h1>Cart</h1>
+        <p>Your cart is empty.</p>
+        <Link href="/">Back to shop</Link>
       </main>
     );
   }
@@ -22,16 +22,16 @@ export default function CartPage() {
 
   return (
     <main>
-      <h1>Koszyk</h1>
+      <h1>Cart</h1>
       <ul>
         {cart.items.map(item => (
           <CartItem key={item.id} item={item} />
         ))}
       </ul>
-      <p>Razem: <strong>{total.toFixed(2)} zł</strong></p>
-      <button onClick={() => dispatch({ type: 'CLEAR_CART' })}>Wyczyść koszyk</button>
+      <p>Total: <strong>{total.toFixed(2)} PLN</strong></p>
+      <button onClick={() => dispatch({ type: 'CLEAR_CART' })}>Clear cart</button>
       {' '}
-      <Link href="/">Kontynuuj zakupy</Link>
+      <Link href="/">Continue shopping</Link>
     </main>
   );
 }

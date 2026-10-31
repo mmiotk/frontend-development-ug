@@ -4,7 +4,7 @@
 
 Przycisk dodawania obsługiwał **zapis**, czyli zmianę danych wywołaną przez użytkownika. Przy zapisie wiadomo, jak ma wyglądać wynik, więc koszyk pokazuje go z wyprzedzeniem, zanim serwer odpowie. Rekomendacje to **odczyt**: strona potrzebuje danych, których jeszcze nie ma, więc nie ma czego pokazać zawczasu. Zostaje czekanie, a czekanie trzeba czymś wypełnić. <u>Zapis użytkownika obsługuje `useOptimistic`, a odczyt danych z opóźnieniem `use` razem z granicą Suspense</u>.
 
-Pod listą produktów sklep pokaże sekcję „Polecamy również”. Dane do niej przychodzą z symulowanego serwera. Na końcu pliku `app/lib/fakeApi.js`, pod funkcją `fakeAddToCart`, dochodzi druga funkcja:
+Pod listą produktów sklep pokaże sekcję „You may also like”. Dane do niej przychodzą z symulowanego serwera. Na końcu pliku `app/lib/fakeApi.js`, pod funkcją `fakeAddToCart`, dochodzi druga funkcja:
 
 ```js
 // Symulacja pobrania polecanych produktów (opóźnienie 2 s).
@@ -14,11 +14,11 @@ export function fetchRecommended(shouldFail = false) {
     setTimeout(
       () =>
         shouldFail
-          ? reject(new Error('Brak połączenia — nie udało się załadować rekomendacji'))
+          ? reject(new Error('No connection — could not load recommendations'))
           : resolve([
-              { id: 10, name: 'Młynek do kawy ręczny', price: 89.99 },
-              { id: 11, name: 'Termos 0.5L',            price: 55.00 },
-              { id: 12, name: 'Filtr do kawy x100',     price: 12.50 },
+              { id: 10, name: 'Manual coffee grinder', price: 89.99 },
+              { id: 11, name: 'Thermos 0.5L',            price: 55.00 },
+              { id: 12, name: 'Coffee filters x100',     price: 12.50 },
             ]),
       2000
     )
@@ -45,10 +45,10 @@ function Names() {
   return <ul>{names.map(n => <li key={n}>{n}</li>)}</ul>;
 }
 
-<Suspense fallback={<p>Ładowanie...</p>}>  {/* granica: co pokazać w czasie czekania */}
+<Suspense fallback={<p>Loading...</p>}>  {/* granica: co pokazać w czasie czekania */}
   <Names />
 </Suspense>
-// najpierw: <p>Ładowanie...</p>, po 500 ms: <ul><li>Ala</li><li>Ola</li></ul>
+// najpierw: <p>Loading...</p>, po 500 ms: <ul><li>Ala</li><li>Ola</li></ul>
 ```
 
 Przez pierwsze 500 ms w miejscu granicy stoi napis z propa `fallback`. Po spełnieniu Promise React renderuje `Names` jeszcze raz i lista zastępuje napis. Ten sam układ wyrenderowany już po spełnieniu Promise od razu pokazuje listę, bez treści zastępczej.
@@ -78,11 +78,11 @@ export default function RecommendedProducts({ recommendedPromise }) {
 
   return (
     <section>
-      <h3>Polecamy również</h3>
+      <h3>You may also like</h3>
       <ul>
         {recommended.map(p => (
           <li key={p.id}>
-            {p.name} — {p.price.toFixed(2)} zł
+            {p.name} — {p.price.toFixed(2)} PLN
           </li>
         ))}
       </ul>
@@ -97,11 +97,11 @@ Komponent nie dowiaduje się o czekaniu w żaden jawny sposób. Jego kod jest na
 
 ## Dwie sekundy z życia `RecommendedProducts`
 
-Przebieg w sklepie, gdy komponent stoi pod granicą z treścią zastępczą „Ładowanie rekomendacji...”, a Promise jeszcze trwa:
+Przebieg w sklepie, gdy komponent stoi pod granicą z treścią zastępczą „Loading recommendations...”, a Promise jeszcze trwa:
 
 1. **Chwila 0.** React renderuje stronę. `CartSummary` i `ProductList` kończą render od razu. `RecommendedProducts` dochodzi do linii z `use`, a Promise jest w toku.
 2. **Zawieszenie.** `use` przerywa render komponentu. Kod poniżej tej linii, z `map` i listą, w ogóle się nie wykonuje.
-3. **Treść zastępcza.** React szuka najbliższej granicy Suspense nad komponentem i w jej miejscu wyświetla napis ładowania. Reszta strony jest już na ekranie i działa: przycisk „Dodaj do koszyka” można kliknąć w czasie ładowania.
+3. **Treść zastępcza.** React szuka najbliższej granicy Suspense nad komponentem i w jej miejscu wyświetla napis ładowania. Reszta strony jest już na ekranie i działa: przycisk „Add to cart” można kliknąć w czasie ładowania.
 4. **Po 2000 ms.** Promise spełnia się tablicą trzech produktów, a React próbuje wyrenderować komponent jeszcze raz.
 5. **Drugi render.** `use` widzi spełniony Promise i od razu zwraca tablicę. `map` tworzy trzy elementy `<li>` z kluczami 10, 11 i 12, a treść zastępcza znika.
 
@@ -125,7 +125,7 @@ Sklep stosuje dokładnie ten układ. `use` stoi w pliku `RecommendedProducts.jsx
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
 flowchart LR
     U["use(promise)<br/>RecommendedProducts"] --> S{"granica Suspense"}
-    S --> FB["treść zastępcza:<br/>Ładowanie rekomendacji..."]
+    S --> FB["treść zastępcza:<br/>Loading recommendations..."]
     E["pobieranie w useEffect<br/>lub w onClick"] -. "✗ granica nic nie widzi" .-> S
 ```
 
@@ -139,93 +139,7 @@ Na Rysunku 4.8 ciągła strzałka pokazuje źródło, które włącza granicę: 
 
 Efekt uruchamia się dopiero po zakończeniu renderu, a procedura obsługi zdarzenia działa poza renderem w ogóle. Obie drogi kończą render normalnie i czekanie muszą obsłużyć same.
 
-## Rozszerzenie: ta sama sekcja bez `use`
-
-Dla porównania poniższy kod, który nie należy do projektu, pobiera rekomendacje w efekcie:
-
-```jsx
-// Rozszerzenie spoza demo: ta sama sekcja bez use() i bez Suspense.
-function RecommendedProducts() {
-  const [recommended, setRecommended] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);   // flaga ładowania
-  const [error, setError] = useState(null);           // komunikat błędu
-
-  useEffect(() => {
-    fetchRecommended()
-      .then(setRecommended)
-      .catch(err => setError(err.message))
-      .finally(() => setIsLoading(false));
-  }, []);                                              // pobranie raz, po pierwszym renderze
-
-  if (isLoading) return <p>Ładowanie rekomendacji...</p>;
-  if (error) return <p>Wystąpił błąd: {error}</p>;
-  return <ul>{recommended.map(p => <li key={p.id}>{p.name}</li>)}</ul>;
-}
-```
-
-Ta wersja obsługuje wszystkie trzy stany sama, w trzech zmiennych stanu i dwóch warunkach przed listą. Pierwszy render kończy się normalnie, z pustą tablicą i flagą ładowania, a efekt startuje dopiero po nim. Wersja z `use` przenosi napis ładowania do granicy u rodzica, a komunikat błędu do granicy błędów, więc w komponencie zostaje sama lista. Różnica rośnie z liczbą sekcji: każda kolejna sekcja z efektem powtarza te same trzy zmienne, a sekcje z `use` dzielą jedną parę granic.
-
-## Rozszerzenie: cztery źródła zawieszenia
-
-Dokumentacja wymienia wszystkie źródła, które zatrzymują odsłonięcie granicy:
-
-- **`lazy`**, czyli komponent, którego kod przeglądarka pobiera osobnym plikiem, przez dynamiczny `import()`, dopiero przy pierwszym renderze;
-- **`use` z Promise**, także z danymi przychodzącymi z komponentów serwerowych albo ładowanymi przez framework obsługujący Suspense;
-- **arkusz stylów** `<link rel="stylesheet">` z propem `precedence`, który każe Reactowi wstrzymać odsłonięcie treści do załadowania stylów;
-- **strumieniowanie HTML**, czyli odpowiedź serwera wysyłana w kawałkach, przy którym granica czeka na swój kawałek, tak jak segment z `loading.jsx`.
-
-## Rozszerzenie: `use` w warunku i w `try/catch`
-
-Mimo nazwy `use` nie jest hookiem. Dokumentacja mówi:
-
-> **„Mimo nazwy `use` nie jest hookiem. W przeciwieństwie do hooków można go wywołać w pętli i w instrukcji warunkowej, takiej jak `if`.”**
->
-> *„Despite its name, `use` is not a Hook. Unlike Hooks, it can be called inside loops and conditional statements like `if`.”*
->
-> — dokumentacja React, *use*
-
-Ta swoboda dotyczy także odczytu kontekstu, którego `useContext` w warunku zrobić nie może:
-
-```jsx
-const ThemeContext = createContext('light');
-
-function Cond({ show }) {
-  if (show) {
-    const theme = use(ThemeContext);   // use w if: dozwolone
-    return <p>{theme}</p>;
-  }
-  return <p>-</p>;
-}
-// pod <ThemeContext value="dark">: <Cond show /> daje <p>dark</p>, <Cond show={false} /> daje <p>-</p>
-```
-
-Wolność ma jedną granicę: `use` nie może stać w bloku `try/catch`. Oczekujący Promise przerywa render podobnie jak wyjątek. Ręczny `catch` przechwyci więc zwykłe czekanie na dane.
-
-```jsx
-function Tried() {
-  let v;
-  try {
-    v = use(slowPromise);
-  } catch (e) {
-    v = e.message;   // „Suspense Exception: This is not a real error! …”
-  }
-  return <p>{v}</p>;
-}
-```
-
-Komponent pokazuje wtedy tekst „Suspense Exception: This is not a real error!” i zostaje przy nim także po spełnieniu Promise, bo React nie dowiedział się o czekaniu. React w trybie deweloperskim ostrzega przy tym: *„`use` was called from inside a try/catch block. This is not allowed and can lead to unexpected behavior.”*.
-
-## Rozszerzenie: ukryta treść i odsłanianie
-
-Granica pokazuje treść zastępczą nie tylko przy pierwszym renderze.
-
-> **„Jeśli Suspense wyświetlał już treść drzewa, a potem znów nastąpiło zawieszenie, treść zastępcza pojawi się ponownie, chyba że aktualizację wywołały `startTransition` lub `useDeferredValue`.”**
->
-> *„If Suspense was displaying content for the tree, but then it suspended again, the fallback will be shown again unless the update causing it was caused by startTransition or useDeferredValue.”*
->
-> — dokumentacja React, *Suspense*
-
-Dla użytkownika wygląda to jak znikanie gotowej listy. Gdyby rodzic podmienił Promise w stanie, zwykła aktualizacja schowałaby trzy polecane produkty do czasu spełnienia nowego Promise. Ta sama aktualizacja owinięta w `startTransition`, czyli oznaczona jako przejście, zostawiłaby starą listę na ekranie, dopóki nowa nie będzie gotowa. Dokumentacja dodaje, że w przejściu natychmiast pokażą treść zastępczą tylko granice nowe, czyli takie, których przed aktualizacją nie było na ekranie. Hook `useDeferredValue` z cytatu zwraca opóźnioną kopię wartości z propsa, więc na ekranie zostaje stara treść, dopóki nowa nie będzie gotowa.
-
 > 💡 **Zapamiętaj:** komponent czytający Promise przez `use` zawiesza się do jego rozstrzygnięcia, a najbliższa granica `<Suspense>` nad nim pokazuje w tym czasie treść zastępczą. Komponent nie wie, że czeka: o tym, kiedy Promise powstaje i co widać w czasie czekania, decydują komponenty nad nim.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r08_use-i-suspense.md`](rozszerzenia/r08_use-i-suspense.md)

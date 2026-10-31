@@ -116,52 +116,13 @@ Po jednym `ADD_ITEM` komponent ma za sobą dwa rendery. `dispatch` z pierwszego 
 
 Stąd bierze się przewaga reducera przy podziale kontekstu. Dostawca zbudowany na `useState` z funkcjami `addItem`, `removeItem` i `clearCart`, zapisanymi w jego ciele, tworzyłby je przy każdym renderze od nowa. Kontekst z takimi funkcjami zmieniałby wartość tak samo jak kontekst ze stanem i przyciski znów renderowałyby się po każdej akcji. Takie funkcje da się zapamiętać między renderami hookiem `useCallback`, ale memoizacja to osobna technika, z własną tablicą zależności do pilnowania. <u>Reducer daje stałą funkcję bez memoizacji, bo wszystkie zmiany koszyka idą przez jedno `dispatch` o stałej tożsamości</u>, a ich logika siedzi w `cartReducer` poza komponentem.
 
-Ta sama reguła działa w drugą stronę dla stanu. `cartReducer` zwraca nowy obiekt także wtedy, gdy akcja niczego nie zmienia: `CLEAR_CART` na pustym koszyku daje `{ ...state, items: [] }`, czyli inny obiekt niż poprzedni. Konsumenci stanu wyrenderowaliby się wtedy mimo braku zmiany, a konsumenci funkcji nadal by milczeli. W sklepie ten przypadek nie zachodzi z interfejsu, bo przycisk „Wyczyść koszyk” w `CartSummary` jest przy pustym koszyku zablokowany, a `/cart` pokazuje wtedy osobny widok bez przycisku.
-
-## Rozszerzenie: czego kontekstowi brakuje, czyli selektor
-
-Dalsze dzielenie, na przykład na kontekst pozycji i kontekst sumy, w sklepie nic by nie dało. Suma i liczba sztuk wynikają z tej samej tablicy `items`, więc oba konteksty zmieniałyby się zawsze razem. Potrzebny byłby **selektor**, czyli funkcja wybierająca z wartości jeden fragment, przy czym komponent renderuje się tylko po zmianie tego fragmentu. Barklund w *React in Depth* pisze, że wbudowany kontekst tego nie potrafi.
-
-> **„Niestety nie da się powiedzieć Reactowi, żeby renderował ponownie tylko wybrany komponent, gdy zmienią się określone pola kontekstu.”**
->
-> *„Unfortunately, we cannot tell React to re-render only a specific component when specific properties of a context update.”*
->
-> — Morten Barklund, *React in Depth*
-
-Autor dodaje, że ta możliwość miała pojawić się w wersji beta React 19, ale do niej nie weszła. Jako obejście podaje zewnętrzny pakiet `use-context-selector` z hookiem `useContextSelector`. Pakiet wymaga jednak utworzenia kontekstu jego własną funkcją `createContext`, więc zmienia także zapis dostawcy. W sklepie dwa wbudowane konteksty wystarczają.
-
-Selektor jest podstawowym narzędziem bibliotek stanu. W React Redux, bibliotece stanu aplikacji, hook `useSelector` wybiera fragment stanu z magazynu i po każdej wysłanej akcji porównuje przez referencję poprzedni i bieżący wynik selektora. Dokumentacja dopowiada: „jeśli są różne, komponent zostanie zmuszony do ponownego renderu” (*„If they are different, the component will be forced to re-render”*). Dokumentacja Zustand, innej biblioteki stanu, ujmuje to krócej. Wybiera się fragment stanu, a komponent go czytający renderuje się, gdy ten fragment się zmieni (*„Select your state and the consuming component will re-render when that state changes”*).
-
-## Rozszerzenie: kiedy kontekst przestaje wystarczać
-
-Biblioteki stanu też korzystają z kontekstu Reacta, ale wkładają do niego **magazyn**, czyli stały obiekt, który trzyma stan i sam powiadamia subskrybentów o zmianach. Według dokumentacji React Redux do kontekstu trafia magazyn i wewnętrzne obiekty subskrypcji (*„the Redux store and internal subscription wrappers”*). Bieżący stan dociera do komponentu przez selektor, który subskrybuje magazyn. To ta sama idea co `CartDispatchContext`. <u>Kontekst niesie stałą referencję, a selektor decyduje o renderze</u>.
-
-Z tej różnicy wynikają sygnały, które da się sprawdzić w kodzie. Pierwszy pojawia się, gdy wiele niezależnych fragmentów stanu czyta wiele komponentów, a podział na konteksty rozrasta się w stos zagnieżdżonych dostawców. Drugi to wartość zmieniana przy każdym zdarzeniu i czytana przez wielu konsumentów. Trzeci to potrzeba wspólnej obsługi efektów ubocznych dla wszystkich akcji, którą w Reduxie, bibliotece stanu z jednym magazynem, realizuje **middleware**, czyli funkcje pośredniczące między wysłaniem akcji a reducerem. Barklund ocenia Zustand, małą bibliotekę stanu, jako prostą, ale trudniejszą w dużej skali:
-
-> **„Jest tak prosty w użyciu, że nie da się go zepsuć. Trudniej go jednak używać w dużej skali, bo nie ma wbudowanych narzędzi ani wzorców organizowania wielu niezależnych magazynów.”**
->
-> *„It’s so simple to use that you can’t screw it up. It’s a bit trickier to use at scale, however, because it doesn’t come with any built-in tools or patterns for organizing multiple unrelated data stores.”*
->
-> — Morten Barklund, *React in Depth*
-
-Magazyn Zustand bywa zmienną modułu, a zmienna modułu na serwerze jest wspólna dla wszystkich żądań. Dokumentacja Zustand dla Next.js zastrzega więc, że magazyn nie powinien być współdzielony między żądaniami (*„the store should not be shared across requests”*) i ma powstawać osobno dla każdego z nich. Koszyk sklepu nie spełnia żadnego z sygnałów: ma jeden reducer, cztery akcje i cztery rodzaje konsumentów. Do kontekstu nie trafiają też wartości wyliczane, jak suma, ani komunikat błędu, który żyje w przycisku.
-
-## Rozszerzenie: zmiana interfejsu przez adapter
-
-Usunięcie eksportu `useCart` od razu przerywa budowanie komunikatem „Export useCart doesn't exist in target module” w każdym z czterech plików, które go importują. Na czas przepisywania konsumentów plik może więc eksportować dawną nazwę jako **adapter**. To cienka funkcja, która składa stary kształt wartości z nowych części:
-
-```jsx
-// Tymczasowo: dawny interfejs zostaje, dopóki każdy komponent nie przejdzie na nowe hooki.
-export function useCart() {
-  return { cart: useCartState(), dispatch: useCartDispatch(), addOptimistic: useCartOptimistic() };
-}
-```
-
-Adapter czyta wszystkie trzy konteksty, więc komponenty, które go używają, renderują się tak jak przed podziałem. Gdy żaden plik nie importuje już `useCart`, adapter znika, a aplikacja przez cały czas zmiany daje się zbudować.
+Ta sama reguła działa w drugą stronę dla stanu. `cartReducer` zwraca nowy obiekt także wtedy, gdy akcja niczego nie zmienia: `CLEAR_CART` na pustym koszyku daje `{ ...state, items: [] }`, czyli inny obiekt niż poprzedni. Konsumenci stanu wyrenderowaliby się wtedy mimo braku zmiany, a konsumenci funkcji nadal by milczeli. W sklepie ten przypadek nie zachodzi z interfejsu, bo przycisk „Clear cart” w `CartSummary` jest przy pustym koszyku zablokowany, a `/cart` pokazuje wtedy osobny widok bez przycisku.
 
 ## Gdzie koszyk mieszka na końcu
 
-Koszyk żyje w stanie `CartProvider`, czyli w pamięci jednej karty przeglądarki: przeładowanie strony na `/cart` pokazuje „Koszyk jest pusty.”. Funkcje `fakeAddToCart` i `fetchRecommended` tylko udają serwer opóźnieniem, a nic poza kartą nie wie o zawartości koszyka. Trwały koszyk wymaga zapisu w miejscu, które przeżyje przeładowanie i będzie wspólne dla urządzeń użytkownika.
+Koszyk żyje w stanie `CartProvider`, czyli w pamięci jednej karty przeglądarki: przeładowanie strony na `/cart` pokazuje „Your cart is empty.”. Funkcje `fakeAddToCart` i `fetchRecommended` tylko udają serwer opóźnieniem, a nic poza kartą nie wie o zawartości koszyka. Trwały koszyk wymaga zapisu w miejscu, które przeżyje przeładowanie i będzie wspólne dla urządzeń użytkownika.
 
 > 💡 **Zapamiętaj:** koszyk i każda stała funkcja trafiają do osobnych kontekstów. Komponent, który tylko wysyła akcje, czyta konteksty z funkcjami i nie renderuje się po zmianie koszyka, bo `dispatch` z `useReducer` i setter z `useOptimistic` mają stałą tożsamość. Gdy potrzebny jest render po zmianie jednego pola, wbudowany kontekst nie wystarcza i potrzebny jest selektor z biblioteki.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r12_podzial-kontekstu.md`](rozszerzenia/r12_podzial-kontekstu.md)

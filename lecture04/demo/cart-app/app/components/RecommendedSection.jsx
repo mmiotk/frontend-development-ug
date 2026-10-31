@@ -14,7 +14,7 @@ const recommendedPromise = fetchRecommended();
 export default function RecommendedSection() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={<p>Ładowanie rekomendacji...</p>}>
+      <Suspense fallback={<p>Loading recommendations...</p>}>
         <RecommendedProducts recommendedPromise={recommendedPromise} />
       </Suspense>
     </ErrorBoundary>

@@ -60,19 +60,19 @@ export default function HomePage() {
 
 ```jsx
       <section>
-        <h2>Koszyk ({cart.items.length} pozycji)</h2>
+        <h2>Cart ({cart.items.length} items)</h2>
         <ul>
           {cart.items.map(item => (
             <li key={item.id}>
-              {item.name} × {item.qty} = {(item.price * item.qty).toFixed(2)} zł
+              {item.name} × {item.qty} = {(item.price * item.qty).toFixed(2)} PLN
               {/* Przycisk tylko opisuje zdarzenie; regułę zna reducer. */}
               <button onClick={() => dispatch({ type: 'REMOVE_ITEM', id: item.id })}>
-                Usuń
+                Remove
               </button>
             </li>
           ))}
         </ul>
-        <button onClick={() => dispatch({ type: 'CLEAR_CART' })}>Wyczyść koszyk</button>
+        <button onClick={() => dispatch({ type: 'CLEAR_CART' })}>Clear cart</button>
       </section>
 ```
 
@@ -81,9 +81,9 @@ Lista produktów dostaje przycisk, który wysyła `ADD_ITEM` z całym obiektem p
 ```jsx
           {products.map(p => (
             <li key={p.id}>
-              {p.name} — {p.price.toFixed(2)} zł
+              {p.name} — {p.price.toFixed(2)} PLN
               <button onClick={() => dispatch({ type: 'ADD_ITEM', product: p })}>
-                Dodaj do koszyka
+                Add to cart
               </button>
             </li>
           ))}
@@ -93,7 +93,7 @@ Sekcja koszyka czyta `cart.items`, liczy pozycje przez `length`, a wartość ka�
 
 ## Droga jednego kliknięcia
 
-Kliknięcie „Dodaj do koszyka” przy kawie wywołuje `dispatch({ type: 'ADD_ITEM', product: p })`. Funkcja `dispatch` nie zmienia stanu od razu. **Kolejkuje akcję** i prosi Reacta o nowy render. Dopiero w tym renderze React wywołuje `cartReducer` z bieżącym stanem i akcją, a wynik staje się nową wartością `cart`.
+Kliknięcie „Add to cart” przy kawie wywołuje `dispatch({ type: 'ADD_ITEM', product: p })`. Funkcja `dispatch` nie zmienia stanu od razu. **Kolejkuje akcję** i prosi Reacta o nowy render. Dopiero w tym renderze React wywołuje `cartReducer` z bieżącym stanem i akcją, a wynik staje się nową wartością `cart`.
 
 W tej samej procedurze obsługi zmienna stanu ma więc nadal wartość sprzed kliknięcia, tak samo jak przy setterze z `useState`. Pokazuje to licznik, który po wysłaniu akcji zapisuje bieżącą wartość:
 
@@ -171,7 +171,7 @@ Wiersz koszyka dostaje pole liczbowe. Wyrażenie `{cart.items.map(…)}` wewnąt
   <li key={item.id}>
     {item.name}
     {' — '}
-    {item.price.toFixed(2)} zł
+    {item.price.toFixed(2)} PLN
     {' × '}
     <input
       type="number"
@@ -183,26 +183,26 @@ Wiersz koszyka dostaje pole liczbowe. Wyrażenie `{cart.items.map(…)}` wewnąt
       }
     />
     {' = '}
-    {(item.price * item.qty).toFixed(2)} zł
-    <button onClick={() => dispatch({ type: 'REMOVE_ITEM', id: item.id })}>Usuń</button>
+    {(item.price * item.qty).toFixed(2)} PLN
+    <button onClick={() => dispatch({ type: 'REMOVE_ITEM', id: item.id })}>Remove</button>
   </li>
 ))}
 ```
 
-Pole jest kontrolowane, a każda zmiana wysyła akcję `UPDATE_QTY` zamiast wywołania settera. Ilość 3 przy kawie daje „= 149.97 zł”, a zero reducer zamienia na 1, więc pole znów pokazuje 1. Atrybut `min="1"` blokuje strzałkę w dół na wartości 1, ale nie powstrzyma wpisania zera z klawiatury. <u>Prawdziwą granicę wyznacza `Math.max(1, action.qty)` w reducerze</u>. Wstawki `{' — '}` i `{' × '}` to zwykłe napisy w JSX, które rozdzielają liczby spacjami.
+Pole jest kontrolowane, a każda zmiana wysyła akcję `UPDATE_QTY` zamiast wywołania settera. Ilość 3 przy kawie daje „= 149.97 PLN”, a zero reducer zamienia na 1, więc pole znów pokazuje 1. Atrybut `min="1"` blokuje strzałkę w dół na wartości 1, ale nie powstrzyma wpisania zera z klawiatury. <u>Prawdziwą granicę wyznacza `Math.max(1, action.qty)` w reducerze</u>. Wstawki `{' — '}` i `{' × '}` to zwykłe napisy w JSX, które rozdzielają liczby spacjami.
 
 ## Suma pod listą
 
-Pod listą, przed przyciskiem „Wyczyść koszyk”, pojawia się suma:
+Pod listą, przed przyciskiem „Clear cart”, pojawia się suma:
 
 ```jsx
 {/* Wartość pochodna: liczona przy każdym renderze, bez osobnego stanu. */}
 {cart.items.length > 0 && (
-  <p>Razem: {cart.items.reduce((s, i) => s + i.price * i.qty, 0).toFixed(2)} zł</p>
+  <p>Total: {cart.items.reduce((s, i) => s + i.price * i.qty, 0).toFixed(2)} PLN</p>
 )}
 ```
 
-Suma to wartość pochodna, liczona przy każdym renderze z tablicy pozycji. `reduce` zaczyna od zera i dodaje wartość kolejnych pozycji, więc kawa z herbatą dają „Razem: 68.49 zł”, a zmiana ilości kawy na 3 daje „Razem: 168.47 zł”. Akapit pokazuje się tylko przy niepustym koszyku dzięki operatorowi `&&`.
+Suma to wartość pochodna, liczona przy każdym renderze z tablicy pozycji. `reduce` zaczyna od zera i dodaje wartość kolejnych pozycji, więc kawa z herbatą dają „Total: 68.49 PLN”, a zmiana ilości kawy na 3 daje „Total: 168.47 PLN”. Akapit pokazuje się tylko przy niepustym koszyku dzięki operatorowi `&&`.
 
 ## Co robi zmiana w miejscu
 
@@ -212,55 +212,7 @@ W trybie deweloperskim dochodzi drugi skutek. Tryb ścisły wywołuje reducer dw
 
 Gałąź z kopią `{ ...i, qty: i.qty + 1 }` przy dwóch wywołaniach dostaje dwa razy ten sam stan i dwa razy zwraca ten sam wynik. Podwójne wywołanie jest więc nieszkodliwe dla czystego reducera i widoczne dla każdego, który zmienia argument. Z tego powodu tryb ścisły pomaga znaleźć mutację, zanim trafi do wersji produkcyjnej, w której reducer wykonuje się raz.
 
-## Rozszerzenie: trzeci argument `init`
-
-Trzeci, opcjonalny argument `init` wylicza stan początkowy z drugiego argumentu. Dokumentacja opisuje regułę tak: bez `init` stanem początkowym jest `initialArg`, a z nim wynik wywołania `init(initialArg)`. React wywołuje tę funkcję tylko przy pierwszym renderze, a w trybie ścisłym, jak reducer, dwa razy.
-
-Różnica wobec leniwego inicjalizatora `useState` leży w argumencie. Funkcja przekazana do `useState` nie dostaje niczego, a `init` dostaje `initialArg`. Można więc przekazać osobno funkcję i dane, z których ma policzyć stan, bez opakowywania jej w funkcję strzałkową. Poniższy kod nie należy do projektu. Pokazuje koszyk, który startuje z listy produktów przekazanej w propsie:
-
-```jsx
-// Spoza demo: koszyk startowy buduje sam reducer, raz, przy pierwszym renderze.
-function createInitialCart(savedProducts) {
-  return savedProducts.reduce(
-    (state, product) => cartReducer(state, { type: 'ADD_ITEM', product }),
-    initialCartState
-  );
-}
-
-function CartPage({ savedProducts }) {
-  // Drugi argument to dane, trzeci to funkcja, która z nich liczy stan.
-  const [cart, dispatch] = useReducer(cartReducer, savedProducts, createInitialCart);
-  // ...
-}
-```
-
-Funkcja `createInitialCart` nie zna żadnej reguły koszyka. Przepuszcza zapisane produkty przez `cartReducer`, więc lista `[kawa, herbata, kawa]` daje dwie pozycje, w tym kawę z `qty: 2`. Reguła koszyka obowiązuje więc już przy starcie, a nie dopiero od pierwszego kliknięcia. Gdy funkcja nie potrzebuje danych, dokumentacja pozwala przekazać `null` jako drugi argument. Pusty koszyk sklepu niczego nie wylicza, więc strona przekazuje gotowy obiekt `initialCartState`.
-
-## Rozszerzenie: trzy przypadki, których reguła nie przewidziała
-
-Reguła w reducerze działa przy każdej zmianie, także wtedy, gdy nikt tego nie planował. Pole ilości z konwersją przez `Number` ma trzy zachowania warte znajomości.
-
-- **Pole nie daje się opróżnić.** Backspace na wartości 1 daje pusty tekst, `Number('')` zwraca 0, reducer zamienia je na 1 i pole od razu znów pokazuje 1. Żeby wpisać 3, trzeba zaznaczyć zawartość i wpisać nową liczbę. Dopisanie 5 za cyfrą 3 daje 35.
-- **Ułamek przechodzi.** Wpisanie 1.5 zostawia w stanie `qty: 1.5`, a wiersz pokazuje „= 74.98 zł”. `Math.max(1, 1.5)` pilnuje tylko dolnej granicy. Reguły „ilość jest liczbą całkowitą” w reducerze nie ma, więc nie działa.
-- **Liczba ujemna znika.** Wklejenie −2 daje w polu 1, tak samo jak zero. Przy pisaniu znak po znaku sam minus daje pusty tekst, więc pole wraca do 1, a następna cyfra dopisuje się do niego i wychodzi 12.
-
-Pierwszy przypadek zależy od wyboru `Number`. Pole liczbowe ma też właściwość `valueAsNumber`, która od razu daje liczbę. MDN opisuje jednak jej zachowanie przy pustym polu inaczej.
-
-> **„Jeśli usunie się liczbę z kontrolki, wynikiem jest NaN.”**
->
-> *„If you delete the number in the widget, the result is NaN.”*
->
-> — MDN, *HTMLInputElement: valueAsNumber property*
-
-`Math.max` zwraca `NaN`, gdy którykolwiek argument jest `NaN`, więc reguła minimum przestaje działać:
-
-```js
-Math.max(1, NaN);   // NaN: dolna granica nie pomaga
-cartReducer(s, { type: 'UPDATE_QTY', id: 1, qty: NaN }).items;
-// [{ id: 1, name: 'Kawa', price: 49.99, qty: NaN }]
-```
-
-Wersja z `valueAsNumber` zapisałaby więc w stanie `qty: NaN`, a wiersz pokazałby „= NaN zł”. Natomiast `Number('')` daje 0, które reguła minimum zamienia na 1. Konwersja w komponencie i reguła w reducerze działają razem i każda z nich zmienia wynik. Uzupełnienie reguły o liczby całkowite wymagałoby zmiany jednej gałęzi `UPDATE_QTY`, bez dotykania komponentu.
-
 > 💡 **Zapamiętaj:** `dispatch` tylko zgłasza akcję. Nowy stan liczy reducer w następnym renderze i obowiązują w nim wyłącznie reguły zapisane w reducerze.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r02_usereducer.md`](rozszerzenia/r02_usereducer.md)

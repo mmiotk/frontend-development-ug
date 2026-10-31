@@ -13,14 +13,14 @@ export default function CartSummary() {
 
   return (
     <section>
-      <h2>Koszyk: {count} szt. — {total.toFixed(2)} zł</h2>
-      <Link href="/cart">Przejdź do koszyka</Link>
+      <h2>Cart: {count} pcs — {total.toFixed(2)} PLN</h2>
+      <Link href="/cart">Go to cart</Link>
       {' '}
       <button
         onClick={() => dispatch({ type: 'CLEAR_CART' })}
         disabled={cart.items.length === 0}
       >
-        Wyczyść koszyk
+        Clear cart
       </button>
     </section>
   );

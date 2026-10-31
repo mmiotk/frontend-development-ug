@@ -223,21 +223,7 @@ Promise tworzony w renderze komponentu klienckiego, czyli `use(fetch(...).then(.
 
 Kod `SuspendPage` nie sprawdza `r.ok`. Przy odpowiedzi 500 Promise się spełni treścią błędu, a wyjątek wyjdzie dopiero przy `articles.map` i trafi do najbliższej granicy błędów, w tej aplikacji do `app/error.jsx`. W kodzie przeznaczonym do wdrożenia łańcuch rzuca wyjątek przy złym statusie, tak jak `fetchArticles` na stronie głównej.
 
-## Rozszerzenie: jeden Promise, kilku odbiorców
-
-Ten sam Promise może trafić do kilku komponentów, na przykład do listy tytułów i do licznika artykułów obok nagłówka. Oba propsy wskazują jeden obiekt, więc żądanie do `/api/articles` wychodzi raz, a oba komponenty czekają na ten sam wynik. Przewodnik *Streaming* zaznacza, że Promise można przekazywać przez dowolnie wiele poziomów. Granicy `<Suspense>` potrzebuje tylko komponent, który wywołuje `use`. Gdy odbiorców jest wielu i leżą głęboko, przewodnik podaje wzorzec z kontekstem:
-
-> **„Gdy kilka komponentów potrzebuje tych samych danych, pobieranie zaczyna się raz, a Promise przekazuje się przez dostawcę kontekstu, tak żeby każdy komponent w poddrzewie mógł go rozpakować przez `use()`.”**
->
-> *„When multiple components need the same data, start the fetch once and pass the promise through a context provider so any component in the subtree can resolve it with `use()`”*
->
-> — dokumentacja Next.js, *Streaming*
-
-W kontekście leży wtedy sam Promise. Dostawca nie czeka na nic, więc nie wstrzymuje renderu poddrzewa. Zawiesza się dopiero komponent, który wywoła `use`. Odbiorcy pod osobnymi granicami pokazują treść niezależnie, a każda granica jest według przewodnika osobną jednostką hydratacji.
-
-## Rozszerzenie: strumień po drodze do przeglądarki
-
-Strumień może zniknąć między serwerem a przeglądarką. Przewodnik *Streaming* ostrzega, że każda warstwa, która zbiera odpowiedź w całości przed wysłaniem, odbiera mu sens. Serwer pośredniczący (*reverse proxy*), czyli program przyjmujący żądania przed aplikacją, na przykład Nginx, domyślnie tak robi, a przewodnik wyłącza to nagłówkiem `X-Accel-Buffering: no`. Kompresja odpowiedzi w drodze do przeglądarki też potrafi zbierać kawałki. TTFB mierzony za takim pośrednikiem wraca wtedy do czasu najwolniejszego zapytania, choć sama aplikacja strumieniuje poprawnie.
-
 > 💡 **Zapamiętaj:** komponent serwerowy może zacząć pobieranie bez `await` i przekazać Promise w dół drzewa. Promise musi się rozstrzygnąć wartością, którą da się zserializować, a nagłówek poza granicą trafia do statycznej powłoki, zanim dane nadejdą.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r05_promise-z-serwera.md`](rozszerzenia/r05_promise-z-serwera.md)

@@ -164,9 +164,7 @@ Serwer produkcyjny mówi to także nagłówkiem. Odpowiedź dla `/articles/1` ma
 
 Adres `/articles/99` pokazuje widok „nie znaleziono”, ale odpowiedź HTTP ma kod 200 i znacznik `noindex`. Strumień, który otwiera każdy plik `loading.jsx` nad stroną, także `app/loading.jsx`, wysyła nagłówki z kodem 200, zanim `notFound()` się wykona. Adres bez żadnej trasy, na przykład `/artykuly`, dostaje 404, bo Next.js wie o braku trasy jeszcze przed renderem. Różnica dzieli więc przypadki „nie ma takiej trasy” i „trasa jest, ale zasobu brak”.
 
-## Rozszerzenie: prawdziwy status i roboty
-
-Gdy prawdziwy status jest potrzebny, na przykład dla statystyk albo robotów wyszukiwarek, istnienie zasobu sprawdza się, zanim treść odpowiedzi zacznie płynąć, czyli przed granicą Suspense. Część robotów oznacza strony z widokiem błędu i kodem sukcesu jako **miękkie 404** (*soft 404s*), a znacznik `noindex` ogranicza tylko ich indeksowanie. Strumień zmienia też to, co widzą roboty. Według dokumentacji `loading.js` dla robotów, które czytają wyłącznie statyczny HTML, takich jak Twitterbot, Next.js najpierw kończy `generateMetadata`, a dopiero potem strumieniuje interfejs. Metadane trafiają dzięki temu do `<head>`, zanim robot przestanie czytać odpowiedź. Listę takich robotów ustawia opcja `htmlLimitedBots`. Kumar w *Fluent React* opisuje ten sam podział w Remiksie: dla robota odpowiedź musi zawierać wyrenderowaną treść strony, a przeglądarka dostaje jeszcze JavaScript do hydratacji. W `articleviewer` nie ma `generateMetadata`, więc tytuł karty pochodzi ze stałego obiektu `metadata` w layoucie.
-
 > 💡 **Zapamiętaj:** komponent serwerowy czyta dane przez zwykłe wywołanie funkcji z `lib/store.js`, bez żądania HTTP do własnego API. <u>Błąd oczekiwany zwraca się jako wartość, a wyjątek zostawia granicy z `error.jsx`</u>, bo po zbudowaniu jego treść i tak nie dociera do użytkownika.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r04_ladowanie-bledy-i-artykul.md`](rozszerzenia/r04_ladowanie-bledy-i-artykul.md)

@@ -15,9 +15,9 @@ Zawartość `<body>` dostaje nawigację i dostawcę:
 ```jsx
       <body>
         <nav>
-          <Link href="/">Sklep</Link>
+          <Link href="/">Shop</Link>
           {' | '}
-          <Link href="/cart">Koszyk</Link>
+          <Link href="/cart">Cart</Link>
         </nav>
         <CartProvider>
           {children}      {/* każda strona aplikacji trafia tu, czyli pod dostawcę */}
@@ -37,7 +37,7 @@ Stan i hooki działają tylko w komponentach klienckich. Dokumentacja Next.js (*
 >
 > — dokumentacja Next.js, *Server and Client Components*
 
-Next.js pilnuje tej granicy już przy budowaniu. Moduł serwerowy z `createContext` zatrzymuje build komunikatem *„You're importing a module that depends on `createContext` into a React Server Component module. This API is only available in Client Components.”*. Samo wywołanie `useContext` w komponencie serwerowym kończy się przy prerenderze wyjątkiem `TypeError` z informacją, że `useContext` nie jest funkcją, bo serwerowa wersja Reacta tego hooka nie udostępnia.
+Next.js pilnuje tej granicy już przy budowaniu. Moduł serwerowy z `createContext` kończy się błędem, który dokumentacja Next.js opisuje zdaniem *„You are using `createContext` in a server component but it only works in client components.”*, czyli w komponencie serwerowym `createContext` nie działa. Samo wywołanie `useContext` w komponencie serwerowym kończy się przy prerenderze wyjątkiem `TypeError` z informacją, że `useContext` nie jest funkcją, bo serwerowa wersja Reacta tego hooka nie udostępnia.
 
 Ta sama strona dokumentacji podaje regułę, która ratuje układ z layoutem: komponent serwerowy można przekazać komponentowi klienckiemu jako prop, najczęściej jako `children`. Najmniejszy przykład poza sklepem korzysta z modułu `node:os` z biblioteki standardowej Node.js, który podaje dane o systemie serwera:
 
@@ -48,7 +48,7 @@ import { useState } from 'react';
 
 export default function ClientBox({ children }) {
   const [open, setOpen] = useState(true);   // stan istnieje tylko w komponencie klienckim
-  return <section><button onClick={() => setOpen(o => !o)}>przełącz</button>{open && children}</section>;
+  return <section><button onClick={() => setOpen(o => !o)}>toggle</button>{open && children}</section>;
 }
 ```
 
@@ -126,7 +126,7 @@ Dwie pierwsze linie funkcji `HomePage` czytają koszyk z kontekstu:
   const total = cart.items.reduce((s, i) => s + i.price * i.qty, 0);
 ```
 
-Strona przestała deklarować stan. Teraz go odczytuje, a `useReducer` żyje w `CartProvider`. Strona nadal zaczyna się od `'use client'`, bo wywołuje hook. Wersja jest uproszczona: nagłówek z liczbą pozycji i sumą, przycisk „Wyczyść koszyk” z `disabled={cart.items.length === 0}` oraz przyciski „Usuń” i „Dodaj”. Pole ilości i akapit „Razem” znikają.
+Strona przestała deklarować stan. Teraz go odczytuje, a `useReducer` żyje w `CartProvider`. Strona nadal zaczyna się od `'use client'`, bo wywołuje hook. Wersja jest uproszczona: nagłówek z liczbą pozycji i sumą, przycisk „Clear cart” z `disabled={cart.items.length === 0}` oraz przyciski „Remove” i „Add to cart”. Pole ilości i akapit „Total” znikają.
 
 ## Reducer i kontekst jako jeden wzorzec
 
@@ -157,8 +157,8 @@ export default function CartSummary() {
 
   return (
     <section>
-      <h2>Koszyk: {count} szt. — {total.toFixed(2)} zł</h2>
-      {/* ... link „Przejdź do koszyka” (Link z importu) i przycisk „Wyczyść koszyk” z dispatch */}
+      <h2>Cart: {count} pcs — {total.toFixed(2)} PLN</h2>
+      {/* ... link „Go to cart” (Link z importu) i przycisk „Clear cart” z dispatch */}
     </section>
   );
 }
@@ -191,10 +191,10 @@ Nowy plik `app/components/ProductList.jsx` wyświetla katalog i czyta z kontekst
   // ... return (<section> z nagłówkiem i listą <ul>:
         {products.map(product => (
           <li key={product.id}>
-            {product.name} — {product.price.toFixed(2)} zł
+            {product.name} — {product.price.toFixed(2)} PLN
             {' '}
             <button onClick={() => dispatch({ type: 'ADD_ITEM', product })}>
-              Dodaj do koszyka
+              Add to cart
             </button>
           </li>
         ))}
@@ -223,7 +223,7 @@ import ProductList from './components/ProductList';
 export default function HomePage() {
   return (
     <main>
-      <h1>Sklep kawowy</h1>
+      <h1>Coffee shop</h1>
       <CartSummary />
       <ProductList />
     </main>
@@ -250,9 +250,9 @@ export default function CartPage() {
   if (cart.items.length === 0) {        // wariant 1: pusty koszyk, wcześniejszy return
     return (
       <main>
-        <h1>Koszyk</h1>
-        <p>Koszyk jest pusty.</p>
-        <Link href="/">Wróć do sklepu</Link>
+        <h1>Cart</h1>
+        <p>Your cart is empty.</p>
+        <Link href="/">Back to shop</Link>
       </main>
     );
   }
@@ -263,9 +263,9 @@ export default function CartPage() {
         ))}
 ```
 
-Pod listą stoją jeszcze suma „Razem”, przycisk „Wyczyść koszyk” i link „Kontynuuj zakupy”. Plik musi być kliencki, choć strona główna z tego zrezygnowała. `HomePage` tylko układa gotowe komponenty, a `CartPage` sama czyta koszyk: od długości `cart.items` zależy, który wariant pokaże.
+Pod listą stoją jeszcze suma „Total”, przycisk „Clear cart” i link „Continue shopping”. Plik musi być kliencki, choć strona główna z tego zrezygnowała. `HomePage` tylko układa gotowe komponenty, a `CartPage` sama czyta koszyk: od długości `cart.items` zależy, który wariant pokaże.
 
-Kliknięcie „Przejdź do koszyka” podmienia tylko zawartość `children` w layoucie. `CartProvider` zostaje na miejscu, a `CartPage` przy pierwszym renderze dostaje ten sam obiekt `cart`, który przed chwilą wyświetlał nagłówek. Komponent nigdy nie zmienia koszyka sam: zmiana pola ilości w `CartItem` wysyła `UPDATE_QTY`, reducer zwraca nowy stan, a dostawca przekazuje go dalej.
+Kliknięcie „Go to cart” podmienia tylko zawartość `children` w layoucie. `CartProvider` zostaje na miejscu, a `CartPage` przy pierwszym renderze dostaje ten sam obiekt `cart`, który przed chwilą wyświetlał nagłówek. Komponent nigdy nie zmienia koszyka sam: zmiana pola ilości w `CartItem` wysyła `UPDATE_QTY`, reducer zwraca nowy stan, a dostawca przekazuje go dalej.
 
 ## Rysunek 4.6 — gdzie w sklepie przebiega granica klienta
 
@@ -282,21 +282,7 @@ flowchart LR
 
 Rysunek 4.6 pokazuje, które komponenty sklepu wykonują się tylko na serwerze, a które także w przeglądarce. Granica klienta nie przebiega jedną linią przez całe drzewo. `CartProvider` jest kliencki, ale `HomePage` pod nim zostaje serwerowa, bo dociera do dostawcy jako `children`. Dopiero `CartSummary` i `ProductList` znów są klienckie, każdy z własnej dyrektywy. Wszystkie komponenty klienckie pod dostawcą czytają kontekst. Jedyny prop w obrazku płynie od `CartPage` do `CartItem` i niesie konkretną pozycję.
 
-## Rozszerzenie: dostawca w layoucie grupy tras
-
-Przewodnik Next.js o aplikacjach jednostronicowych zaleca, żeby dane potrzebne tylko części aplikacji dostarczać w poddrzewie tej części zamiast w layoucie głównym. Gdyby sklep miał też blog, koszyk mógłby trafić do layoutu grupy tras, czyli katalogu w nawiasach, na przykład `app/(shop)/layout.jsx`. Blog nie znalazłby się wtedy pod dostawcą koszyka. Ceną jest czas życia stanu: layout grupy znika, gdy użytkownik przejdzie na trasę spoza grupy, a razem z nim `CartProvider`. Po powrocie koszyk byłby pusty.
-
-## Rozszerzenie: kilku dostawców obok siebie
-
-Layout może osadzić więcej niż jednego dostawcę. Schwarzmüller podaje przykład, który pasuje do sklepu.
-
-> **„Sklep internetowy może używać jednego kontekstu do koszyka, drugiego do stanu uwierzytelnienia i jeszcze innego do śledzenia analityki strony.”**
->
-> *„For example, an online shop could use one context for managing the shopping cart, another context for the user authentication status, and yet another context value for tracking page analytics.”*
->
-> — Maximilian Schwarzmüller, *React Key Concepts*
-
-Dostawców zagnieżdża się wtedy w sobie wokół `children`. Kolejność nie ma znaczenia, dopóki żaden z nich nie czyta wartości innego. Gdyby koszyk zależał od zalogowanego użytkownika, dostawca uwierzytelnienia musiałby stać wyżej. Dokumentacja Reacta (*useContext*) pisze, że „piramida” kontekstów przy korzeniu rosnącej aplikacji jest czymś oczekiwanym i nie ma w niej nic złego. Komu przeszkadza samo zagnieżdżenie, może zebrać dostawców w jednym komponencie, na przykład `Providers`, i owinąć nim `children` w layoucie.
-
 > 💡 **Zapamiętaj:** dostawca kontekstu w Next.js to komponent kliencki przyjmujący `children`, osadzony w layoucie serwerowym. Strony przekazane jako `children` mogą zostać serwerowe, a stan w kontekście żyje tak długo jak dostawca.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r06_dostawca-i-konsumenci.md`](rozszerzenia/r06_dostawca-i-konsumenci.md)

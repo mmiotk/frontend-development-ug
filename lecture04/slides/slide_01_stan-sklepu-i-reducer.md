@@ -13,11 +13,11 @@ Katalog produktów leży w pliku `app/data/products.js`:
 ```js
 // Statyczny katalog; w prawdziwej aplikacji przyszedłby z serwera.
 export const products = [
-  { id: 1, name: 'Kawa ziarnista Arabica 1kg', price: 49.99 },
-  { id: 2, name: 'Herbata Earl Grey 100g',     price: 18.50 },
-  { id: 3, name: 'Kubek ceramiczny 350ml',     price: 34.00 },
-  { id: 4, name: 'Zaparzacz do herbaty',        price: 22.00 },
-  { id: 5, name: 'Cukier trzcinowy 500g',       price:  8.99 },
+  { id: 1, name: 'Arabica coffee beans 1kg', price: 49.99 },
+  { id: 2, name: 'Earl Grey tea 100g',     price: 18.50 },
+  { id: 3, name: 'Ceramic mug 350ml',     price: 34.00 },
+  { id: 4, name: 'Tea infuser',        price: 22.00 },
+  { id: 5, name: 'Cane sugar 500g',       price:  8.99 },
 ];
 ```
 
@@ -31,11 +31,11 @@ Każdy produkt ma trzy pola. **`id`** posłuży jako klucz listy i jako sposób 
 Layout główny obejmuje każdą stronę aplikacji, a stronę dostaje jako `children`. Eksport `metadata` ustawia tytuł karty przeglądarki:
 
 ```jsx
-export const metadata = { title: 'Sklep kawowy — demo' };
+export const metadata = { title: 'Coffee shop — demo' };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pl">
+    <html lang="en">
       <body>
         {children}
       </body>
@@ -52,10 +52,10 @@ import { products } from './data/products';
 export default function HomePage() {
   return (
     <main>
-      <h1>Sklep kawowy</h1>
+      <h1>Coffee shop</h1>
       <ul>
         {products.map(p => (
-          <li key={p.id}>{p.name} — {p.price.toFixed(2)} zł</li>
+          <li key={p.id}>{p.name} — {p.price.toFixed(2)} PLN</li>
         ))}
       </ul>
     </main>
@@ -179,7 +179,7 @@ Dziennik audytu to zapis zdarzeń w kolejności. Według Kumara pozwala odtworzy
 >
 > — dokumentacja React, *useReducer*
 
-Nazwy akcji w koszyku, `ADD_ITEM` i `CLEAR_CART`, brzmią jak polecenia. Dokumentacja woli nazwy w czasie przeszłym, jak `'added'` i `'deleted'` (*„Choose a name that says what happened!”*), ale obie konwencje działają. Ważniejsza jest reguła o liczbie akcji. Jedna interakcja to jedna akcja, nawet jeśli zmienia wiele danych, dlatego „Wyczyść koszyk” wysyła jedno `CLEAR_CART`, a nie pięć `REMOVE_ITEM`. Dziennik akcji czyta się wtedy jak historię zakupów.
+Nazwy akcji w koszyku, `ADD_ITEM` i `CLEAR_CART`, brzmią jak polecenia. Dokumentacja woli nazwy w czasie przeszłym, jak `'added'` i `'deleted'` (*„Choose a name that says what happened!”*), ale obie konwencje działają. Ważniejsza jest reguła o liczbie akcji. Jedna interakcja to jedna akcja, nawet jeśli zmienia wiele danych, dlatego „Clear cart” wysyła jedno `CLEAR_CART`, a nie pięć `REMOVE_ITEM`. Dziennik akcji czyta się wtedy jak historię zakupów.
 
 ## Instrukcja `switch`, klamry i `return`
 
@@ -271,10 +271,10 @@ Stan jest obiektem `{ items: [] }`, a nie gołą tablicą, więc da się do nieg
 Reducer jest zwykłą funkcją, więc działa także poza komponentem. Dwa wywołania z produktem, który drugim razem niesie inną cenę, pokazują jedną regułę, której nikt nie zapisał wprost:
 
 ```js
-const kawa = { id: 1, name: 'Kawa', price: 49.99 };
-let s = cartReducer(initialCartState, { type: 'ADD_ITEM', product: kawa });
-s = cartReducer(s, { type: 'ADD_ITEM', product: { ...kawa, price: 59.99 } });
-s.items;   // [{ id: 1, name: 'Kawa', price: 49.99, qty: 2 }]
+const coffee = { id: 1, name: 'Coffee', price: 49.99 };
+let s = cartReducer(initialCartState, { type: 'ADD_ITEM', product: coffee });
+s = cartReducer(s, { type: 'ADD_ITEM', product: { ...coffee, price: 59.99 } });
+s.items;   // [{ id: 1, name: 'Coffee', price: 49.99, qty: 2 }]
 ```
 
 `ADD_ITEM` niesie cały obiekt produktu, bo reducer nie ma dostępu do katalogu. Gałąź dla produktu, który już jest w koszyku, zmienia jednak tylko `qty`. **Koszyk zapamiętuje dane produktu z chwili pierwszego dodania.** W sklepie z cenami zmienianymi w trakcie sesji tę regułę trzeba by zapisać świadomie.

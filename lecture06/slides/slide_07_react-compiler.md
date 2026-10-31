@@ -185,15 +185,7 @@ Kompilator zmniejsza **liczbę** renderów i obliczeń. Nie przyspiesza pojedync
 
 Ręczne sprawdzanie tych czynności po każdej zmianie łatwo skrócić albo coś w nim pominąć. Ten sam zestaw czynności może wykonać program, który renderuje komponent, klika w niego i porównuje wynik z oczekiwanym. Z takim zestawem włączenie kompilatora, aktualizacja jego wersji i usunięcie zbędnej memoizacji stają się zmianami, które da się sprawdzić jednym poleceniem.
 
-## Rozszerzenie: opcja `panicThreshold`
-
-Za brak przerwanego buildu odpowiada opcja `panicThreshold`. Jej domyślna wartość `'none'` każe pominąć komponent, którego nie da się skompilować, i budować dalej. Wartości `'critical_errors'` i `'all_errors'` przerywają build, a dokumentacja zaleca je tylko chwilowo, do szukania problemów.
-
-## Rozszerzenie: biblioteki, które psują memoizację
-
-Część bibliotek powstała, zanim zasady memoizacji Reacta zostały spisane. Dokumentacja wymienia funkcję `watch` z React Hook Form i hook `useReactTable` z TanStack Table. Wspólny problem nazywa **wewnętrzną zmiennością** (*interior mutability*). Obiekt albo funkcja trzyma ukryty stan, który się zmienia, choć referencja zostaje ta sama.
-
-Skutek opisuje przykład z `watch`. Wartość zapamiętana przez `useMemo(() => watch('name'), [watch])` nigdy się nie zaktualizuje, bo `watch` ma przez cały czas tę samą referencję. Interfejs wygląda wtedy na zamrożony. Komponenty z takimi API kompilator pomija sam. W projekcie z ESLintem takie wywołania wskazuje też reguła `incompatible-library` z pakietu `eslint-plugin-react-hooks`, a `contacts-app` lintera nie ma.
-
 > 💡 **Zapamiętaj:** React Compiler w Next.js 16 wymaga wtyczki `babel-plugin-react-compiler` i opcji `reactCompiler: true` na najwyższym poziomie konfiguracji. Kompiluje tylko komponenty i hooki zgodne z Regułami Reacta, a resztę pomija bez przerywania buildu.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r07_react-compiler.md`](rozszerzenia/r07_react-compiler.md)

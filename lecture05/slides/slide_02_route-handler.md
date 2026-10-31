@@ -153,55 +153,7 @@ curl -X POST -H "Content-Type: application/json" \
 
 Na pierwsze polecenie serwer odpowiada linią `HTTP/1.1 404 Not Found` i ciałem `{"error":"Not found"}`. Drugie tworzy artykuł z `id` równym 4, więc od tej chwili `GET /api/articles` zwraca cztery pozycje. Taki test oddziela błędy API od błędów interfejsu. Gdy `curl` dostaje złe dane, przyczyna leży w Route Handlerze. Gdy `curl` dostaje dobre dane, a strona pokazuje złe, przyczyna leży w kodzie Reacta.
 
-## Rozszerzenie: metody bezpieczne i idempotentne
-
-Słownik MDN nazywa dwie własności metod. Metoda jest **bezpieczna** (*safe*), gdy „nie zmienia stanu serwera” (*„doesn't alter the state of the server”*): `GET`, `HEAD` i `OPTIONS`. Metoda jest **idempotentna** (*idempotent*), gdy kilka identycznych żądań ma ten sam zamierzony skutek co jedno. Idempotentne są metody bezpieczne oraz `PUT` i `DELETE`. `POST` tej gwarancji nie ma: dwa identyczne żądania `POST /api/articles` dopiszą dwa artykuły. Dlatego klient może ponowić żądanie idempotentne po zerwanym połączeniu, a `POST` nie. Według MDN <u>pilnowanie tej umowy należy do aplikacji</u>, bo serwer nie zabroni funkcji `GET` zapisywać danych.
-
-## Rozszerzenie: odpowiedź 400 i nagłówek `Location`
-
-Zły format ciała to błąd klienta, więc odpowiada się na niego kodem 400. Kod 201 ma też drugą stronę: według MDN nowy zasób musi dać się znaleźć pod adresem z nagłówka `Location`. Wariant spoza demo:
-
-```js
-// Rozszerzenie spoza demo: 400 przy złym JSON-ie i nagłówek Location
-export async function POST(request) {
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-  const article = addArticle(body);
-  return NextResponse.json(article, {
-    status: 201,
-    headers: { Location: `/api/articles/${article.id}` }, // adres nowego zasobu
-  });
-}
-```
-
-Ciało `{"title":` daje teraz `400 Bad Request`, a poprawny artykuł `201 Created` z nagłówkiem `location`, na przykład `/api/articles/5`. Sprawdzenie, czy obiekt ma właściwe pola, to osobny krok, którego ten wariant nadal nie robi.
-
-## Rozszerzenie: filtr `?author=`
-
-Część adresu po znaku `?` czyta się z obiektu żądania. W Route Handlerze `request` jest obiektem **`NextRequest`**, który ma przetworzony adres w polu `nextUrl`:
-
-```js
-// Rozszerzenie spoza demo: filtr po parametrze ?author=
-export async function GET(request) {
-  const author = request.nextUrl.searchParams.get("author"); // null, gdy parametru brak
-  const articles = getArticles();
-  return NextResponse.json(author ? articles.filter((a) => a.author === author) : articles);
-}
-```
-
-Adres z `?author=Alice` zwraca jeden artykuł, a `?author=Nikt` pustą tablicę z kodem 200. Pusta lista jest poprawnym wynikiem wyszukiwania, więc nie jest przypadkiem dla 404.
-
-## Rozszerzenie: nagłówki i ciasteczka żądania
-
-Route Handler może czytać nagłówki i ciasteczka. `request.headers` daje standardowy obiekt `Headers`, a `request.cookies.get("token")` odczytuje ciasteczko. Te same dane zwracają funkcje `headers()` i `cookies()` z modułu `next/headers`. Dokumentacja zastrzega, że obiekt z `headers()` służy tylko do odczytu, a nagłówek odpowiedzi ustawia się w polu `headers` nowego obiektu `Response`. W `articleviewer` żaden Route Handler nie czyta nagłówków. W tym miejscu stałoby sprawdzenie tokenu w API dla aplikacji zewnętrznych.
-
-## Rozszerzenie: odpowiedź dla innej domeny
-
-Przeglądarka pilnuje, kto czyta odpowiedź. Skrypt może odczytać odpowiedź tylko z tego samego **pochodzenia** (*origin*), czyli z tej samej kombinacji schematu, domeny i portu. MDN opisuje **CORS** (*Cross-Origin Resource Sharing*) jako mechanizm oparty na nagłówkach HTTP, którym serwer wskazuje inne pochodzenia, z których przeglądarka może ładować jego zasoby. Strona serwowana przez sam `articleviewer` czyta `/api/articles` bez przeszkód. Aplikacja uruchomiona na innym porcie dostałaby blokadę, bo odpowiedzi nie mają nagłówka `Access-Control-Allow-Origin`. `curl` tej blokady nie zna, bo CORS jest regułą przeglądarki, a nie serwera.
-
 > 💡 **Zapamiętaj:** Route Handler to plik `route.js`, którego funkcje nazywają się jak metody HTTP, dostają `Request` i zwracają `Response`. <u>Błąd klienta, taki jak zły JSON, odsyła się kodem 4xx</u>, bo nieprzechwycony wyjątek w Route Handlerze kończy się kodem 500.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r02_route-handler.md`](rozszerzenia/r02_route-handler.md)

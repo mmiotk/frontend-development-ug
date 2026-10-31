@@ -18,7 +18,7 @@ W trybie deweloperskim działa tryb ścisły (*Strict Mode*), który wywołuje f
 
 ## Wynik: renderują się wszystkie przyciski
 
-Pomiar obejmuje jedno kliknięcie „Dodaj do koszyka” przy kawie i 1,5 s do końca akcji. W trybie deweloperskim (Next.js 16.4.0, React 19.3.0) daje taki wynik:
+Pomiar obejmuje jedno kliknięcie „Add to cart” przy kawie i 1,5 s do końca akcji. W trybie deweloperskim (Next.js 16.4.0, React 19.3.0) daje taki wynik:
 
 | Komponent | Wpisy w konsoli | Kiedy |
 |---|---|---|
@@ -75,12 +75,12 @@ Na Rysunku 4.11 ciągłe strzałki prowadzą do konsumentów kontekstu. Oba dost
 ```jsx
 function Panel({ children }) {        // dziecko przychodzi z zewnątrz jako children
   const [open, setOpen] = useState(false);
-  return <div><button onClick={() => setOpen(!open)}>{open ? 'Zwiń' : 'Rozwiń'}</button>{children}</div>;
+  return <div><button onClick={() => setOpen(!open)}>{open ? 'Collapse' : 'Expand'}</button>{children}</div>;
 }
 
 function PanelInline() {              // dziecko tworzone w środku, przy każdym renderze od nowa
   const [open, setOpen] = useState(false);
-  return <div><button onClick={() => setOpen(!open)}>{open ? 'Zwiń' : 'Rozwiń'}</button><Child /></div>;
+  return <div><button onClick={() => setOpen(!open)}>{open ? 'Collapse' : 'Expand'}</button><Child /></div>;
 }
 ```
 
@@ -96,33 +96,7 @@ Dlatego `ProductList`, choć jest komponentem klienckim pod dostawcą, nie rende
 
 Gdy stan i dostawca siedzą w komponencie, który sam tworzy resztę aplikacji, każda zmiana renderuje całe drzewo, tak jak w `PanelInline`. Samo wydzielenie dostawcy do osobnej funkcji, jak zaznacza Schwarzmüller w *React Key Concepts*, korzyści wydajnościowych nie przynosi. Zysk daje dopiero to, że stan mieszka w dostawcy, a reszta drzewa przychodzi do niego jako `children`. `CartProvider` w sklepie od początku ma tę postać: trzyma reducer u siebie, a layout nad nim nie ma stanu.
 
-## Rozszerzenie: druga pułapka, czyli nowy obiekt bez zmiany danych
-
-W sklepie `CartProvider` renderuje się tylko po zmianie koszyka, prawdziwego albo optymistycznego. Wystarczy jednak dodać mu własny stan, na przykład `isCartOpen` dla wysuwanego panelu, żeby problem się rozszerzył. Otwarcie panelu wyrenderuje dostawcę, obiekt wartości powstanie od nowa, a wszyscy konsumenci wyrenderują się ponownie. Tym razem koszyk w ogóle się nie zmienił. Dokumentacja opisuje ten sam przypadek na przykładzie kontekstu logowania:
-
-> **„Za każdym razem, gdy `MyApp` renderuje się ponownie, na przykład po zmianie trasy, powstaje inny obiekt wskazujący na inną funkcję, więc React musi ponownie wyrenderować wszystkie komponenty w głębi drzewa, które wywołują `useContext(AuthContext)`.”**
->
-> *„Whenever MyApp re-renders (for example, on a route update), this will be a different object pointing at a different function, so React will also have to re-render all components deep in the tree that call useContext(AuthContext).”*
->
-> — dokumentacja React, *useContext*
-
-Pułapka dotyczy tylko wartości będących obiektem, tablicą albo funkcją. Dokumentacja `useContext` pokazuje też kontekst motywu z wartością `value={theme}`, gdzie `theme` to napis `'dark'` albo `'light'`. Dla napisów i liczb `Object.is` porównuje samą wartość, więc ponowny render dostawcy z tym samym napisem nie dotyka konsumentów.
-
-## Rozszerzenie: wartość, która zmienia się bardzo często
-
-Z reguły porównania wynika jeszcze jedno kryterium. Liczba zbędnych renderów to liczba konsumentów pomnożona przez liczbę zmian wartości. Koszyk zmienia się po kliknięciu, czyli rzadko. Gdyby do tego samego kontekstu trafiła wartość zmieniana przy każdym znaku w polu wyszukiwania, każde naciśnięcie klawisza renderowałoby wszystkie pięć przycisków i podsumowanie koszyka. Barklund przyznaje, że walka o dodatkowe rendery jednego komponentu może wyglądać na przesadną optymalizację. Ostrzega jednak przed skalą:
-
-> **„W dużej aplikacji z wieloma kontekstami te dodatkowe aktualizacje jednak szybko się sumują!”**
->
-> *„In a large application with many contexts, however, these extra updates add up quickly!”*
->
-> — Morten Barklund, *React in Depth*
-
-<u>Wartość zmieniana przy każdym zdarzeniu nie powinna dzielić kontekstu z wartością czytaną przez wielu konsumentów</u>. Tekst w polu wyszukiwania zostaje w stanie komponentu, który go pokazuje.
-
-## Rozszerzenie: rendery, które przychodzą od rodzica
-
-Kontekst to nie jedyne źródło renderu. Na stronie `/cart` każdy `CartItem` czyta z kontekstu tylko `dispatch`, ale renderuje go `CartPage`, który czyta stan koszyka. Zmiana ilości jednej pozycji renderuje `CartPage`, a ten tworzy od nowa elementy wszystkich wierszy, tak jak `PanelInline` tworzy `<Child />`. Przy trzech pozycjach w koszyku zmiana ilości kawy daje po parze wpisów z każdego z trzech wierszy. Ten render przychodzi od rodzica, więc żadna zmiana w kontekście go nie usunie. Wpis w konsoli mówi tylko, że komponent się wyrenderował, a nie dlaczego.
-
 > 💡 **Zapamiętaj:** React renderuje każdego konsumenta kontekstu, gdy wartość dostawcy zmieni się według `Object.is`. Wybranie jednego pola przez destrukturyzację ani `memo` tego nie zatrzymują. Komponenty pod dostawcą, które kontekstu nie czytają, nie renderują się, gdy dostawca przyjmuje je jako `children`.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r11_rendery-kontekstu.md`](rozszerzenia/r11_rendery-kontekstu.md)

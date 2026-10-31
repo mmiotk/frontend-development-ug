@@ -131,23 +131,7 @@ Sesja idzie pierwsza, bo walidacja danych od nieznanej osoby jest zbędną prac�
 
 Sprawdzenie na poziomie strony nie wystarcza. Przewodnik *Data Security* pisze, że kontrola uwierzytelnienia na stronie nie obejmuje akcji zdefiniowanych w tej stronie (*„A page-level authentication check does not extend to the Server Actions defined within it.”*). Strona może przekierować niezalogowanego, a akcja i tak przyjmie jego żądanie `POST`, jeśli sama nie sprawdzi sesji.
 
-## Rozszerzenie: ochrony wbudowane i ich granice
-
-Next.js dokłada zabezpieczenia bez udziału programisty. Akcję wywołuje się wyłącznie metodą `POST`. Nagłówek `Origin` żądania jest porównywany z nagłówkiem `Host` albo `X-Forwarded-Host`, a niezgodne żądania są odrzucane. Chroni to przed **CSRF** (*Cross-Site Request Forgery*), czyli przed cudzą stroną, która w tle wysyła żądanie w imieniu zalogowanego użytkownika. Żądanie `POST /new` z nagłówkiem `Origin: https://evil.example` Next.js odrzuca kodem 500 z komunikatem „… does not match `origin` header … Aborting the action.”. Ochrona ma jednak granicę. Żądanie bez nagłówka `Origin` przechodzi i zapisuje artykuł, a serwer notuje tylko ostrzeżenie „Missing `origin` header from a forwarded Server Actions request.”. Ochrona blokuje więc obce strony w przeglądarce, ale nie zatrzymuje programu wysyłającego żądania z terminala.
-
-Tę samą granicę ma plik **`proxy.js`**, czyli kod uruchamiany przed obsługą żądania (dawniej `middleware`), który bywa używany do sprawdzania sesji. Dokumentacja tego pliku przypomina, że funkcje serwerowe nie są osobnymi trasami. Obsługuje się je jako żądania `POST` pod adres strony, na której ich użyto. Wzorzec `matcher`, który pomija daną ścieżkę, pomija więc także wywołania akcji na tej ścieżce. Przeniesienie akcji na inną trasę może po cichu zdjąć z niej kontrolę, dlatego sprawdzenie zostaje w samej funkcji serwerowej.
-
-Druga granica dotyczy liczby żądań. Formularz można wysłać tysiąc razy z rzędu, a każde wysłanie przejdzie kontrolę sesji i schematu. Przewodnik *Data Security* zaleca przy kosztownych operacjach, takich jak wysyłka e-maili czy zapis do bazy, **ograniczanie liczby żądań** (*rate limiting*). Przykład w przewodniku *Backend for Frontend* odpowiada na nadmiar żądań kodem 429 i treścią `{ error: 'Rate limit exceeded' }`.
-
-## Rozszerzenie: domknięcia i wartość zwracana
-
-Akcja zdefiniowana wewnątrz komponentu serwerowego może korzystać ze zmiennych otaczającej funkcji, czyli tworzy domknięcie. Zmienne przechwycone przez akcję wędrują do klienta i z powrotem, więc Next.js je szyfruje. Klucz powstaje przy każdym budowaniu, dlatego taka akcja działa tylko z tym buildem, z którego pochodzi strona. Przewodnik *Data Security* zastrzega, że samo szyfrowanie nie wystarcza do ochrony wartości wrażliwych. Bezpieczniej jest odczytać je ponownie na serwerze w chwili wywołania.
-
-Wartość zwracana przez akcję jest serializowana do klienta, więc kształtuje się ją według tego, co wyświetla interfejs. `createArticle` zwraca `{ success: true }` zamiast pełnego rekordu, który mógłby zawierać pola nieprzeznaczone dla przeglądarki.
-
-## Rozszerzenie: tekst od użytkownika na stronie
-
-Zapisany tekst wraca na ekran pod `/articles/[id]`. JSX zamienia tekst na bezpieczną postać przed wstawieniem do strony. Artykuł z treścią `<script>alert(1)</script>` wyświetli się jako zwykły napis, a skrypt się nie wykona. Taki atak nazywa się **XSS** (*Cross-Site Scripting*). Ochronę wyłącza atrybut `dangerouslySetInnerHTML`, który wstawia surowy HTML. Treść od użytkowników wstawia się w ten sposób tylko po oczyszczeniu biblioteką do sanityzacji HTML.
-
 > 💡 **Zapamiętaj:** każde wejście, które zapisuje dane, samo sprawdza ich kształt, bo Server Action i Route Handler to publiczne punkty końcowe. Ochrony frameworka, takie jak kontrola `Origin`, tego sprawdzenia nie zastępują.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r08_bezpieczenstwo-zapisu.md`](rozszerzenia/r08_bezpieczenstwo-zapisu.md)

@@ -156,71 +156,7 @@ flowchart LR
 
 Rysunek 5.11 zbiera w jednym węźle wszystkie wyzwalacze pobrania i pokazuje przerywaną strzałką ze znakiem ✗ połączenie, którego nie ma: `revalidatePath` nie uruchamia pobrania w SWR.
 
-## Rozszerzenie: kiedy SWR pyta serwer
-
-Dokumentacja API podaje wartości domyślne:
-
-- **`revalidateOnFocus = true`**: odświeżenie, gdy okno odzyskuje fokus, najwyżej raz na `focusThrottleInterval = 5000` ms.
-- **`revalidateOnReconnect = true`**: odświeżenie po powrocie sieci.
-- **`dedupingInterval = 2000`**: żądania z tym samym kluczem w oknie dwóch sekund łączą się w jedno.
-- **`refreshInterval = 0`** i **`refreshWhenHidden = false`**: odpytywanie jest wyłączone, a włączone nie działa w karcie schowanej w tle.
-
-Przy `refreshInterval: 5000` jedno okno wysyła dwanaście żądań na minutę, także gdy nikt niczego nie dodaje. Sto otwartych okien to tysiąc dwieście żądań na minutę, prawie zawsze z tą samą listą. Interwał dobiera się więc do tempa zmian danych.
-
-## Rozszerzenie: wyścig żądań
-
-Dokumentacja Reacta ostrzega, że odpowiedzi sieciowe mogą przyjść w innej kolejności, niż wysłano żądania. Przy własnym `fetch` w efekcie stare żądanie przerywa się obiektem `AbortController`, który według MDN pozwala przerwać jedno albo więcej żądań w wybranej chwili. SWR nie wymaga tu własnego kodu, bo każda odpowiedź trafia do wpisu swojego klucza. Gdy odpowiedź dla artykułu 1 przyjdzie później niż odpowiedź dla artykułu 2, zapisze się pod kluczem artykułu 1 i nie nadpisze widoku artykułu 2. Wyścig między zapisem a odświeżaniem w tle rozwiązuje osobny hook do zapisu, `useSWRMutation`, który po mutacji porzuca trwające żądanie `useSWR` i pobiera dane ponownie.
-
-## Rozszerzenie: dane z serwera jako wartość startowa
-
-Komponent serwerowy pobiera listę i przekazuje ją komponentowi klienckiemu, a ten podaje ją do SWR w opcji `fallbackData`. Takiej trasy nie ma w projekcie:
-
-```jsx
-// Rozszerzenie spoza demo: dane z serwera jako wartość startowa SWR
-"use client";
-import useSWR from "swr";
-
-const fetcher = (url) => fetch(url).then((r) => r.json());
-
-export default function LiveArticles({ initialArticles }) {
-  const { data } = useSWR("/api/articles", fetcher, {
-    fallbackData: initialArticles, // pokazywane przed pierwszym żądaniem z przeglądarki
-    refreshInterval: 5000,
-  });
-  return <ul>{data.map((a) => <li key={a.id}>{a.title}</li>)}</ul>;
-}
-```
-
-Pierwszy render ma wtedy listę z serwera, a odpytywanie działa dalej. Komponent nie sprawdza `isLoading`, bo przy pierwszym żądaniu flaga i tak ma wartość `true`, choć na ekranie stoją już dane startowe: wartość z `fallbackData` nie liczy się jako załadowana.
-
-## Rozszerzenie: klucze złożone, `SWRConfig` i `useSWRMutation`
-
-Zmienna, od której zależą dane, musi być częścią klucza. Dokumentacja pokazuje błąd z tokenem przekazanym tylko do `fetcher`: klucz się nie zmienia, więc SWR zwróci złe dane. Rozwiązaniem jest klucz-tablica, na przykład `["/api/articles", author]`, związany z pamięcią w całości. Klucz `null` wyłącza pobieranie: ``useSWR(id ? `/api/articles/${id}` : null, fetcher)`` nie wyśle żądania pod `/api/articles/undefined`.
-
-Po zapisie nieaktualna może być też lista pod `/api/articles?author=Ala`. Globalna funkcja `mutate` z `swr` przyjmuje zamiast klucza funkcję filtrującą: `mutate((key) => typeof key === "string" && key.startsWith("/api/articles"))` odświeża wszystkie pasujące wpisy. Dokumentacja zastrzega, że globalny `mutate` z samym kluczem nic nie zrobi bez zamontowanego hooka z tym kluczem.
-
-Gdy wiele komponentów korzysta z tego samego `fetcher`, podaje się go raz w `<SWRConfig value={{ fetcher }}>` nad drzewem, a `useSWR` dostaje sam klucz. Jedna funkcja może wtedy sprawdzać `r.ok` za wszystkie zapytania.
-
-Zapis z przycisku ma w SWR także osobny hook. **`useSWRMutation`** z `swr/mutation` według dokumentacji uruchamia mutację wyłącznie ręcznie, przez zwracaną funkcję `trigger`. Funkcja zapisu dostaje klucz i obiekt z polem `arg`, czyli argumentem przekazanym do `trigger`. Hook zwraca też flagę `isMutating`, przydatną do wyłączenia przycisku na czas zapisu. Opcja `populateCache` ma tu domyślnie wartość `false`, odwrotnie niż w `mutate`, więc odpowiedź `POST` z jednym artykułem nie nadpisze listy.
-
-## Rozszerzenie: zmiana widoczna przed odpowiedzią serwera
-
-SWR potrafi pokazać zmianę przed odpowiedzią. Funkcja `saveArticle` wysyłałaby `POST` i zwracała nowy artykuł:
-
-```jsx
-// Rozszerzenie spoza demo: aktualizacja optymistyczna z wycofaniem
-await mutate(saveArticle(newArticle), {
-  optimisticData: (current) => [...current, { ...newArticle, id: "temp" }],
-  rollbackOnError: true, // przywróć starą listę, gdy POST się nie uda
-  populateCache: false,  // POST zwraca jeden artykuł, a nie listę
-});
-```
-
-- **`optimisticData`** trafia od razu do pamięci albo jest funkcją bieżących danych.
-- **`rollbackOnError`**, domyślnie włączone, przywraca poprzednią listę po nieudanym zapisie.
-- **`populateCache`**, domyślnie włączone, zapisuje wynik mutacji jako dane klucza. `POST` zwraca jeden artykuł, więc bez `false` lista zamieniłaby się w obiekt, a `articles.map` zgłosiłby wyjątek.
-
-Po zakończeniu SWR i tak pobiera listę, bo `revalidate` jest domyślnie włączone. Wartość tymczasowa trafia przy tym do **wspólnej pamięci**: widzi ją każdy komponent z kluczem `"/api/articles"`, także w innej części strony. `useOptimistic` z Reacta trzyma wartość tymczasową w stanie jednego komponentu, tylko na czas akcji.
-
 > 💡 **Zapamiętaj:** klucz SWR jest nazwą wpisu w pamięci i argumentem `fetcher`. Ekran ładowania zależy od `isLoading`, a związany `mutate()` odświeża wpis po własnym zapisie. Pamięć SWR żyje w przeglądarce i nie widzi rewalidacji z serwera.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r11_swr.md`](rozszerzenia/r11_swr.md)

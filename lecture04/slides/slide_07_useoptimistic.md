@@ -2,7 +2,7 @@
 
 ## Dodanie do koszyka trwa
 
-W prawdziwym sklepie kliknięcie „Dodaj do koszyka” wysyła żądanie do serwera, który zapisuje koszyk w bazie. Odpowiedź przychodzi po czasie, którego aplikacja nie kontroluje. Do tej pory koszyk zmieniał się natychmiast, bo `dispatch` działa lokalnie. Żeby zobaczyć problem czekania, sklep dostaje symulację sieci w nowym pliku `app/lib/fakeApi.js`:
+W prawdziwym sklepie kliknięcie „Add to cart” wysyła żądanie do serwera, który zapisuje koszyk w bazie. Odpowiedź przychodzi po czasie, którego aplikacja nie kontroluje. Do tej pory koszyk zmieniał się natychmiast, bo `dispatch` działa lokalnie. Żeby zobaczyć problem czekania, sklep dostaje symulację sieci w nowym pliku `app/lib/fakeApi.js`:
 
 ```js
 // Symulacja wywołań sieciowych z opóźnieniem.
@@ -15,7 +15,7 @@ export function fakeAddToCart(product, shouldFail = false) {
     setTimeout(
       () =>
         shouldFail
-          ? reject(new Error('Błąd sieci — nie udało się dodać produktu'))
+          ? reject(new Error('Network error — could not add the product'))
           : resolve({ success: true, product }),
       1500
     )
@@ -23,7 +23,7 @@ export function fakeAddToCart(product, shouldFail = false) {
 }
 ```
 
-Funkcja zwraca obiekt Promise, czyli wynik, który pojawi się później. Timer `setTimeout` odkłada rozstrzygnięcie o 1500 ms. Po tym czasie Promise spełnia się obiektem `{ success: true, product }` albo, gdy drugi argument ma wartość `true`, zostaje odrzucony z błędem „Błąd sieci”. Obie drogi da się w ten sposób przejść bez prawdziwego serwera.
+Funkcja zwraca obiekt Promise, czyli wynik, który pojawi się później. Timer `setTimeout` odkłada rozstrzygnięcie o 1500 ms. Po tym czasie Promise spełnia się obiektem `{ success: true, product }` albo, gdy drugi argument ma wartość `true`, zostaje odrzucony z błędem „Network error”. Obie drogi da się w ten sposób przejść bez prawdziwego serwera.
 
 Półtorej sekundy bez żadnej reakcji to długo. Użytkownik nie wie, czy kliknięcie zadziałało, więc klika drugi raz. Drugie kliknięcie wysyła drugie żądanie, a w koszyku ląduje druga paczka kawy, której nikt nie zamierzał kupić.
 
@@ -176,8 +176,8 @@ export default function AddToCartButton({ product }) {
 
   return (
     <>
-      <button onClick={handleAdd}>Dodaj do koszyka</button>
-      {error && <span> Błąd: {error}</span>}
+      <button onClick={handleAdd}>Add to cart</button>
+      {error && <span> Error: {error}</span>}
     </>
   );
 }
@@ -185,7 +185,7 @@ export default function AddToCartButton({ product }) {
 
 Funkcja `handleAdd` czyści poprzedni błąd i uruchamia przejście z funkcją asynchroniczną. W przejściu `addOptimistic` dopisuje akcję tymczasową, a nagłówek koszyka zmienia się w tej samej chwili. Potem akcja czeka na `fakeAddToCart`. Po sukcesie `dispatch` zapisuje produkt w prawdziwym koszyku. Po porażce `catch` zapisuje komunikat w `error`, a koszyka nikt nie cofa ręcznie. Pusty fragment `<>…</>` zwraca przycisk i komunikat obok siebie bez dodatkowego elementu w DOM.
 
-Wewnętrzne `startTransition` wokół `dispatch` ma konkretny powód. Dokumentacja zaznacza, że aktualizacje stanu po `await` nie należą już do przejścia. Bez owinięcia `dispatch` wykonałby się od razu, jeszcze przed końcem przejścia, a reducer stanu optymistycznego dołożyłby akcję tymczasową do koszyka, który ma już kawę. Na jeden render nagłówek pokazałby wtedy „2 szt. — 99.98 zł”, a przy dwóch szybkich kliknięciach podwojenie trwa około 0,3 s. Owinięty `dispatch` trafia na ekran w tym samym zatwierdzeniu, w którym znika akcja tymczasowa. <u>Aktualizację wartości prawdziwej po `await` owija się w kolejne `startTransition`</u>.
+Wewnętrzne `startTransition` wokół `dispatch` ma konkretny powód. Dokumentacja zaznacza, że aktualizacje stanu po `await` nie należą już do przejścia. Bez owinięcia `dispatch` wykonałby się od razu, jeszcze przed końcem przejścia, a reducer stanu optymistycznego dołożyłby akcję tymczasową do koszyka, który ma już kawę. Na jeden render nagłówek pokazałby wtedy „2 pcs — 99.98 PLN”, a przy dwóch szybkich kliknięciach podwojenie trwa około 0,3 s. Owinięty `dispatch` trafia na ekran w tym samym zatwierdzeniu, w którym znika akcja tymczasowa. <u>Aktualizację wartości prawdziwej po `await` owija się w kolejne `startTransition`</u>.
 
 Przycisk nie jest blokowany na czas zapisu. Drugie kliknięcie od razu widać w nagłówku jako drugą sztukę, więc użytkownik nie klika w ciemno, a każde kliknięcie wysyła własne żądanie i własną akcję.
 
@@ -216,7 +216,7 @@ import AddToCartButton from './AddToCartButton';
             <AddToCartButton product={product} />
 ```
 
-Lista przestała czytać kontekst, bo funkcje koszyka potrzebne są teraz tylko przyciskowi, a przycisk pobiera je sam. Każdy z pięciu egzemplarzy `AddToCartButton` ma własny komunikat błędu, a wszystkie wysyłają akcje do jednego koszyka optymistycznego. Po kliknięciu przy kawie nagłówek od razu pokazuje „Koszyk: 1 szt. — 49.99 zł” i po 1,5 s nic się w nim nie zmienia. Kawa, a 0,3 s później herbata, dają kolejno 1 i 2 sztuki, bez żadnego cofania: druga akcja tymczasowa liczy się na wierzchu pierwszej.
+Lista przestała czytać kontekst, bo funkcje koszyka potrzebne są teraz tylko przyciskowi, a przycisk pobiera je sam. Każdy z pięciu egzemplarzy `AddToCartButton` ma własny komunikat błędu, a wszystkie wysyłają akcje do jednego koszyka optymistycznego. Po kliknięciu przy kawie nagłówek od razu pokazuje „Cart: 1 pcs — 49.99 PLN” i po 1,5 s nic się w nim nie zmienia. Kawa, a 0,3 s później herbata, dają kolejno 1 i 2 sztuki, bez żadnego cofania: druga akcja tymczasowa liczy się na wierzchu pierwszej.
 
 ## Gdy serwer odmówi
 
@@ -226,7 +226,7 @@ Drogę błędu daje wywołanie z drugim argumentem `true`:
 await fakeAddToCart(product, true); // shouldFail = true: Promise zostaje odrzucony po 1,5 s
 ```
 
-Odrzucony Promise rzuca wyjątek w miejscu `await`. Łapie go blok `catch`, który zapisuje komunikat w `error`, a `dispatch` nie pada. Nagłówek od razu pokazuje „Koszyk: 1 szt. — 49.99 zł”, a po 1,5 s, razem z końcem przejścia, wraca do „Koszyk: 0 szt. — 0.00 zł”. Obok przycisku stoi „Błąd: Błąd sieci — nie udało się dodać produktu”. To pełny wzorzec interfejsu optymistycznego: wynik na ekranie przed odpowiedzią i cofnięcie przy odmowie.
+Odrzucony Promise rzuca wyjątek w miejscu `await`. Łapie go blok `catch`, który zapisuje komunikat w `error`, a `dispatch` nie pada. Nagłówek od razu pokazuje „Cart: 1 pcs — 49.99 PLN”, a po 1,5 s, razem z końcem przejścia, wraca do „Cart: 0 pcs — 0.00 PLN”. Obok przycisku stoi „Error: Network error — could not add the product”. To pełny wzorzec interfejsu optymistycznego: wynik na ekranie przed odpowiedzią i cofnięcie przy odmowie.
 
 Bez `catch` odrzucenie przepadłoby dla interfejsu. **Granica błędów** to komponent pokazujący komunikat w miejscu poddrzewa, które rzuciło wyjątek. Samodzielna funkcja `startTransition` nie należy jednak do żadnego komponentu, więc żadna granica go nie przejmie. Koszyk i tak by się cofnął, ale bez słowa wyjaśnienia.
 
@@ -236,26 +236,7 @@ Stan optymistyczny obiecuje wynik, którego jeszcze nie ma. Takie założenie ko
 
 Hook niczego nie zapisuje na stałe i nie pamięta wyniku. Wartość tymczasowa istnieje tylko do końca przejścia, a o porażce informuje osobny stan, jak `error` w przycisku. Gdy komponent potrzebuje tylko informacji, czy coś trwa, wystarczy porównanie: `optimisticCart !== cart` oznacza, że któraś akcja wciąż czeka na serwer.
 
-## Rozszerzenie: pozycja oznaczona jako niepotwierdzona
-
-Reducer stanu optymistycznego nie musi być tym samym reducerem co prawdziwy. Dokumentacja pokazuje wariant, w którym pozycja tymczasowa niesie flagę. Poniższy fragment nie należy do projektu:
-
-```jsx
-// Rozszerzenie spoza demo: optymistyczne wiersze z flagą, wzór z dokumentacji useOptimistic.
-const [optimisticItems, addOptimisticItem] = useOptimistic(
-  items,
-  (currentItems, product) => [
-    ...currentItems,
-    { ...product, qty: 1, pending: true }, // pending: serwer jeszcze nie potwierdził
-  ]
-);
-```
-
-Wiersz z polem `pending: true` może pokazać dopisek „(dodawanie)” albo szarszy kolor. Gdy rodzic zapisze potwierdzoną pozycję w `items`, na ekranie zostaje wersja bez flagi. Użytkownik widzi wtedy nie tylko wynik, ale i to, że nie jest on jeszcze pewny.
-
-## Rozszerzenie: dwa przyciski w tym samym czasie
-
-Każde kliknięcie uruchamia osobne przejście, ale przejścia nie są od siebie niezależne. Dokumentacja `startTransition` mówi, że przy kilku trwających przejściach React obecnie łączy je w jedno (*„React currently batches them together”*) i nazywa to ograniczeniem, które może zniknąć w przyszłych wersjach. Dla koszyka optymistycznego skutek jest niewidoczny: obie akcje tymczasowe stoją na ekranie od chwili kliknięcia, a prawdziwy koszyk dogania je po zakończeniu połączonych przejść. <u>Wartość tymczasowa trwa do końca wszystkich połączonych przejść</u>, a nie tylko własnej akcji.
-
 > 💡 **Zapamiętaj:** `useOptimistic(cart, cartReducer)` pokazuje koszyk z akcjami w drodze tylko w czasie trwania przejścia i sam wraca do wartości prawdziwej, także po odmowie serwera. Zapis wartości prawdziwej po `await` owija się w kolejne `startTransition`, inaczej przez chwilę na ekranie stoją obie wersje naraz.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r07_useoptimistic.md`](rozszerzenia/r07_useoptimistic.md)

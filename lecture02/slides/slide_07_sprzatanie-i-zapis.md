@@ -175,32 +175,7 @@ Zapis dałoby się wstawić bezpośrednio do `addTask`, `toggleTask` i `deleteTa
 
 W Task Board ryzyko jest jeszcze większe, bo listę zmieniają trzy procedury, a każda następna operacja byłaby czwartym miejscem do zapamiętania. Wieruch przenosi zapis do `useEffect` z zależnością od stanu. Od tej chwili magazyn przeglądarki jest zawsze zsynchronizowany ze stanem, niezależnie od tego, gdzie i kiedy stan został zmieniony. Efekt z `[tasks]` w `TaskBoard` daje tę samą gwarancję w jednej linii.
 
-## Rozszerzenie: kod asynchroniczny w efekcie
-
-Z umowy o funkcji sprzątającej wynika, że funkcja efektu nie może być asynchroniczna. Banks i Porcello wyjaśniają, że funkcja `async` zawsze zwraca obiekt Promise, czyli wynik dostępny dopiero później, więc zapis `useEffect(async () => {})` jest niepoprawny. React uznaje zwróconą wartość za funkcję sprzątającą. Ostrzega wtedy w konsoli, że efekt „must not return anything besides a function, which is used for clean-up”, a przy usunięciu komponentu zgłasza `TypeError: destroy is not a function`. Kod asynchroniczny umieszcza się w funkcji wewnętrznej, wywoływanej w setupie:
-
-```jsx
-// Przykład spoza demo: kod asynchroniczny w efekcie
-"use client";
-import { useState, useEffect } from "react";
-
-// zaślepka źródła danych: Promise, który po 500 ms daje tablicę
-function fetchData() {
-  return new Promise((resolve) => setTimeout(() => resolve(["a", "b"]), 500));
-}
-
-export default function Loader() {
-  const [data, setData] = useState([]);
-  useEffect(() => {
-    async function load() {           // funkcja asynchroniczna zdefiniowana wewnątrz setupu
-      const result = await fetchData(); // await czeka na wynik Promise
-      setData(result);
-    }
-    load(); // setup niczego nie zwraca, więc React nie ma czego wziąć za sprzątanie
-  }, []);
-  return <p>{data.length} items</p>;
-}
-```
-
 > 💡 **Zapamiętaj:** efekt, który coś włącza, zwraca funkcję, która to wyłącza. Stan zapisywany poza Reactem synchronizuje się efektem zależnym od tego stanu, a nie kodem rozsianym po procedurach.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r07_sprzatanie-i-zapis.md`](rozszerzenia/r07_sprzatanie-i-zapis.md)

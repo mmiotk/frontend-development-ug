@@ -155,19 +155,7 @@ Poprawka nie dotyczy wiersza. Musi trafić do `app/page.jsx`, gdzie rodzic ma pr
 
 Barklund opisuje ten krok jako regułę. Gdy zaczyna się memoizować komponenty, trzeba też memoizować ich propsy (*„it is necessary to memoize properties when you start memoizing components”*). Dotyczy to obiektów i tablic tworzonych w ciele rodzica, a jeszcze bardziej funkcji. Według Barklunda właśnie funkcje są głównym powodem, dla którego hook `useCallback` istnieje i jest tak często używany. `memo` w dziecku i stabilne propsy w rodzicu działają tylko razem. Każda z tych zmian osobno daje w `contacts-app` ten sam wynik co jej brak: pięć wierszy renderowanych przy każdej literze.
 
-## Rozszerzenie: komponent czysty, klasy i wnętrze `memo`
-
-Alex Banks i Eve Porcello w *Learning React* nazywają wynik `memo` komponentem czystym:
-
-> **„W Reakcie komponent czysty to komponent, który przy tych samych propsach zawsze renderuje ten sam wynik.”**
->
-> *„In React, a pure component is a component that always renders the same output, given the same properties.”*
->
-> — Alex Banks, Eve Porcello, *Learning React*
-
-Autorzy przypominają też, skąd ten mechanizm się wziął. W komponentach klasowych tę samą decyzję podejmowała metoda `shouldComponentUpdate`, a później klasa bazowa `React.PureComponent`. Według autorów `PureComponent` działa tak samo jak `memo`, ale tylko dla klas, a `memo` jest jego odpowiednikiem dla komponentów funkcyjnych. Ich przykład z kotami ma budowę listy kontaktów: bez `memo` dodanie czwartego kota wypisuje w konsoli cztery linie, a z `memo` tylko jedną, dla nowego kota.
-
-Tejas Kumar zagląda przy tym do kodu źródłowego Reacta. `memo` zwraca zwykły obiekt z trzema polami i nie tworzy żadnej nowej funkcji. Pole `$$typeof` ma wartość oznaczającą komponent memoizowany, `type` wskazuje oryginalny komponent, a `compare` przechowuje opcjonalną funkcję porównującą. Decyzję z Rysunku 6.3 Kumar rozpisuje, czytając w kodzie Reacta funkcję `updateMemoComponent`.
-
 > 💡 **Zapamiętaj:** owinięcie w `memo` to deklaracja, że komponent renderuje się czysto. React pomija go tylko wtedy, gdy każdy prop ma tę samą tożsamość co poprzednio, więc jedna funkcja tworzona w ciele rodzica wystarczy, żeby nie pominął ani jednego renderu.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r03_react-memo.md`](rozszerzenia/r03_react-memo.md)

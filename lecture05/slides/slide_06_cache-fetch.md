@@ -164,33 +164,7 @@ export default async function HomePage() {
 
 Build oznacza teraz `/` symbolem `ƒ` i nie potrzebuje działającego API. Każde wejście renderuje stronę od nowa, ale lista przez minutę pochodzi z pamięci `fetch`. O tym, kiedy renderuje się strona, decyduje `connection()`, a o tym, jak długo żyje odpowiedź API, opcja `revalidate`.
 
-## Rozszerzenie: konfiguracja całego segmentu
-
-Zamiast opcji przy każdym `fetch` można ustawić zachowanie całej strony eksportem z `page.jsx` albo `layout.jsx`.
-
-```js
-// rozszerzenie spoza demo: konfiguracja segmentu, eksport na poziomie modułu
-export const revalidate = 30; // ISR dla całego segmentu
-// export const dynamic = "force-dynamic"; // odpowiednik cache: "no-store"
-```
-
-**`export const revalidate = 30`** ustawia domyślny czas odświeżania strony, ale nie nadpisuje wartości z pojedynczego `fetch`. Najniższa wartość spośród layoutów i stron jednej trasy wyznacza częstotliwość odświeżania całej trasy. Wartość musi być stałą liczbą: `600` przejdzie, a `60 * 10` już nie, bo Next.js odczytuje ją z kodu w czasie budowania. **`export const dynamic = "force-dynamic"`** każe renderować stronę przy każdym żądaniu.
-
-## Rozszerzenie: dane spoza `fetch` i deduplikacja
-
-`ArticlePage` czyta magazyn wywołaniem `getArticle(id)`, bez `fetch`, więc żadna z opcji powyżej jej nie dotyczy. Dla takich funkcji model oparty na opcjach `fetch` ma `unstable_cache` z `next/cache`. Bugl uspokaja co do nazwy: „mimo nazwy tej funkcji można już bezpiecznie używać w produkcji” (*„Despite its name, this function can already safely be used in production.”*). Dokumentacja Next.js 16 ma do niej nowszą uwagę: API zostało zastąpione dyrektywą `use cache`, częścią opcjonalnego modelu Cache Components, z którego ta aplikacja nie korzysta.
-
-Osobnym mechanizmem jest **deduplikacja żądań** (w dokumentacji *request memoization*, bez związku z `useMemo`). Według dokumentacji `fetch` żądania `GET` z tym samym adresem i opcjami wykonują się w trakcie jednego przebiegu renderu raz. Wynik dostają wszystkie komponenty serwerowe, layouty i strony, które je wywołały. Dzięki temu dane pobiera się w komponencie, który ich potrzebuje, zamiast przekazywać je przez propsy. Deduplikacja nie działa w Route Handlerach, bo te nie należą do drzewa komponentów.
-
-## Rozszerzenie: nagłówki i pliki pamięci czasowej
-
-Pamięć czasowa zmienia też wynik buildu. Przy `revalidate: 30` tabela tras dostaje kolumny `Revalidate` i `Expire`, a wiersz `○ /` ma w nich `30s` i `1y`. Odpowiedź dla `/` niesie nagłówek `Cache-Control: s-maxage=30, stale-while-revalidate=31535970`. Druga liczba to rok w sekundach pomniejszony o 30. Dokumentacja opcji `expireTime` w `next.config.js` wyjaśnia, że ten nagłówek jest przeznaczony dla sieci CDN (*Content Delivery Network*), czyli serwerów pośrednich trzymających kopie odpowiedzi blisko użytkowników.
-
-Pamięć `fetch` żyje poza procesem pojedynczego żądania: zapisane odpowiedzi leżą jako pliki w katalogu `.next/cache/fetch-cache`. Przewodnik *How Revalidation Works* nazywa to domyślną pamięcią w systemie plików, wystarczającą dla jednej instancji serwera. Pamięć przeżywa restart serwera, a magazyn artykułów nie. Po restarcie `/api/articles` zwraca znowu trzy wpisy, a strona `/` nadal pokazuje „Artykuły (4)” z zapisanej odpowiedzi. Ten sam przewodnik dodaje, że przy rewalidacji trasy Next.js generuje od nowa zarówno HTML, jak i RSC Payload, i trzyma je w jednym wpisie.
-
-## Rozszerzenie: pamięć w trybie deweloperskim
-
-Twarde odświeżenie (Ctrl+Shift+R) albo zaznaczone „Disable cache” w narzędziach przeglądarki wysyłają nagłówek `cache-control: no-cache`. Według dokumentacji `next dev` ignoruje wtedy opcje `cache`, `revalidate` i `tags`. Przy `force-cache` lista nagle wygląda na świeżą, a efekt pamięci widać tylko przy zwykłym odświeżeniu. Sprzeczne opcje w jednym wywołaniu dokumentacja odrzuca. Zapis `{ cache: "no-store", next: { revalidate: 3600 } }` daje w terminalu `next dev` ostrzeżenie „Specified "cache: no-store" and "revalidate: 3600", only one should be specified.”.
-
 > 💡 **Zapamiętaj:** w Next.js 16 `fetch` na serwerze domyślnie nie zapamiętuje odpowiedzi, ale na trasie statycznej i tak wykonuje się raz, w czasie budowania. Pamięć włącza się jawnie przez `force-cache` albo `next: { revalidate: N }`, a po upływie czasu pierwsze żądanie dostaje jeszcze dane stare.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r06_cache-fetch.md`](rozszerzenia/r06_cache-fetch.md)

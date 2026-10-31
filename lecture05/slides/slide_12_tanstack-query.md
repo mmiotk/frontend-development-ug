@@ -146,60 +146,11 @@ export function useAddArticle() {
 
 Komponent dostaje z hooka funkcję `mutate(dane)` i flagę `isPending` do zablokowania przycisku. Po `mutate` lista na ekranie od razu dostaje nowy artykuł, bo `invalidateQueries` oznacza wpis jako nieświeży, a aktywne zapytanie pobiera go ponownie. Według dokumentacji mutacje domyślnie nie są ponawiane. Przy zapisie ma to sens, bo powtórzony `POST` mógłby dodać artykuł dwa razy.
 
-## Rozszerzenie: wersja 5 i obiekt w argumencie
-
-Wersja 5 przyjmuje wyłącznie obiekt. Przewodnik migracji pisze krótko: „teraz obsługujemy wyłącznie format obiektowy” (*„now we only support the object format.”*). Stare wywołanie `useQuery(klucz, funkcja, opcje)` z poradników nie zadziała, tak samo jak `invalidateQueries(['posts'])` z książki Bugla, pisanej pod wersję 4. Opcja `cacheTime` z wersji 4 nazywa się teraz `gcTime`, a stan `loading` nazywa się `pending`.
-
-## Rozszerzenie: klucze zapytań
-
-Klucz jest tablicą. Dokumentacja *Query Keys* zaczyna od zdania, że biblioteka zarządza pamięcią na podstawie kluczy. Jeśli funkcja zapytania zależy od zmiennej, zmienna trafia do klucza: lista po autorze ma klucz `["articles", { author }]`. Klucze działają jak zależności funkcji zapytania, więc zmiana klucza oznacza nowe zapytanie.
-
-Klucze układa się hierarchicznie: `["articles"]` dla listy, `["articles", id]` dla szczegółów. Barklund zauważa zaletę: do zapytań odwołuje się dokładnym kluczem albo jego początkiem. `invalidateQueries({ queryKey: ["articles"] })` oznacza jako nieświeże wszystkie zapytania z kluczem zaczynającym się od `"articles"`, a aktywne pobierają się od razu.
-
-Trzy opcje sterują tym, co zapytanie robi z kluczem:
-
-- **`enabled: false`** wstrzymuje zapytanie. Według dokumentacji nie pobiera się przy montowaniu ani w tle i ignoruje `invalidateQueries`. Zapis `enabled: !!author` czeka, aż użytkownik wybierze autora.
-- **`select`** wybiera fragment danych, na przykład `(data) => data.length`. Komponent renderuje się wtedy tylko przy zmianie liczby artykułów.
-- **`placeholderData: keepPreviousData`** robi przy paginacji z kluczem `["articles", page]` to samo co `keepPreviousData` w SWR, a flaga `isPlaceholderData` mówi, że na ekranie są stare dane.
-
-## Rozszerzenie: ręczne wycofanie zmiany
-
-Zmianę pamięci przed odpowiedzią serwera z ręcznym wycofaniem zapisuje się w trzech funkcjach, zgodnie z przewodnikiem *Optimistic Updates*. W wersji 5.104.1 każda z nich dostaje ostatnim argumentem kontekst z polem `client`, czyli klientem zapytań:
-
-```jsx
-// Rozszerzenie spoza demo: aktualizacja optymistyczna z ręcznym wycofaniem
-const saveArticle = (article) => // POST /api/articles, zwraca zapisany artykuł
-  fetch("/api/articles", { method: "POST", body: JSON.stringify(article) }).then((r) => r.json());
-
-useMutation({
-  mutationFn: saveArticle,
-  onMutate: async (newArticle, context) => {
-    await context.client.cancelQueries({ queryKey: ["articles"] }); // przerwij pobierania, które nadpisałyby zmianę
-    const previous = context.client.getQueryData(["articles"]);
-    context.client.setQueryData(["articles"], (old) => [...old, newArticle]);
-    return { previous }; // kopia do wycofania
-  },
-  onError: (err, newArticle, onMutateResult, context) => {
-    context.client.setQueryData(["articles"], onMutateResult.previous);
-  },
-  onSettled: (data, error, variables, onMutateResult, context) =>
-    context.client.invalidateQueries({ queryKey: ["articles"] }),
-});
-```
-
-`onMutate` przerywa pobierania w tle przez `cancelQueries`, bo starsza odpowiedź nadpisałaby zmianę. Potem zapisuje kopię listy i dopisuje artykuł. `onError` przywraca kopię, a `onSettled` unieważnia listę po każdym wyniku. W SWR wycofanie robi opcja `rollbackOnError`, a tu pisze się je samemu. Ten sam przewodnik opisuje prostszy wariant bez dotykania pamięci: lista renderuje dodatkową pozycję z `variables` mutacji, dopóki `isPending` ma wartość `true`.
-
-## Rozszerzenie: dane z serwera na start
-
-Dane z komponentu serwerowego można przekazać do `useQuery` w opcji `initialData`. Barklund odróżnia ją od `placeholderData`. Dane startowe to prawdziwe dane, które mogą zastąpić odpowiedź. Dane zastępcze tylko wyglądają podobnie i najpewniej nie są prawdziwe.
-
-Przewodnik *Advanced Server Rendering* zaleca w App Routerze drugą drogę. Komponent serwerowy tworzy własny `QueryClient`, wypełnia go wywołaniem `await queryClient.query({ queryKey: ["articles"], queryFn: getArticles })` i zwraca `<HydrationBoundary state={dehydrate(queryClient)}>` wokół komponentu klienckiego z `useQuery`. W wersji 5.104.1 metoda `prefetchQuery` z wcześniejszych poradników jest oznaczona jako przestarzała na rzecz `query`. Różnią się zachowaniem przy błędzie: `prefetchQuery` go połykała, a `query` odrzuca Promise, więc nieudane pobranie przerywa render komponentu serwerowego. HTML strony zawiera wtedy gotową listę. Przeglądarka i tak wysyła zaraz po hydratacji `GET /api/articles`, bo przy `staleTime` równym 0 dane z serwera są od razu nieświeże. Komentarz w kodzie przewodnika zaleca przy SSR `staleTime` powyżej zera, na przykład 60 sekund.
-
-Przewodnik zawiera też ostrzeżenie ważne dla tej aplikacji. Server Actions nie nadają się do `queryFn`, bo wykonują się po kolei, a zapytania mają biec równolegle. Do odczytu służy Route Handler, taki jak `/api/articles`, a akcje zostają dla `useMutation`.
-
 ## Gdzie powstaje ekran i kto go odświeża
 
 W `articleviewer` lista na `/` powstaje na serwerze przy każdym żądaniu z odpowiedzi API zapamiętanej na minutę, a zapis obsługuje akcja z `revalidatePath`. Strona `/swr-demo` trzyma kopię w przeglądarce, w widocznej karcie odświeża ją co pięć sekund, a po własnym zapisie od razu przez `mutate()`. <u>W przeglądarce pobiera się tylko dane, których serwer nie dostarczy w chwili renderu: zmienne w czasie albo zależne od działań użytkownika</u>.
 
 > 💡 **Zapamiętaj:** TanStack Query traktuje dane z serwera jako stan z cyklem życia: świeże, nieświeże, nieaktywne i usunięte. Nieudane zapytanie jest w przeglądarce domyślnie ponawiane trzy razy, klucze układa się hierarchicznie, a po mutacji unieważnia się je przez `invalidateQueries`.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r12_tanstack-query.md`](rozszerzenia/r12_tanstack-query.md)

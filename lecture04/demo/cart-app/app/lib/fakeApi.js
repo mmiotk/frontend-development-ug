@@ -8,7 +8,7 @@ export function fakeAddToCart(product, shouldFail = false) {
     setTimeout(
       () =>
         shouldFail
-          ? reject(new Error('Błąd sieci — nie udało się dodać produktu'))
+          ? reject(new Error('Network error — could not add the product'))
           : resolve({ success: true, product }),
       1500
     )
@@ -22,11 +22,11 @@ export function fetchRecommended(shouldFail = false) {
     setTimeout(
       () =>
         shouldFail
-          ? reject(new Error('Brak połączenia — nie udało się załadować rekomendacji'))
+          ? reject(new Error('No connection — could not load recommendations'))
           : resolve([
-              { id: 10, name: 'Młynek do kawy ręczny', price: 89.99 },
-              { id: 11, name: 'Termos 0.5L',            price: 55.00 },
-              { id: 12, name: 'Filtr do kawy x100',     price: 12.50 },
+              { id: 10, name: 'Manual coffee grinder', price: 89.99 },
+              { id: 11, name: 'Thermos 0.5L',            price: 55.00 },
+              { id: 12, name: 'Coffee filters x100',     price: 12.50 },
             ]),
       2000
     )

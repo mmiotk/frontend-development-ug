@@ -91,7 +91,7 @@ Druga linia pokazuje pułapkę. Dostawca bez atrybutu `value` działa tak, jakby
 >
 > — dokumentacja React, *createContext*
 
-Sensowna wartość domyślna, jak motyw `'light'`, pasuje tam, gdzie aplikacja może działać bez dostawcy. Dla koszyka takiej wartości nie ma. Gdyby wartością domyślną był pusty koszyk `{ items: [] }`, komponent postawiony przez pomyłkę poza dostawcą pokazałby zero produktów, a przycisk „Dodaj do koszyka” nie robiłby nic. Nikt by tego nie zauważył. <u>Dla stanu, który ma jedno źródło, głośny błąd jest lepszy od cichej wartości zastępczej</u>, więc kontekst koszyka dostaje `null`.
+Sensowna wartość domyślna, jak motyw `'light'`, pasuje tam, gdzie aplikacja może działać bez dostawcy. Dla koszyka takiej wartości nie ma. Gdyby wartością domyślną był pusty koszyk `{ items: [] }`, komponent postawiony przez pomyłkę poza dostawcą pokazałby zero produktów, a przycisk „Add to cart” nie robiłby nic. Nikt by tego nie zauważył. <u>Dla stanu, który ma jedno źródło, głośny błąd jest lepszy od cichej wartości zastępczej</u>, więc kontekst koszyka dostaje `null`.
 
 ## Plik kontekstu koszyka
 
@@ -175,46 +175,7 @@ const { cart } = useContext(CartContext);
 
 Drugi komunikat mówi tylko, że coś jest `null`. Pierwszy wymienia nazwę dostawcy, więc przy takim błędzie wystarczy sprawdzić, czy komponent leży w drzewie pod `<CartProvider>`. Dokumentacja Next.js stosuje ten sam wzorzec w przewodniku o aplikacjach jednostronicowych: jej hook `useUser` rzuca wyjątek `useUser must be used within a UserProvider`.
 
-## Rozszerzenie: komponent, który czyta i dostarcza ten sam kontekst
-
-Osobna reguła dotyczy komponentu, który kontekst jednocześnie czyta i dostarcza. `useContext` nie widzi dostawcy zwróconego przez ten sam komponent, tylko szuka wyżej:
-
-```jsx
-function SelfProvider() {
-  const seen = useContext(ThemeContext); // szuka NAD SelfProvider: dostawcy nie ma, więc 'light'
-  return (
-    <ThemeContext value="inner">
-      <p>sam widzi: {seen}</p>
-      <Label />                          {/* dziecko widzi 'inner' */}
-    </ThemeContext>
-  );
-}
-// renderuje: <p>sam widzi: light</p><p>motyw: inner</p>
-```
-
-Wartość z JSX komponentu trafia do jego dzieci, a nie do niego samego, bo hook wykonuje się, zanim komponent zwróci dostawcę.
-
-## Rozszerzenie: ten sam obiekt po obu stronach
-
-Kontekst łączy dostawcę i odbiorcę przez tożsamość obiektu. Dokumentacja zastrzega, że przekazanie działa tylko wtedy, gdy dostawca i komponent czytający używają dokładnie tego samego obiektu, porównanego operatorem `===`. Każde wywołanie `createContext` tworzy nowy obiekt:
-
-```js
-const a = createContext(null);
-const b = createContext(null);
-console.log(a === b); // false: dwa wywołania, dwa niezależne kanały
-```
-
-Stąd zalecenie dokumentacji, żeby wywoływać `createContext` poza komponentami. Wywołanie w ciele komponentu tworzyłoby przy każdym renderze nowy obiekt, czyli za każdym razem inny kontekst. Odbiorca szukałby wtedy dostawcy kanału, którego nikt już nie dostarcza.
-
-## Rozszerzenie: dwie kopie modułu z kontekstem
-
-Ten sam warunek tłumaczy rzadszą awarię. Narzędzie budujące może przez dowiązania symboliczne (pliki wskazujące na inny katalog) umieścić w paczce dwie kopie modułu z kontekstem. Każda kopia wywołuje własne `createContext`, więc powstają dwa różne obiekty. Dostawca korzysta wtedy z jednej kopii, odbiorca z drugiej i nie znajduje dostawcy. Dokumentacja radzi przypisać oba obiekty do zmiennych globalnych i porównać je w konsoli przez `===`.
-
-## Rozszerzenie: wiele egzemplarzy jednego dostawcy
-
-`CartProvider` to zwykły komponent, więc można go wyrenderować więcej niż raz. Każdy egzemplarz wywołuje własny `useReducer` i ma własny koszyk. Dwa dostawcy postawieni obok siebie dadzą dwa niezależne poddrzewa: dodanie kawy w jednym nie zmieni drugiego.
-
-Morten Barklund w *React in Depth* wykorzystuje tę cechę celowo. Formularz śniadania w jego przykładzie ma cztery grupy przycisków radiowych na jednej stronie. Każda grupa jest osobnym dostawcą z własnym zaznaczeniem, więc opcje kawy nie widzą zaznaczenia w grupie pieczywa. Koszyk korzysta z drugiej skrajności: jeden egzemplarz dostawcy obejmuje wszystkie komponenty, które go czytają.
-
 > 💡 **Zapamiętaj:** kontekst tworzy się przez `createContext` poza komponentem, dostarcza przez `<Ctx value>` i czyta przez `useContext` schowany we własnym hooku. Odczyt sięga do najbliższego dostawcy wyżej, a wartość domyślna działa tylko wtedy, gdy dostawcy nie ma wcale.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r05_context.md`](rozszerzenia/r05_context.md)

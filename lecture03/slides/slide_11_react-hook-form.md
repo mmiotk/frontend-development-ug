@@ -2,13 +2,13 @@
 
 ## Biblioteka zamiast akcji
 
-Formularz `/new` korzysta wyłącznie z tego, co daje React 19: `<form action>`, `useActionState` i `useFormStatus`. Druga droga to biblioteka formularzy. Barklund w *React in Depth* wymienia w tej grupie między innymi Formika, React Hook Form i React Final Form. Strona React Hook Form zapowiada „wydajne, elastyczne i rozszerzalne formularze z łatwą walidacją” (*„Performant, flexible and extensible forms with easy-to-use validation”*).
+Formularz `/new` korzysta wyłącznie z tego, co daje React 19: `<form action>`, `useActionState` i `useFormStatus`. Druga droga to biblioteka formularzy. Barklund w *React in Depth* wymienia między innymi Formika, React Hook Form i React Final Form. Strona React Hook Form nazywa ją „wydajną, elastyczną i rozszerzalną biblioteką formularzy Reacta z łatwą walidacją” (*„A performant, flexible and extensible React form library with easy-to-use validation”*).
 
-Strona `/new-rhf` robi dokładnie to samo co `/new`: przyjmuje tytuł i priorytet, sprawdza je schematem `issueSchema` i dopisuje zgłoszenie do magazynu. Porównanie dwóch plików z tym samym schematem pokazuje, co jest cechą formularza, a co cechą narzędzia. Reguły walidacji są wspólne. Kształt błędów, moment sprawdzania i to, co dzieje się po sukcesie, zależą od wybranej drogi.
+Strona `/new-rhf` robi to samo co `/new`: przyjmuje tytuł i priorytet, sprawdza je schematem `issueSchema` i dopisuje zgłoszenie do magazynu. Porównanie dwóch plików z tym samym schematem pokazuje, co jest cechą formularza, a co cechą narzędzia. Kształt błędów, moment sprawdzania i to, co dzieje się po sukcesie, zależą od drogi.
 
 ## Po co powstały biblioteki formularzy
 
-Akcje formularzy weszły do Reacta dopiero w wersji 19. Wcześniej każdy formularz składał się ręcznie ze stanu, procedur `onChange`, funkcji `onSubmit` z `preventDefault()`, własnej walidacji i flag w rodzaju „pole już odwiedzone” albo „formularz się wysyła”. Pole kontrolowane (wartość w stanie komponentu) renderuje komponent przy każdej literze, a duży formularz potrzebuje wielu osobnych wartości stanu. Biblioteki formularzy powstały, żeby ten powtarzalny kod napisać raz.
+Akcje formularzy weszły do Reacta dopiero w wersji 19. Wcześniej każdy formularz składał się ze stanu, procedur `onChange`, funkcji `onSubmit` z `preventDefault()`, własnej walidacji i flag w rodzaju „pole już odwiedzone” albo „formularz się wysyła”. Pole kontrolowane (wartość w stanie komponentu) renderuje komponent przy każdej literze, a duży formularz potrzebuje wielu osobnych wartości stanu. Biblioteki formularzy powstały, żeby ten powtarzalny kod napisać raz.
 
 React Hook Form odpowiada na obie wady naraz. Jeden hook `useForm` zastępuje osobne wartości stanu dla każdego pola, a wartości pól zostają w DOM. Część tej pracy w React 19 wykonują już akcje, dlatego wybór biblioteki przestał być oczywisty i wymaga porównania.
 
@@ -255,23 +255,7 @@ async function onSubmit(data) {
 
 Klucz `root.server` oznacza błąd, który nie należy do żadnego pola. Gdy `save` rzuci wyjątek z komunikatem „Server is not responding”, ten tekst stoi pod formularzem, a `isSubmitting` wraca do `false`. Pola po udanym zapisie czyści funkcja `reset` z `useForm`. W demo nie jest potrzebna, bo `router.push("/")` opuszcza stronę formularza.
 
-## Rozszerzenie: biblioteka i akcja w jednym formularzu
-
-Czasem potrzebne są oba mechanizmy naraz: walidacja React Hook Form w trakcie pisania i stan wyniku z `useActionState`. Funkcję zwróconą przez `useActionState` wywołuje się wtedy w `onSubmit` wewnątrz `startTransition`, czyli jako przejście, bo tylko wtedy React śledzi jej status. Kod jest rozszerzeniem spoza demo:
-
-```jsx
-// Hybryda: RHF waliduje, useActionState trzyma wynik (poza demo)
-import { startTransition } from "react";
-
-function onSubmit(data) {
-  const formData = new FormData(); // akcja oczekuje FormData, biblioteka oddaje obiekt
-  formData.set("title", data.title);
-  formData.set("priority", data.priority);
-  startTransition(() => formAction(formData)); // poza przejściem isPending się nie zmieni
-}
-```
-
-Taki formularz ma dwa mechanizmy stanu i obiekt `FormData` budowany ręcznie z danych biblioteki. Opłaca się dopiero wtedy, gdy walidacja w trakcie pisania jest potrzebna, a akcja ma pracować na serwerze.
-
 > 💡 **Zapamiętaj:** React Hook Form podpina pola przez ref i zostawia je niekontrolowane, a stan formularza czyta przez `Proxy`, więc renderuje komponent tylko przy zmianie tego, co komponent wyświetla. `handleSubmit` wywołuje `onSubmit` wyłącznie z danymi, które przeszły przez `zodResolver`.
 
+
+Materiał rozszerzony do tego slajdu: [`rozszerzenia/r11_react-hook-form.md`](rozszerzenia/r11_react-hook-form.md)
