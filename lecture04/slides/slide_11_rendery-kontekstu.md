@@ -43,10 +43,12 @@ Przyczyna leży w tym, co React porównuje. Komponent pisze `const { dispatch, a
 `Object.is` dla obiektów sprawdza tylko, czy to ten sam obiekt w pamięci. Literał `{ … }` tworzy nowy obiekt przy każdym wykonaniu, nawet z tymi samymi polami:
 
 ```js
+const cart = { items: [] };         // uproszczony koszyk
+const dispatch = () => {};          // jedna funkcja, tworzona raz
 const before = { cart, dispatch };  // wartość z poprzedniego renderu dostawcy (uproszczona)
 const after = { cart, dispatch };   // ten sam koszyk, ta sama funkcja, nowy literał
-Object.is(before, after);                    // false: dwa różne obiekty
-Object.is(before.dispatch, after.dispatch);  // true: ta sama funkcja
+Object.is(before, after);                    // → false (dwa różne obiekty)
+Object.is(before.dispatch, after.dispatch);  // → true (ta sama funkcja)
 ```
 
 Obiekt `{ cart, dispatch, addOptimistic }` powstaje w `CartProvider` od nowa przy każdym jego renderze. Po kliknięciu nowy jest koszyk optymistyczny, po 1,5 s prawdziwy, i za każdym razem `CartProvider` tworzy nowy obiekt wartości. Porównanie daje wynik „różne” i każdy komponent wywołujący `useCart()` renderuje się ponownie. Funkcje w środku obiektu są te same, ale React do nich nie zagląda.
@@ -73,6 +75,10 @@ Na Rysunku 4.11 ciągłe strzałki prowadzą do konsumentów kontekstu. Oba dost
 `CartProvider` stoi w layoucie i dostaje stronę jako `children`. Gdy zmienia się jego stan, jego funkcja wykonuje się ponownie, ale `children` to ten sam element, który przyszedł od layoutu. W App Routerze strona `HomePage` jest komponentem serwerowym, więc w przeglądarce jej funkcja nie wykonuje się wcale. `CartProvider` dostaje `children` przygotowane na serwerze, a w nich elementy komponentów klienckich, takich jak `ProductList`. Element JSX to zwykły obiekt opisujący komponent i jego propsy. Jeśli rodzic nie utworzył go od nowa, React uznaje, że to poddrzewo nie ma powodu się zmienić. Różnicę widać na dwóch panelach z tym samym dzieckiem:
 
 ```jsx
+import { useState } from 'react';
+
+function Child() { return <i>child</i>; }
+
 function Panel({ children }) {        // dziecko przychodzi z zewnątrz jako children
   const [open, setOpen] = useState(false);
   return <div><button onClick={() => setOpen(!open)}>{open ? 'Collapse' : 'Expand'}</button>{children}</div>;

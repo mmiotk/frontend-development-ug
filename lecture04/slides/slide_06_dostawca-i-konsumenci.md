@@ -58,7 +58,7 @@ import os from 'node:os';                  // moduł Node.js, którego nie ma w 
 import ClientBox from './ClientBox';
 
 function ServerInfo() {
-  return <p>platforma: {os.platform()}</p>; // wykonuje się na serwerze: „platforma: linux”
+  return <p>platform: {os.platform()}</p>; // → platform: linux (wykonuje się na serwerze)
 }
 
 export default function Page() {
@@ -205,7 +205,7 @@ Zapis `{ type: 'ADD_ITEM', product }` to skrócony zapis obiektu. Gdy nazwa pola
 ```js
 const product = { id: 1 };
 const action = { type: 'ADD_ITEM', product }; // to samo co { type: 'ADD_ITEM', product: product }
-console.log(JSON.stringify(action));          // {"type":"ADD_ITEM","product":{"id":1}}
+console.log(JSON.stringify(action));          // → {"type":"ADD_ITEM","product":{"id":1}}
 ```
 
 Każdy z trzech plików zaczyna się od `'use client'` i importu `useCart`. Listę można wstawić na dowolną stronę pod dostawcą bez dopisywania żadnego propsa.

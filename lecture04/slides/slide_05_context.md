@@ -31,7 +31,7 @@ const ThemeContext = createContext('light'); // krok 1: obiekt kontekstu, 'light
 
 function Label() {
   const theme = useContext(ThemeContext);    // krok 3: odczyt wartości od dostawcy
-  return <p>motyw: {theme}</p>;
+  return <p>theme: {theme}</p>;
 }
 
 function Middle() {
@@ -39,7 +39,7 @@ function Middle() {
 }
 
 // krok 2: dostawca, wszystko pod nim widzi 'dark'
-<ThemeContext value="dark"><Middle /></ThemeContext>  // renderuje: <p>motyw: dark</p>
+<ThemeContext value="dark"><Middle /></ThemeContext>  // → <p>theme: dark</p>
 ```
 
 Funkcja **`createContext`** zwraca obiekt kontekstu. Ten obiekt nie trzyma żadnej bieżącej wartości. Jest tylko identyfikatorem kanału, którego używają obie strony. Element `<ThemeContext value="dark">` to **dostawca** (*provider*): udostępnia wartość z atrybutu `value` całemu poddrzewu. Hook **`useContext`** odczytuje tę wartość w dowolnym komponencie pod dostawcą. `Middle` nic o motywie nie wie, a `Label` i tak dostaje `'dark'`.
@@ -67,7 +67,7 @@ Dokumentacja *useContext* opisuje, jak React znajduje wartość. Idzie od kompon
     <Label />                        {/* głębszy dostawca przesłania wyższego: 'sepia' */}
   </ThemeContext>
 </ThemeContext>
-// renderuje: <p>motyw: dark</p><p>motyw: sepia</p>
+// → <p>theme: dark</p><p>theme: sepia</p>
 ```
 
 Dokumentacja porównuje to do dziedziczenia właściwości w CSS. Kolor ustawiony na `<div>` dziedziczą wszystkie węzły w środku, dopóki któryś nie ustawi innego. Porównanie ma granicę: w CSS dziedziczą się tylko niektóre właściwości, a kontekst dociera do każdego potomka, który go czyta.
@@ -79,11 +79,10 @@ Z porównania wynika druga reguła. **Różne konteksty nie przesłaniają się 
 Argument `createContext` nie jest stanem startowym. Jest wartością, którą dostaje komponent, gdy nad nim nie ma żadnego dostawcy:
 
 ```jsx
-<Middle />                                // brak dostawcy: <p>motyw: light</p>
-<ThemeContext><Label /></ThemeContext>    // dostawca bez value: value={undefined}, <p>motyw: </p>
+<Middle />   // → <p>theme: light</p>: brak dostawcy, więc wartość domyślna
 ```
 
-Druga linia pokazuje pułapkę. Dostawca bez atrybutu `value` działa tak, jakby przekazał `value={undefined}`, a wartość domyślna nie wchodzi wtedy do gry, bo dostawca w drzewie istnieje. Dokumentacja opisuje rolę wartości domyślnej tak:
+Dostawca bez atrybutu `value`, na przykład `<ThemeContext><Label /></ThemeContext>`, działa tak, jakby przekazał `value={undefined}`. `Label` wyrenderuje wtedy `<p>theme: </p>` z pustym motywem, a wartość domyślna nie wchodzi do gry, bo dostawca w drzewie istnieje. Dokumentacja opisuje rolę wartości domyślnej tak:
 
 > **„Wartość domyślna ma być awaryjnym zabezpieczeniem na ostateczność. Jest statyczna i nigdy nie zmienia się w czasie.”**
 >
@@ -163,17 +162,13 @@ Na Rysunku 4.5 pierwsza ciągła strzałka oznacza, że `CartProvider` używa ob
 
 Funkcja `useCart` to własny hook, czyli funkcja `use…` wołająca inne hooki. Chowa odczyt `useContext(CartContext)` w jednym miejscu. Przed hookami odbiorca czytał kontekst elementem `<CartContext.Consumer>` z funkcją w środku, więc musiał importować sam obiekt kontekstu. Banks i Porcello piszą, że hooki usunęły tę potrzebę (*„we don’t have to expose context to consumer components at all”*).
 
-Hook daje dwie korzyści. Komponent importuje `useCart` i nie musi wiedzieć, że istnieje `CartContext`. Hook jest też jedynym miejscem, w którym da się sprawdzić, czy odczyt odbywa się pod dostawcą. Warunek `if (ctx === null)` to **strażnik**: zamienia ciche `null` na wyjątek z czytelnym komunikatem. Różnicę widać na dwóch wariantach odczytu poza dostawcą:
+Hook daje dwie korzyści. Komponent importuje `useCart` i nie musi wiedzieć, że istnieje `CartContext`. Hook jest też jedynym miejscem, w którym da się sprawdzić, czy odczyt odbywa się pod dostawcą. Warunek `if (ctx === null)` to **strażnik**: zamienia ciche `null` na wyjątek z czytelnym komunikatem. Różnicę widać przy odczycie poza dostawcą. Z hookiem ze strażnikiem:
 
 ```jsx
-// ze strażnikiem: Error: useCart must be used inside <CartProvider>
-const { cart } = useCart();
-
-// bez strażnika: TypeError: Cannot destructure property 'cart' of '…' as it is null.
-const { cart } = useContext(CartContext);
+const { cart } = useCart();   // → Error: useCart must be used inside <CartProvider>
 ```
 
-Drugi komunikat mówi tylko, że coś jest `null`. Pierwszy wymienia nazwę dostawcy, więc przy takim błędzie wystarczy sprawdzić, czy komponent leży w drzewie pod `<CartProvider>`. Dokumentacja Next.js stosuje ten sam wzorzec w przewodniku o aplikacjach jednostronicowych: jej hook `useUser` rzuca wyjątek `useUser must be used within a UserProvider`.
+Bez strażnika ten sam odczyt, czyli `const { cart } = useContext(CartContext);`, kończy się komunikatem `TypeError: Cannot destructure property 'cart' of '…' as it is null.`. Mówi on tylko, że coś jest `null`. Komunikat strażnika wymienia nazwę dostawcy, więc przy takim błędzie wystarczy sprawdzić, czy komponent leży w drzewie pod `<CartProvider>`. Dokumentacja Next.js stosuje ten sam wzorzec w przewodniku o aplikacjach jednostronicowych: jej hook `useUser` rzuca wyjątek `useUser must be used within a UserProvider`.
 
 > 💡 **Zapamiętaj:** kontekst tworzy się przez `createContext` poza komponentem, dostarcza przez `<Ctx value>` i czyta przez `useContext` schowany we własnym hooku. Odczyt sięga do najbliższego dostawcy wyżej, a wartość domyślna działa tylko wtedy, gdy dostawcy nie ma wcale.
 

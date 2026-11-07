@@ -13,6 +13,6 @@ Granica w sklepie nie ma przycisku ponowienia. Flaga `hasError` raz ustawiona zo
 </ErrorBoundary>
 ```
 
-Z tym samym `key` granica po naprawie dziecka nadal pokazuje „Something went wrong: raz”. Po zmianie `key` React tworzy nowy egzemplarz klasy, a ten renderuje już poprawne dziecko.
+Z tym samym `key` granica po naprawie dziecka nadal pokazuje „Something went wrong: first failure”. Po zmianie `key` React tworzy nowy egzemplarz klasy, a ten renderuje już poprawne dziecko.
 
 Biblioteka `react-error-boundary`, polecana przez dokumentację Reacta, ma ponowienie wbudowane. Według jej README treść zastępcza dostaje funkcję `resetErrorBoundary`, która czyści błąd i ponawia render poddrzewa, a prop `resetKeys` robi to samo po zmianie wskazanej wartości.

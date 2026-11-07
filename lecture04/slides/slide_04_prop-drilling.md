@@ -22,7 +22,7 @@ function HomePage() {
   const [a, setA] = useState(0);
   return <div><button onClick={() => setA(a + 1)}>+</button><OwnBadge /></div>;
 }
-// Po kliknięciu „+”: nadal „koszyk: 0”.
+// Po kliknięciu „+”: → cart: 0
 ```
 
 Kliknięcie zmienia `a`, ale napis pokazuje `n` z innego komponentu, więc zostaje „cart: 0”. Sklep, w którym `ProductList` i `CartSummary` trzymałyby każdy własny `useReducer`, miałby dokładnie ten problem: dwa niezależne koszyki. Kliknięcie „Add to cart” zmieniłoby koszyk listy, a nagłówek dalej pokazywałby zero.
@@ -52,7 +52,7 @@ function HomePage() {
   const [n, setN] = useState(0);   // jeden stan u wspólnego przodka
   return <div><AddBtn onAdd={() => setN(n + 1)} /><Badge n={n} /></div>;
 }
-// Po kliknięciu „+”: „koszyk: 1”.
+// Po kliknięciu „+”: → cart: 1
 ```
 
 Po trzecim kroku oba dzieci są **kontrolowane** przez rodzica. Dokumentacja nazywa tak komponent, w którym ważne informacje pochodzą z propsów, a nie z jego własnego stanu. Rodzic w pełni określa wtedy zachowanie dziecka. `Badge` nie decyduje już, co pokazuje. Wyświetla liczbę, którą dostał. To inne znaczenie niż w polu kontrolowanym z formularza: tam stan trzyma wartość pola, a tu rodzic trzyma dane całego komponentu.

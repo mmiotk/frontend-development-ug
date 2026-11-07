@@ -23,7 +23,12 @@ const CartContext = createContext(null);   // funkcja z pakietu; dostawca: <Cart
 
 // w AddToCartButton, zamiast useContext:
 const dispatch = useContextSelector(CartContext, v => v.dispatch);
-// jedno dodanie kawy (next build + next start) → AddToCartButton render 1 … 5: po 2 wpisy, jak z useContext
+```
+
+Jedno dodanie kawy (`next build` + `next start`):
+
+```text
+AddToCartButton render 1 … 5 → po 2 wpisy, jak z useContext
 ```
 
 W React 19.3.0 pakiet nie zmniejszył liczby wywołań funkcji przycisków: także po `dispatch` wysłanym bez przejścia każdy z pięciu przycisków wywołał się raz. W sklepie dwa wbudowane konteksty wystarczają.
@@ -44,6 +49,9 @@ Koszyk sklepu nie spełnia żadnego z sygnałów: ma jeden reducer, cztery akcje
 
 ```jsx
 // Przykład spoza demo: magazyn Zustand 5.0.16 w kontekście, osobny dla każdego egzemplarza dostawcy
+import { createContext, use, useState } from 'react';
+import { createStore, useStore } from 'zustand';
+
 const createCartStore = () => createStore(set => ({
   items: [],
   add: product => set(s => ({ items: [...s.items, product] })),
@@ -57,7 +65,12 @@ function CartStoreProvider({ children }) {
 const useCart = selector => useStore(use(CartStoreContext), selector);
 
 // AddButton: const add = useCart(s => s.add);   ItemCount: const count = useCart(s => s.items.length);
-// jedno dodanie kawy (next start) → ItemCount render: 1 wpis, AddButton render 1 … 5: 0 wpisów
+```
+
+Jedno dodanie kawy (`next start`):
+
+```text
+ItemCount render: 1 wpis, AddButton render 1 … 5: 0 wpisów
 ```
 
 Wartość kontekstu, czyli magazyn, nie zmienia się wcale, a o renderze decyduje selektor. Przyciski czytają stałą funkcję `add`, więc dodanie kawy renderuje tylko licznik.

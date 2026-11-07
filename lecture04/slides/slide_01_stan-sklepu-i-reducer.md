@@ -24,8 +24,8 @@ export const products = [
 Każdy produkt ma trzy pola. **`id`** posłuży jako klucz listy i jako sposób rozpoznania produktu w koszyku. **`name`** to nazwa na stronie. **`price`** jest liczbą, bo będzie mnożona przez ilość i sumowana. Liczbę na ekranie formatuje metoda `toFixed`, która zwraca napis z podaną liczbą cyfr po przecinku:
 
 ```js
-(18.5).toFixed(2);        // "18.50", napis, a nie liczba
-(49.99 * 3).toFixed(2);   // "149.97", zaokrąglenie do dwóch miejsc
+(18.5).toFixed(2);        // → "18.50": napis, a nie liczba
+(49.99 * 3).toFixed(2);   // → "149.97": zaokrąglenie do dwóch miejsc
 ```
 
 Layout główny obejmuje każdą stronę aplikacji, a stronę dostaje jako `children`. Eksport `metadata` ustawia tytuł karty przeglądarki:
@@ -72,17 +72,17 @@ Koszyk przyjmuje cztery operacje. Produkt można **dodać**, a gdy już jest w k
 Dwie z tych reguł opierają się na metodach `find` i `Math.max`. `find` zwraca pierwszy element spełniający warunek albo `undefined`, a `Math.max` zwraca większy z argumentów:
 
 ```js
-[{ id: 1 }, { id: 2 }].find(i => i.id === 2);  // { id: 2 }
-[{ id: 1 }].find(i => i.id === 9);             // undefined: brak takiego elementu
-Math.max(1, 0);                                // 1: dolna granica wygrywa
-Math.max(1, 3);                                // 3
+[{ id: 1 }, { id: 2 }].find(i => i.id === 2);  // → { id: 2 }
+[{ id: 1 }].find(i => i.id === 9);             // → undefined: brak takiego elementu
+Math.max(1, 0);                                // → 1: dolna granica wygrywa
+Math.max(1, 3);                                // → 3
 ```
 
 Najprostsza droga to jedna tablica w `useState` i osobna funkcja dla każdej operacji. Poniższy kod nie należy do projektu. Pokazuje, czego kolejne kroki unikają:
 
 ```jsx
-"use client";
-import { useState } from "react";
+'use client';
+import { useState } from 'react';
 
 export default function HomePage() {
   const [items, setItems] = useState([]);
@@ -154,7 +154,7 @@ Metoda `reduce` przechodzi po tablicy i za każdym razem podaje funkcji wynik do
 
 ```js
 // (wynik dotychczasowy, element) => wynik następny; startujemy od 0
-[1, 2, 3].reduce((acc, x) => acc + x, 0);   // 6
+[1, 2, 3].reduce((acc, x) => acc + x, 0);   // → 6
 ```
 
 Reducer Reacta działa tak samo, tylko elementami są akcje, a wynikiem stan. Koszyk po dziesięciu kliknięciach jest więc wynikiem przepuszczenia dziesięciu akcji przez tę samą funkcję, zaczynając od pustego koszyka. Ten sam wynik daje `akcje.reduce(cartReducer, initialCartState)`, bo `cartReducer` ma dokładnie kształt funkcji, której oczekuje `reduce`.
@@ -195,8 +195,8 @@ function noBreak(t) {
   }
   return out;
 }
-noBreak('a');   // ['a', 'b']: gałąź 'a' przeszła do 'b'
-noBreak('b');   // ['b']
+noBreak('a');   // → ['a', 'b']: gałąź 'a' przeszła do 'b'
+noBreak('b');   // → ['b']
 ```
 
 Dokumentacja zaleca dwa nawyki, które usuwają ten problem w reducerze.
@@ -274,7 +274,7 @@ Reducer jest zwykłą funkcją, więc działa także poza komponentem. Dwa wywo�
 const coffee = { id: 1, name: 'Coffee', price: 49.99 };
 let s = cartReducer(initialCartState, { type: 'ADD_ITEM', product: coffee });
 s = cartReducer(s, { type: 'ADD_ITEM', product: { ...coffee, price: 59.99 } });
-s.items;   // [{ id: 1, name: 'Coffee', price: 49.99, qty: 2 }]
+s.items;   // → [{ id: 1, name: 'Coffee', price: 49.99, qty: 2 }]
 ```
 
 `ADD_ITEM` niesie cały obiekt produktu, bo reducer nie ma dostępu do katalogu. Gałąź dla produktu, który już jest w koszyku, zmienia jednak tylko `qty`. **Koszyk zapamiętuje dane produktu z chwili pierwszego dodania.** W sklepie z cenami zmienianymi w trakcie sesji tę regułę trzeba by zapisać świadomie.

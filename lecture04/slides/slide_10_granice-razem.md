@@ -41,7 +41,7 @@ Promise utworzony w komponencie, który sam wywołuje `use`, powstawałby przy k
 >
 > — dokumentacja React, *use*
 
-Różnicę widać na dwóch komponentach, które czytają te same dane:
+Różnicę widać na komponencie, który czyta Promise z modułu:
 
 ```jsx
 const teaPromise = fetchTea();     // raz, przy pierwszym imporcie modułu
@@ -50,20 +50,15 @@ function TeaFromModule() {
   const teas = use(teaPromise);    // przy każdej próbie ten sam obiekt
   return <p>{teas.join(', ')}</p>;
 }
-
-function TeaFromRender() {
-  const teas = use(fetchTea());    // każda próba renderu tworzy nowy, znów oczekujący Promise
-  return <p>{teas.join(', ')}</p>;
-}
 ```
 
-Gdy `fetchTea` spełnia się po 100 ms, pierwszy komponent pokazuje listę. Drugi po półtorej sekundy nadal stoi przy treści zastępczej, a `fetchTea` wywołuje się przy każdej jego próbie od nowa. Nowy Promise jest znów nierozstrzygnięty, więc komponent znów się zawiesza. Konsola nie wypisuje przy tym żadnego ostrzeżenia, więc objaw wygląda jak bardzo wolne łącze.
+Gdy `fetchTea` spełnia się po 100 ms, `TeaFromModule` pokazuje listę. Przy `use(fetchTea())` w ciele komponentu każda próba renderu tworzy nowy, znów oczekujący Promise, więc komponent zawiesza się za każdym razem. Lista się nie pojawia, a `fetchTea` wywołuje się przy każdej próbie od nowa. Konsola nie wypisuje przy tym żadnego ostrzeżenia, więc objaw wygląda jak bardzo wolne łącze.
 
 Liczy się położenie Promise względem granicy Suspense. Model z trzema wariantami `fetchTea` daje trzy różne wyniki:
 
 - **Promise w ciele komponentu nad granicą**, tak jakby `fetchRecommended()` stało w funkcji `RecommendedSection`, ładowania nie zapętla. Po spełnieniu Promise React ponawia render pod granicą, a nie komponentu nad nią. Każdy kolejny render tego komponentu tworzy jednak nowy Promise i granica znów pokazuje treść zastępczą.
 - **Promise w `useState` komponentu nad granicą**, tworzony leniwym inicjalizatorem `useState(() => fetchTea())`, zostaje ten sam przy kolejnych renderach, bo ten komponent jest już zamontowany i ma swój stan.
-- **Ten sam `useState` w komponencie, który wywołuje `use`**, zawodzi. Komponent zawieszony przed pierwszym zamontowaniem nie ma jeszcze stanu, więc przy każdej próbie inicjalizator tworzy nowy Promise. W ciągu niecałych dwóch sekund `fetchTea` wywołuje się 31 razy, a lista się nie pojawia.
+- **Ten sam `useState` w komponencie, który wywołuje `use`**, zawodzi. Komponent zawieszony przed pierwszym zamontowaniem nie ma jeszcze stanu, więc przy każdej próbie inicjalizator tworzy nowy Promise. W ciągu 1,9 s `fetchTea` wywołuje się 22 razy (wersja zbudowana), a lista się nie pojawia.
 
 Dokumentacja formułuje wymóg. Obiekty Promise przekazywane do `use` w komponentach klienckich muszą być zapamiętane, czyli przy kolejnych renderach ma wracać ten sam egzemplarz. Sposób zapamiętania zależy od frameworka, a bez frameworka dokumentacja dopuszcza prostą pamięć na poziomie modułu. Stała w module to jej najprostsza wersja: moduł JavaScriptu wykonuje się raz, przy pierwszym imporcie, więc stała przechowuje jeden obiekt przez cały czas życia strony. Promise może też powstać w komponencie serwerowym i przyjść do klienckiego w propsie. Sklep zostaje przy stałej w module, bo to najprostsza postać zapamiętania, a rekomendacje nie zależą ani od użytkownika, ani od żądania.
 
@@ -132,7 +127,7 @@ Na serwerze wyjątek trafia do logu (`⨯ Error: No connection — could not loa
 2. **Błąd mija granicę Suspense.** Suspense obsługuje tylko czekanie, więc React idzie wyżej, do najbliższej granicy błędów.
 3. **Granica błędów przejmuje wyjątek.** Jej metody ustawiają flagę błędu i zapisują go w konsoli, a `render` zwraca akapit „Something went wrong: No connection — could not load recommendations” w miejsce całej sekcji.
 
-Komunikat zastępuje napis ładowania po 2,2–2,4 s od wejścia, bez przeładowania i bez zmiany adresu. Do tej chwili sekcją zajmuje się granica Suspense. Koszyk leży poza obiema granicami, więc kawa dodana w trakcie ładowania zostaje w nagłówku. W trybie deweloperskim React dopisuje własny wpis: „The above error occurred in the <RecommendedProducts> component. It was handled by the <ErrorBoundary> error boundary.”, który nazywa komponent zepsuty i granicę, która go przejęła.
+Komunikat zastępuje napis ładowania po ok. 2,1 s od wejścia, bez przeładowania i bez zmiany adresu. Do tej chwili sekcją zajmuje się granica Suspense. Koszyk leży poza obiema granicami, więc kawa dodana w trakcie ładowania zostaje w nagłówku. W trybie deweloperskim React dopisuje własny wpis: „The above error occurred in the <RecommendedProducts> component. It was handled by the <ErrorBoundary> error boundary.”, który nazywa komponent zepsuty i granicę, która go przejęła.
 
 <u>Odrzucony Promise zostaje odrzucony na zawsze</u>. Nowy `key` na `ErrorBoundary` montuje granicę od nowa, ale jej dziecko czyta ten sam obiekt z modułu i od razu rzuca ten sam wyjątek: komunikat wraca bez czekania. Ponowienie wymaga wymiany starego Promise na nowy.
 

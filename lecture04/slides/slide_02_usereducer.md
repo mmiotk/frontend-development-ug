@@ -102,7 +102,7 @@ function Counter() {
   const [n, dispatch] = useReducer(counter, 0);
   function handleClick() {
     dispatch({ type: 'inc' });
-    console.log(n);   // 0 przy pierwszym kliknięciu, 1 przy drugim: migawka z tego renderu
+    console.log(n);   // → 0 przy pierwszym kliknięciu, 1 przy drugim: migawka z tego renderu
   }
   return <button onClick={handleClick}>n={n}</button>;
 }
@@ -111,6 +111,9 @@ function Counter() {
 Kolejka ma drugą, mniej oczywistą konsekwencję. Dwie akcje wysłane w jednej procedurze obsługi nie widzą tej samej migawki. React stosuje je po kolei i każdej podaje wynik poprzedniej, a cały ekran renderuje się raz. Setter z `useState` wywołany dwa razy z wartością z migawki zachowuje się inaczej:
 
 ```jsx
+import { useReducer, useState } from 'react';
+// counter jak wyżej
+
 function Both() {
   const [n, dispatch] = useReducer(counter, 0);
   const [m, setM] = useState(0);
@@ -122,7 +125,7 @@ function Both() {
   }
   return <button onClick={handleClick}>n={n} m={m}</button>;
 }
-// Po jednym kliknięciu: n=2, m=1, jeden render.
+// → n=2 m=1 po jednym kliknięciu: jeden render.
 ```
 
 Reducer działa więc jak aktualizator przekazany do settera, czyli funkcja w rodzaju `(m) => m + 1`. Różnica polega na tym, że aktualizator pisze się przy każdym wywołaniu od nowa, a reducer raz, w jednym miejscu. Ta sama seria akcji zawsze daje ten sam koszyk, bo każda gałąź liczy wynik wyłącznie z poprzedniego stanu i akcji.
@@ -159,9 +162,9 @@ Na Rysunku 4.2 wartość z pola przechodzi przez trzy miejsca, z których każde
 Przeglądarka oddaje zawartość pola zawsze jako tekst. Funkcja `Number` zamienia tekst na liczbę, a pusty tekst zamienia na zero:
 
 ```js
-Number('3');     // 3
-Number('');      // 0: pusty tekst to zero
-Number('1.5');   // 1.5: ułamek przechodzi
+Number('3');     // → 3
+Number('');      // → 0: pusty tekst to zero
+Number('1.5');   // → 1.5: ułamek przechodzi
 ```
 
 Wiersz koszyka dostaje pole liczbowe. Wyrażenie `{cart.items.map(…)}` wewnątrz `<ul>` dostaje rozbudowany element `<li>`:

@@ -11,12 +11,12 @@ function SelfProvider() {
   const seen = useContext(ThemeContext); // szuka NAD SelfProvider: dostawcy nie ma, więc 'light'
   return (
     <ThemeContext value="inner">
-      <p>sam widzi: {seen}</p>
+      <p>self: {seen}</p>
       <Label />                          {/* dziecko widzi 'inner' */}
     </ThemeContext>
   );
 }
-// renderuje: <p>sam widzi: light</p><p>motyw: inner</p>
+// → <p>self: light</p><p>theme: inner</p>
 ```
 
 Wartość z JSX komponentu trafia do jego dzieci, a nie do niego samego, bo hook wykonuje się, zanim komponent zwróci dostawcę.
@@ -28,7 +28,7 @@ Kontekst łączy dostawcę i odbiorcę przez tożsamość obiektu. Dokumentacja 
 ```js
 const a = createContext(null);
 const b = createContext(null);
-console.log(a === b); // false: dwa wywołania, dwa niezależne kanały
+console.log(a === b); // → false: dwa wywołania, dwa niezależne kanały
 ```
 
 Stąd zalecenie dokumentacji, żeby wywoływać `createContext` poza komponentami. Wywołanie w ciele komponentu tworzyłoby przy każdym renderze nowy obiekt, czyli za każdym razem inny kontekst. Odbiorca szukałby wtedy dostawcy kanału, którego nikt już nie dostarcza.
@@ -47,7 +47,10 @@ function Badge() {
 }
 // <ErrorBoundary><Badge /></ErrorBoundary> → Something went wrong: useCartState must be used inside <CartProvider>
 
-// diagnoza z dokumentacji: obie kopie zapisują swój obiekt w window, porównanie w konsoli przeglądarki
+// diagnoza z dokumentacji: obie kopie zapisują swój obiekt w window; po linii z createContext
+// dopisano w CartContext.jsx:      window.ctxMain = CartStateContext;
+// dopisano w CartContextCopy.jsx:  window.ctxCopy = CartStateContext;
+// porównanie w konsoli przeglądarki:
 window.ctxMain === window.ctxCopy;                  // → false
 ```
 

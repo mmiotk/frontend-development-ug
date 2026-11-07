@@ -69,7 +69,7 @@ function Like({ fail }) {
       setShown(likes + 1);                     // ekran od razu pokazuje 1
       try {
         await wait(300);                       // „serwer” odpowiada po 300 ms
-        if (fail) throw new Error('odmowa');
+        if (fail) throw new Error('rejected');
         setLikes(l => l + 1);                  // prawdziwa wartość dogania wyświetlaną
       } catch {}                               // odmowa: wartość prawdziwa zostaje 0
     });
@@ -108,13 +108,13 @@ Ten sam mechanizm obsługuje porażkę. Gdy akcja rzuci wyjątek, przejście i t
 
 ## Przejście trzyma wartość tymczasową
 
-Setter z `useOptimistic` działa tylko w akcji, czyli w funkcji przekazanej do `startTransition` albo do atrybutu `action` formularza. Bez przejścia React nie wie, kiedy okno wartości tymczasowej ma się zamknąć. Wywołanie settera w zwykłej procedurze obsługi zdarzenia React zgłasza błędem:
+Setter z `useOptimistic` działa tylko w akcji, czyli w funkcji przekazanej do `startTransition` albo do atrybutu `action` formularza. Bez przejścia React nie wie, kiedy okno wartości tymczasowej ma się zamknąć. Wywołanie settera w zwykłej procedurze obsługi zdarzenia nie rzuca wyjątku. W trybie deweloperskim React zapisuje w konsoli błąd (`console.error`) z komunikatem:
 
 ```
 An optimistic state update occurred outside a transition or action. To fix, move the update to an action, or wrap with startTransition.
 ```
 
-Komunikat podaje obie dopuszczalne drogi: przenieść aktualizację do akcji albo owinąć ją w `startTransition`. Dokumentacja dodaje, że stan optymistyczny wyrenderuje się wtedy tylko na moment. Druga granica dotyczy renderu: setter wywołany wprost w ciele komponentu rzuca wyjątek „Cannot update optimistic state while rendering.” i strona kończy się ekranem błędu. <u>Setter stanu optymistycznego wywołuje się wyłącznie wewnątrz akcji albo przejścia</u>.
+Komunikat podaje obie dopuszczalne drogi: przenieść aktualizację do akcji albo owinąć ją w `startTransition`. Dokumentacja dodaje, że stan optymistyczny wyrenderuje się wtedy tylko na moment, a wartość prawdziwa się nie zmienia. W wersji zbudowanej wpisu w konsoli nie ma. Druga granica dotyczy renderu: setter wywołany wprost w ciele komponentu rzuca wyjątek „Cannot update optimistic state while rendering.” i strona kończy się ekranem błędu. <u>Setter stanu optymistycznego wywołuje się wyłącznie wewnątrz akcji albo przejścia</u>.
 
 Formularz z funkcją w atrybucie `action` uruchamia ją w przejściu sam, więc tam `startTransition` nie jest potrzebne. Przycisk z `onClick` takiego udogodnienia nie ma i wywołuje `startTransition` jawnie.
 

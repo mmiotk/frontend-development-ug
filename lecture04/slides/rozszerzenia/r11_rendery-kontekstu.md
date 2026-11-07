@@ -20,8 +20,12 @@ return (
     {children}
   </CartContext>
 );
-// jedno kliknięcie przełącznika panelu, koszyk bez zmian (next dev):
-// AddToCartButton render 1 … 5 → po 2 wpisy, CartSummary render → 2 wpisy
+```
+
+Jedno kliknięcie przełącznika panelu, koszyk bez zmian (`next dev`):
+
+```text
+AddToCartButton render 1 … 5 → po 2 wpisy, CartSummary render → 2 wpisy
 ```
 
 Koszyk się nie zmienił, a wszyscy konsumenci wyrenderowali się ponownie, bo literał wartości powstał od nowa. Pułapka dotyczy tylko obiektów, tablic i funkcji: dla napisu, jak `value={theme}` z kontekstu motywu w dokumentacji `useContext`, `Object.is` porównuje samą wartość i ponowny render dostawcy nie dotyka konsumentów.
@@ -45,7 +49,12 @@ const [query, setQuery] = useState('');
 
 // SearchBox, czyli pole nad listą produktów:
 <input value={query} onChange={e => setQuery(e.target.value)} />
-// wpisanie „tea” (next dev) → po 6 wpisów z każdego z 5 przycisków i z CartSummary, razem 36
+```
+
+Wpisanie „tea” (`next dev`):
+
+```text
+po 6 wpisów z każdego z 5 przycisków i z CartSummary, razem 36
 ```
 
 <u>Wartość zmieniana przy każdym zdarzeniu nie powinna dzielić kontekstu z wartością czytaną przez wielu konsumentów</u>. Tekst w polu wyszukiwania zostaje w stanie komponentu, który go pokazuje.
@@ -61,8 +70,13 @@ export default function CartItem({ item }) {
   console.log('CartItem render', item.id);
   // ...
 }
-// trzy pozycje, ilość kawy zmieniona na 2 (next dev) → CartItem render 1, 2 i 3: po 2 wpisy
-// to samo z export default memo(CartItem)          → tylko CartItem render 1: 2 wpisy
+```
+
+Trzy pozycje, ilość kawy zmieniona na 2 (`next dev`):
+
+```text
+bez memo                         → CartItem render 1, 2 i 3: po 2 wpisy
+export default memo(CartItem)    → tylko CartItem render 1: 2 wpisy
 ```
 
 Ten render przychodzi od rodzica, więc żadna zmiana w kontekście go nie usunie, a `memo` go zatrzymuje, bo reducer zostawia pozostałe pozycje tymi samymi obiektami. Wpis w konsoli mówi tylko, że komponent się wyrenderował, a nie dlaczego.

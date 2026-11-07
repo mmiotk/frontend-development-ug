@@ -45,9 +45,9 @@ Pierwszy przypadek zależy od wyboru `Number`. Pole liczbowe ma też właściwo�
 `Math.max` zwraca `NaN`, gdy którykolwiek argument jest `NaN`, więc reguła minimum przestaje działać:
 
 ```js
-Math.max(1, NaN);   // NaN: dolna granica nie pomaga
+Math.max(1, NaN);   // → NaN: dolna granica nie pomaga
 cartReducer(s, { type: 'UPDATE_QTY', id: 1, qty: NaN }).items;
-// [{ id: 1, name: 'Coffee', price: 49.99, qty: NaN }]
+// → [{ id: 1, name: 'Coffee', price: 49.99, qty: NaN }]
 ```
 
-Wersja z `valueAsNumber` zapisałaby więc w stanie `qty: NaN`, a wiersz pokazałby „= NaN zł”. Natomiast `Number('')` daje 0, które reguła minimum zamienia na 1. Konwersja w komponencie i reguła w reducerze działają razem i każda z nich zmienia wynik. Uzupełnienie reguły o liczby całkowite wymagałoby zmiany jednej gałęzi `UPDATE_QTY`, bez dotykania komponentu.
+Wersja z `valueAsNumber` zapisałaby więc w stanie `qty: NaN`, a wiersz pokazałby „= NaN PLN”. Natomiast `Number('')` daje 0, które reguła minimum zamienia na 1. Konwersja w komponencie i reguła w reducerze działają razem i każda z nich zmienia wynik. Uzupełnienie reguły o liczby całkowite wymagałoby zmiany jednej gałęzi `UPDATE_QTY`, bez dotykania komponentu.

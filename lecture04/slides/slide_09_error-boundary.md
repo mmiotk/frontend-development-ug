@@ -32,7 +32,7 @@ Komponent klasowy to starszy zapis komponentu, który w nowym kodzie zastąpiły
 class Counter {
   constructor(start) { this.value = start; }           // new wywołuje konstruktor, this to nowy egzemplarz
   increment() { this.value += 1; }
-  static describe(c) { return `licznik: ${c.value}`; } // metoda klasy, a nie egzemplarza
+  static describe(c) { return `counter: ${c.value}`; } // metoda klasy, a nie egzemplarza
 }
 class StepCounter extends Counter {                    // dziedziczy pola i metody po Counter
   constructor(start, step) { super(start); this.step = step; } // super przed pierwszym this
@@ -40,8 +40,8 @@ class StepCounter extends Counter {                    // dziedziczy pola i meto
 }
 const c = new StepCounter(0, 5);
 c.increment(); c.increment();
-Counter.describe(c);  // 'licznik: 10'
-c.describe;           // undefined: egzemplarz nie ma metody statycznej
+Counter.describe(c);  // → 'counter: 10'
+c.describe;           // → undefined (egzemplarz nie ma metody statycznej)
 ```
 
 **Konstruktor** (`constructor`) wykonuje się raz, przy `new`, i ustawia pola nowego egzemplarza. Słowo **`this`** wewnątrz konstruktora i metod wskazuje egzemplarz, na którym metoda została wywołana.
@@ -70,7 +70,7 @@ class Clicker extends Component {
 }
 ```
 
-Po dwóch kliknięciach przycisk `<Clicker label="Kliknięcia" />` pokazuje „Kliknięcia: 2”. React tworzy egzemplarz klasy raz, przy montowaniu, a potem przy każdym renderze wywołuje tylko jego metodę `render`. Stan jest jednym obiektem w `this.state`. Metoda `this.setState` przyjmuje obiekt z polami do zmiany, według dokumentacji `Component` łączy go płytko z bieżącym stanem i planuje render. Funkcja strzałkowa w `onClick` przejmuje `this` z metody `render`, więc wskazuje ten sam egzemplarz.
+Po dwóch kliknięciach przycisk `<Clicker label="Clicks" />` pokazuje „Clicks: 2”. React tworzy egzemplarz klasy raz, przy montowaniu, a potem przy każdym renderze wywołuje tylko jego metodę `render`. Stan jest jednym obiektem w `this.state`. Metoda `this.setState` przyjmuje obiekt z polami do zmiany, według dokumentacji `Component` łączy go płytko z bieżącym stanem i planuje render. Funkcja strzałkowa w `onClick` przejmuje `this` z metody `render`, więc wskazuje ten sam egzemplarz.
 
 ## Klasa `ErrorBoundary` w sklepie
 
@@ -111,7 +111,7 @@ export default class ErrorBoundary extends Component {
 
 Konstruktor i `render` działają tak jak w liczniku. Nowe są dwie metody, które React wywołuje sam, gdy któryś potomek rzuci wyjątek. `getDerivedStateFromError` zwraca stan z flagą `hasError` i obiektem błędu, a `render` pokazuje wtedy komunikat z treścią błędu. Dopóki nic się nie psuje, granica jest niewidoczna, bo oddaje `this.props.children` bez zmian.
 
-Operator `?.` w `this.state.error?.message` zabezpiecza odczyt na wypadek wyjątku, który nie jest obiektem `Error`. Dokumentacja `Component` przypomina, że JavaScript pozwala rzucić dowolną wartość, także napis, a nawet `null` (*„JavaScript allows to `throw` any value, including strings or even `null`”*). Po `throw null` zwykłe `error.message` samo rzuciłoby wyjątek w komunikacie zastępczym, a z `?.` komunikat kończy się na „Something went wrong:”.
+Operator `?.` w `this.state.error?.message` zabezpiecza odczyt na wypadek wyjątku, który nie jest obiektem `Error`. Dokumentacja `Component` przypomina, że JavaScript pozwala rzucić dowolną wartość, także napis, a nawet `null` (*„JavaScript allows to `throw` any value, including strings or even `null`”*). Po `throw null` zwykłe `error.message` samo rzuciłoby wyjątek w komunikacie zastępczym, a z `?.` komunikat kończy się na „Something went wrong:”. Dotyczy to wyjątku rzuconego w przeglądarce, na przykład po kliknięciu. Ten sam rzut w pierwszym renderze na serwerze daje w `next dev` błąd TypeError „Cannot read properties of null (reading 'digest')”, a w wersji zbudowanej „Internal Server Error”.
 
 Plik zaczyna się od `'use client'`, bo granica trzyma stan i przełącza widok w przeglądarce, a stan mają tylko komponenty klienckie. Metoda statyczna nie widzi `this`, więc `getDerivedStateFromError` nie może niczego zapisać ani wysłać. Może tylko wyliczyć nowy stan z błędu.
 
@@ -155,6 +155,11 @@ Na Rysunku 4.9 ciągłe strzałki to błędy, które granica przejmuje i zamieni
 Przejście (*Transition*) oznacza aktualizację, którą React śledzi i może odłożyć. Funkcję `startTransition` daje się wziąć z dwóch miejsc: z hooka `useTransition` albo bezpośrednio z pakietu `react`. Tylko pierwsza wersja należy do konkretnego komponentu, więc tylko jej błąd ma gdzie trafić w drzewie:
 
 ```jsx
+import { useTransition } from 'react';
+
+// Symulowany zapis, który zawsze się nie udaje (odrzucenie po 100 ms).
+const save = () => new Promise((_, reject) => setTimeout(() => reject(new Error('Save failed')), 100));
+
 function SaveButton() {
   const [isPending, startTransition] = useTransition(); // przejście związane z tym komponentem
   function handleClick() {
@@ -162,11 +167,11 @@ function SaveButton() {
       await save(); // odrzucony Promise rzuca wyjątek tutaj
     });
   }
-  return <button onClick={handleClick}>{isPending ? 'Zapisywanie...' : 'Zapisz'}</button>;
+  return <button onClick={handleClick}>{isPending ? 'Saving...' : 'Save'}</button>;
 }
 ```
 
-Gdy `save()` zwraca odrzucony Promise, `<ErrorBoundary><SaveButton /></ErrorBoundary>` pokazuje „Something went wrong: Zapis nieudany”. Ślad komponentów w `componentDidCatch` zaczyna się wtedy od `SaveButton`. React zgłasza błąd przejścia w renderze komponentu, do którego przejście należy, więc wyjątek trafia do drzewa w tym samym miejscu co błąd renderu i przejmuje go najbliższa granica nad przyciskiem. Ten sam przycisk z `startTransition` zaimportowanym z `react` zostaje na ekranie, a wyjątek dociera do przeglądarki jako niezłapany błąd strony. Dokumentacja `useTransition` podaje przyczynę:
+Gdy `save()` zwraca odrzucony Promise, `<ErrorBoundary><SaveButton /></ErrorBoundary>` pokazuje „Something went wrong: Save failed”. Ślad komponentów w `componentDidCatch` zaczyna się wtedy od `SaveButton`. React zgłasza błąd przejścia w renderze komponentu, do którego przejście należy, więc wyjątek trafia do drzewa w tym samym miejscu co błąd renderu i przejmuje go najbliższa granica nad przyciskiem. Ten sam przycisk z `startTransition` zaimportowanym z `react` zostaje na ekranie, a wyjątek dociera do przeglądarki jako niezłapany błąd strony. Dokumentacja `useTransition` podaje przyczynę:
 
 > **„Ponieważ samodzielna funkcja nie jest związana z żadnym komponentem, granica błędów nie może obsłużyć błędów z jej przejścia.”**
 >

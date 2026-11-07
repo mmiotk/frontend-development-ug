@@ -38,20 +38,24 @@ Mechanizm ma dwie części. Komponent, który potrzebuje danych, czyta Promise f
 import { Suspense, use } from 'react';
 
 // Promise powstaje poza komponentem, więc każdy render dostaje ten sam obiekt
-const namesPromise = new Promise(r => setTimeout(() => r(['Ala', 'Ola']), 500));
+const namesPromise = new Promise(r => setTimeout(() => r(['Ann', 'Bob']), 500));
 
 function Names() {
   const names = use(namesPromise);     // czeka tu, aż Promise się spełni
   return <ul>{names.map(n => <li key={n}>{n}</li>)}</ul>;
 }
 
-<Suspense fallback={<p>Loading...</p>}>  {/* granica: co pokazać w czasie czekania */}
-  <Names />
-</Suspense>
-// najpierw: <p>Loading...</p>, po 500 ms: <ul><li>Ala</li><li>Ola</li></ul>
+function App() {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>  {/* granica: co pokazać w czasie czekania */}
+      <Names />
+    </Suspense>
+  );
+}
+// → najpierw <p>Loading...</p>, po 500 ms <ul><li>Ann</li><li>Bob</li></ul> (montowanie w przeglądarce)
 ```
 
-Przez pierwsze 500 ms w miejscu granicy stoi napis z propa `fallback`. Po spełnieniu Promise React renderuje `Names` jeszcze raz i lista zastępuje napis. Ten sam układ wyrenderowany już po spełnieniu Promise od razu pokazuje listę, bez treści zastępczej.
+Przez pierwsze 500 ms w miejscu granicy stoi napis z propa `fallback`. Ta sekwencja dotyczy montowania w przeglądarce, na przykład po kliknięciu. Przy renderze na serwerze lista jest w HTML od razu. Po spełnieniu Promise React renderuje `Names` jeszcze raz i lista zastępuje napis. Ten sam układ wyrenderowany już po spełnieniu Promise od razu pokazuje listę, bez treści zastępczej.
 
 ## Co robi `use`
 

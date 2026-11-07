@@ -34,6 +34,7 @@ Zanim sięgnie się po kontekst, dokumentacja proponuje kompozycję: rodzic budu
 
 ```jsx
 // Przykład spoza demo: ProductList przyjmuje gotowe wiersze przez children
+// AddButton, products, cartReducer i initialCartState jak w demo i na slajdzie 04
 function ProductList({ children }) {
   return <ul>{children}</ul>;                    // lista nie zna dispatch ani przycisków
 }

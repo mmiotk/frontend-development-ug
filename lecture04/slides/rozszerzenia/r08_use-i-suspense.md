@@ -41,15 +41,24 @@ Najprościej zobaczyć pierwsze źródło na podsumowaniu koszyka wczytywanym do
 
 ```jsx
 // Przykład spoza demo: CartSummary w osobnym pliku JS, wczytywany przez lazy
+import { lazy, Suspense, useState } from 'react';
+
 const LazySummary = lazy(() => import('./CartSummary'));   // plik obok, w app/components/
 
-<button onClick={() => setShow(true)}>Show summary</button>
-{show && (
-  <Suspense fallback={<p>Loading summary...</p>}>
-    <LazySummary />
-  </Suspense>
-)}
-// kliknięcie „Show summary” → Loading summary..., jeden nowy plik JS, potem Cart: 0 pcs — 0.00 PLN
+function Demo() {
+  const [show, setShow] = useState(false);
+  return (
+    <>
+      <button onClick={() => setShow(true)}>Show summary</button>
+      {show && (
+        <Suspense fallback={<p>Loading summary...</p>}>
+          <LazySummary />
+        </Suspense>
+      )}
+    </>
+  );
+}
+// → po kliknięciu „Show summary”: Loading summary..., jeden nowy plik JS, potem Cart: 0 pcs — 0.00 PLN
 ```
 
 Plik z kodem podsumowania przeglądarka pobiera dopiero po kliknięciu i do jego wczytania granica pokazuje treść zastępczą.
@@ -67,6 +76,8 @@ Mimo nazwy `use` nie jest hookiem. Dokumentacja mówi:
 Ta swoboda dotyczy także odczytu kontekstu, którego `useContext` w warunku zrobić nie może:
 
 ```jsx
+import { createContext, use } from 'react';
+
 const ThemeContext = createContext('light');
 
 function Cond({ show }) {
@@ -76,24 +87,10 @@ function Cond({ show }) {
   }
   return <p>-</p>;
 }
-// pod <ThemeContext value="dark">: <Cond show /> daje <p>dark</p>, <Cond show={false} /> daje <p>-</p>
+// → pod <ThemeContext value="dark">: <Cond show /> daje <p>dark</p>, <Cond show={false} /> daje <p>-</p>
 ```
 
-Wolność ma jedną granicę: `use` nie może stać w bloku `try/catch`. Oczekujący Promise przerywa render podobnie jak wyjątek. Ręczny `catch` przechwyci więc zwykłe czekanie na dane.
-
-```jsx
-function Tried() {
-  let v;
-  try {
-    v = use(slowPromise);
-  } catch (e) {
-    v = e.message;   // „Suspense Exception: This is not a real error! …”
-  }
-  return <p>{v}</p>;
-}
-```
-
-Komponent pokazuje wtedy tekst „Suspense Exception: This is not a real error!” i zostaje przy nim także po spełnieniu Promise, bo React nie dowiedział się o czekaniu. Dokumentacja `use` zapisuje to jako ograniczenie i kieruje obsługę błędu do granicy błędów (*„`use` cannot be called inside a try-catch block. Instead, wrap your component in an Error Boundary to catch the error and display a fallback.”*).
+Wolność ma jedną granicę: `use` nie może stać w bloku `try/catch`. Oczekujący Promise przerywa render podobnie jak wyjątek. Ręczny `catch` przechwyci więc zwykłe czekanie na dane. Gdy komponent zapisze `try { v = use(slowPromise); } catch (e) { v = e.message; }` i wyrenderuje `v`, `catch` złapie wyjątek, którym React przerywa render. W trybie deweloperskim komponent pokazuje wtedy tekst „Suspense Exception: This is not a real error!”, a w wersji zbudowanej ekran pokazuje „Minified React error #460”. Komponent zostaje przy tym ekranie także po spełnieniu Promise, bo React nie dowiedział się o czekaniu. Dokumentacja `use` zapisuje to jako ograniczenie i kieruje obsługę błędu do granicy błędów (*„`use` cannot be called inside a try-catch block. Instead, wrap your component in an Error Boundary to catch the error and display a fallback.”*).
 
 ## Rozszerzenie: ukryta treść i odsłanianie
 
@@ -113,8 +110,11 @@ const [promise, setPromise] = useState(recommendedPromise);
 
 <button onClick={() => setPromise(fetchRecommended())}>Refresh</button>
 <button onClick={() => startTransition(() => setPromise(fetchRecommended()))}>Refresh in transition</button>
-// „Refresh”               → po 0,1 s: 0 z 3 <li> widocznych, Loading recommendations...; po 2 s: 3 <li>
-// „Refresh in transition” → przez 2,5 s: 3 widoczne <li>, treść zastępcza się nie pojawia
+```
+
+```text
+„Refresh”               → po 0,1 s: 0 z 3 <li> widocznych, Loading recommendations...; po 2 s: 3 <li>
+„Refresh in transition” → przez 2,5 s: 3 widoczne <li>, treść zastępcza się nie pojawia
 ```
 
 Zwykła aktualizacja chowa trzy polecane produkty: elementy `<li>` zostają w DOM, ale są ukryte. Przejście zostawia starą listę na ekranie, dopóki nowy Promise się nie spełni.

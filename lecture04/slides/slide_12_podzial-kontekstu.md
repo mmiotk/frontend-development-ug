@@ -108,7 +108,7 @@ Dokumentacja `useReducer` podaje, że funkcja `dispatch` ma stałą tożsamość
 function CartProbe() {
   const [cart, dispatch] = useReducer(cartReducer, initialCartState);
   const clear = () => dispatch({ type: 'CLEAR_CART' }); // nowa funkcja przy każdym wykonaniu ciała
-  // po ADD_ITEM: dispatch ten sam co przy montowaniu, clear już inny
+  // → po ADD_ITEM: dispatch ten sam co przy montowaniu, clear już inny
 }
 ```
 
