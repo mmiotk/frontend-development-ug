@@ -45,7 +45,7 @@ Z tej różnicy wynikają sygnały, które da się sprawdzić w kodzie. Pierwszy
 >
 > — Morten Barklund, *React in Depth*
 
-Koszyk sklepu nie spełnia żadnego z sygnałów: ma jeden reducer, cztery akcje i cztery rodzaje konsumentów. Do kontekstu nie trafiają też wartości wyliczane, jak suma, ani komunikat błędu, który żyje w przycisku. Magazyn Zustand może być zmienną modułu, a zmienna modułu na serwerze jest wspólna dla wszystkich żądań. Dokumentacja Zustand dla Next.js zastrzega więc, że magazyn nie powinien być współdzielony między żądaniami (*„the store should not be shared across requests”*). Dlatego powstaje osobno dla każdego żądania, na przykład w dostawcy.
+Koszyk sklepu nie spełnia żadnego z sygnałów: ma jeden reducer, trzy akcje i trzy rodzaje konsumentów. Do kontekstu nie trafiają też wartości wyliczane, jak suma, ani komunikat błędu, który żyje w przycisku. Magazyn Zustand może być zmienną modułu, a zmienna modułu na serwerze jest wspólna dla wszystkich żądań. Dokumentacja Zustand dla Next.js zastrzega więc, że magazyn nie powinien być współdzielony między żądaniami (*„the store should not be shared across requests”*). Dlatego powstaje osobno dla każdego żądania, na przykład w dostawcy.
 
 ```jsx
 // Przykład spoza demo: magazyn Zustand 5.0.16 w kontekście, osobny dla każdego egzemplarza dostawcy
@@ -77,7 +77,7 @@ Wartość kontekstu, czyli magazyn, nie zmienia się wcale, a o renderze decyduj
 
 ## Rozszerzenie: zmiana interfejsu przez adapter
 
-Usunięcie eksportu `useCart` od razu przerywa budowanie komunikatem „Export useCart doesn't exist in target module” w każdym z czterech plików, które go importują. Na czas przepisywania konsumentów plik może więc eksportować dawną nazwę jako **adapter**. To cienka funkcja, która składa stary kształt wartości z nowych części:
+Usunięcie eksportu `useCart` od razu przerywa budowanie komunikatem „Export useCart doesn't exist in target module” w każdym z trzech plików, które go importują. Na czas przepisywania konsumentów plik może więc eksportować dawną nazwę jako **adapter**. To cienka funkcja, która składa stary kształt wartości z nowych części:
 
 ```jsx
 // Tymczasowo: dawny interfejs zostaje, dopóki każdy komponent nie przejdzie na nowe hooki.

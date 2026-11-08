@@ -2,34 +2,47 @@
 
 ## Trzy stany sekcji rekomendacji
 
-Sekcja „You may also like” może znaleźć się w jednym z trzech stanów. Dane jeszcze nie przyszły, dane przyszły albo zapytanie się nie udało. Komponent `RecommendedProducts` obsługuje tylko środkowy przypadek: dostaje gotową tablicę i rysuje listę. Czekanie przejmuje granica Suspense, a błąd granica błędów. Obie stawia nad nim nowy komponent `app/components/RecommendedSection.jsx`:
+Sekcja „You may also like” może znaleźć się w jednym z trzech stanów. Dane jeszcze nie przyszły, dane przyszły albo zapytanie się nie udało. Komponent `RecommendedList` obsługuje tylko środkowy przypadek: czyta Promise przez `use` i rysuje listę. Czekanie przejmuje granica Suspense, a błąd granica błędów. Obie stoją w `Recommended`, który dostaje teraz `ErrorBoundary` nad `Suspense`:
 
 ```jsx
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, use } from 'react';
 import { fetchRecommended } from '../lib/fakeApi';
-import RecommendedProducts from './RecommendedProducts';
 import ErrorBoundary from './ErrorBoundary';
 
-// Promise powstaje raz, przy pierwszym imporcie modułu, a nie przy każdym renderze.
+// Promise powstaje raz, przy załadowaniu modułu, a nie przy każdym renderze.
 // Wariant z błędem: fetchRecommended(true) daje odrzucony Promise, który łapie granica błędów.
 const recommendedPromise = fetchRecommended();
 
-export default function RecommendedSection() {
+function RecommendedList() {
+  const recommended = use(recommendedPromise); // tu komponent czeka na dane
   return (
-    <ErrorBoundary>
-      <Suspense fallback={<p>Loading recommendations...</p>}>
-        <RecommendedProducts recommendedPromise={recommendedPromise} />
-      </Suspense>
-    </ErrorBoundary>
+    <ul>
+      {recommended.map(p => (
+        <li key={p.id}>{p.name} — {p.price.toFixed(2)} PLN</li>
+      ))}
+    </ul>
+  );
+}
+
+export default function Recommended() {
+  return (
+    <section>
+      <h2>You may also like</h2>
+      <ErrorBoundary>
+        <Suspense fallback={<p>Loading recommendations...</p>}>
+          <RecommendedList />
+        </Suspense>
+      </ErrorBoundary>
+    </section>
   );
 }
 ```
 
-Wywołanie `fetchRecommended()` stoi poza funkcją komponentu, więc wykonuje się raz, gdy moduł zostaje załadowany. `<Suspense>` przez dwie sekundy pokazuje napis „Loading recommendations...”, a `<ErrorBoundary>` przejmuje odrzucony Promise.
+Wywołanie `fetchRecommended()` stoi poza funkcjami komponentów, więc wykonuje się raz, gdy moduł zostaje załadowany. `<Suspense>` przez dwie sekundy pokazuje napis „Loading recommendations...”, a `<ErrorBoundary>` przejmuje odrzucony Promise.
 
-Granica błędów stoi na zewnątrz, a granica Suspense wewnątrz, więc wyjątek rzucony także w samej treści zastępczej trafi do `ErrorBoundary`. `RecommendedProducts` dostaje Promise w propsie i czyta go przez `use`.
+Granica błędów stoi na zewnątrz, a granica Suspense wewnątrz, więc wyjątek rzucony także w samej treści zastępczej trafi do `ErrorBoundary`. `RecommendedList` czyta Promise ze stałej modułu przez `use`, a nagłówek „You may also like” leży poza obiema granicami, więc zostaje na ekranie także po awarii.
 
 ## Dlaczego Promise powstaje poza komponentem
 
@@ -56,42 +69,28 @@ Gdy `fetchTea` spełnia się po 100 ms, `TeaFromModule` pokazuje listę. Przy `u
 
 Liczy się położenie Promise względem granicy Suspense. Model z trzema wariantami `fetchTea` daje trzy różne wyniki:
 
-- **Promise w ciele komponentu nad granicą**, tak jakby `fetchRecommended()` stało w funkcji `RecommendedSection`, ładowania nie zapętla. Po spełnieniu Promise React ponawia render pod granicą, a nie komponentu nad nią. Każdy kolejny render tego komponentu tworzy jednak nowy Promise i granica znów pokazuje treść zastępczą.
+- **Promise w ciele komponentu nad granicą**, tak jakby `fetchRecommended()` stało w funkcji `Recommended`, ładowania nie zapętla. Po spełnieniu Promise React ponawia render pod granicą, a nie komponentu nad nią. Każdy kolejny render tego komponentu tworzy jednak nowy Promise i granica znów pokazuje treść zastępczą.
 - **Promise w `useState` komponentu nad granicą**, tworzony leniwym inicjalizatorem `useState(() => fetchTea())`, zostaje ten sam przy kolejnych renderach, bo ten komponent jest już zamontowany i ma swój stan.
 - **Ten sam `useState` w komponencie, który wywołuje `use`**, zawodzi. Komponent zawieszony przed pierwszym zamontowaniem nie ma jeszcze stanu, więc przy każdej próbie inicjalizator tworzy nowy Promise. W ciągu 1,9 s `fetchTea` wywołuje się 22 razy (wersja zbudowana), a lista się nie pojawia.
 
 Dokumentacja formułuje wymóg. Obiekty Promise przekazywane do `use` w komponentach klienckich muszą być zapamiętane, czyli przy kolejnych renderach ma wracać ten sam egzemplarz. Sposób zapamiętania zależy od frameworka, a bez frameworka dokumentacja dopuszcza prostą pamięć na poziomie modułu. Stała w module to jej najprostsza wersja: moduł JavaScriptu wykonuje się raz, przy pierwszym imporcie, więc stała przechowuje jeden obiekt przez cały czas życia strony. Promise może też powstać w komponencie serwerowym i przyjść do klienckiego w propsie. Sklep zostaje przy stałej w module, bo to najprostsza postać zapamiętania, a rekomendacje nie zależą ani od użytkownika, ani od żądania.
-
-## Strona główna z sekcją rekomendacji
-
-Strona główna dostaje import i jedną sekcję pod listą produktów. W `app/page.jsx` dochodzą dwie linie i pozioma kreska:
-
-```jsx
-import RecommendedSection from './components/RecommendedSection';
-
-      <ProductList />
-      <hr />
-      <RecommendedSection />
-```
-
-Strona nadal jest komponentem serwerowym i tylko układa sekcje. Koszyk i katalog leżą poza obiema granicami, więc nie czekają na rekomendacje. Przycisk „Add to cart” kliknięty w czasie ładowania działa normalnie: nagłówek od razu pokazuje „Cart: 1 pcs”, a pod kreską dalej trwa ładowanie.
 
 ## Rysunek 4.10 — jeden Promise, trzy obrazy na ekranie
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
 flowchart LR
-    P["recommendedPromise<br/>stała w module"] --> U["RecommendedProducts<br/>use(recommendedPromise)"]
+    P["recommendedPromise<br/>stała w module"] --> U["RecommendedList<br/>use(recommendedPromise)"]
     U -->|"w toku, 0–2000 ms"| F1["treść zastępcza Suspense:<br/>Loading recommendations..."]
-    U -->|"spełniona"| F2["lista 3 produktów"]
-    U -->|"odrzucona"| F3["komunikat ErrorBoundary:<br/>Something went wrong: No connection..."]
+    U -->|"spełniona"| F2["lista 2 produktów"]
+    U -->|"odrzucona"| F3["komunikat ErrorBoundary:<br/>Something went wrong: No connection"]
 ```
 
 Na Rysunku 4.10 lewa strona to jeden Promise utworzony raz, w module. Trzy strzałki to trzy stany tego samego Promise i to, co każdy zostawia na ekranie. Przez pierwsze dwie sekundy działa tylko granica Suspense. Po spełnieniu Promise żadna z granic niczego nie zasłania. Po odrzuceniu `use` rzuca wyjątek, który przechodzi przez granicę Suspense w górę i trafia do `ErrorBoundary`, a ta zastępuje komunikatem całą sekcję.
 
 ## Jedna stała w przeglądarce i na serwerze
 
-Plik `RecommendedSection.jsx` ma dyrektywę `'use client'`, a jego kod wykonuje się w dwóch miejscach: na serwerze, przy przygotowaniu HTML, i w przeglądarce. Stała `recommendedPromise` powstaje więc w dwóch egzemplarzach.
+Plik `Recommended.jsx` ma dyrektywę `'use client'`, a jego kod wykonuje się w dwóch miejscach: na serwerze, przy przygotowaniu HTML, i w przeglądarce. Stała `recommendedPromise` powstaje więc w dwóch egzemplarzach.
 
 - **W przeglądarce** moduł wykonuje się raz na załadowanie strony. Promise należy do jednej karty i znika przy przeładowaniu.
 - **Na serwerze** moduł wykonuje się raz na proces serwera, a w trybie deweloperskim także po każdej zmianie pliku. Ten sam Promise obsługuje wszystkich użytkowników.
@@ -102,15 +101,15 @@ Z tego podziału wynikają cztery zachowania:
 |---|---|---|
 | pierwsze wejście po starcie serwera deweloperskiego | napis ładowania, po 2 s lista | serwerowy, jeszcze w toku |
 | przeładowanie strony | lista od razu, w HTML | serwerowy, już spełniony |
-| powrót z `/cart` linkiem po co najmniej 2 s od załadowania strony | lista od razu | przeglądarkowy, już spełniony |
+| powrót z `/cart` linkiem „Shop” po co najmniej 2 s od załadowania strony | lista od razu | przeglądarkowy, już spełniony |
 | strona po `next build` | lista w zbudowanym HTML, bez napisu ładowania | ten z budowania, które czeka na spełnienie Promise |
 
 ## Awaria rekomendacji na serwerze i w przeglądarce
 
-Drogę błędu pokazuje wariant z odrzuconym Promise w `app/components/RecommendedSection.jsx`:
+Drogę błędu pokazuje wariant z odrzuconym Promise w `app/components/Recommended.jsx`:
 
 ```jsx
-const recommendedPromise = fetchRecommended(true); // shouldFail = true: Promise odrzucony po 2 s
+const recommendedPromise = fetchRecommended(true); // fail = true: Promise odrzucony po 2 s
 ```
 
 Najpierw błąd pojawia się na serwerze, gdzie granica błędów nie działa. Rolę przejmuje granica Suspense:
@@ -121,23 +120,19 @@ Najpierw błąd pojawia się na serwerze, gdzie granica błędów nie działa. R
 >
 > — dokumentacja React, *Suspense*
 
-Na serwerze wyjątek trafia do logu (`⨯ Error: No connection — could not load recommendations`), a HTML przychodzi z napisem ładowania. Tak samo wygląda w tym wariancie zbudowana strona `/`. W przeglądarce React renderuje sekcję jeszcze raz i zgłasza błąd 419. Serwer nie dokończył granicy, więc nastąpiło przełączenie na renderowanie w przeglądarce (*„The server could not finish this Suspense boundary, likely due to an error during server rendering. Switched to client rendering.”*). Dalej błąd przechodzi tę drogę:
+Na serwerze wyjątek trafia do logu (`⨯ Error: No connection`), a HTML przychodzi z napisem ładowania. Tak samo wygląda w tym wariancie zbudowana strona `/`. W przeglądarce React renderuje sekcję jeszcze raz i zgłasza błąd. Serwer nie dokończył granicy, więc nastąpiło przełączenie na renderowanie w przeglądarce. W trybie deweloperskim konsola pokazuje „Switched to client rendering because the server rendering errored: No connection”, a w wersji zbudowanej „Minified React error #419”. Dalej błąd przechodzi tę drogę:
 
-1. **`use` rzuca wyjątek.** Przeglądarkowy Promise zostaje odrzucony, więc `use` w `RecommendedProducts` rzuca zapisany obiekt `Error` z komunikatem „No connection — could not load recommendations”.
+1. **`use` rzuca wyjątek.** Przeglądarkowy Promise zostaje odrzucony, więc `use` w `RecommendedList` rzuca zapisany obiekt `Error` z komunikatem „No connection”.
 2. **Błąd mija granicę Suspense.** Suspense obsługuje tylko czekanie, więc React idzie wyżej, do najbliższej granicy błędów.
-3. **Granica błędów przejmuje wyjątek.** Jej metody ustawiają flagę błędu i zapisują go w konsoli, a `render` zwraca akapit „Something went wrong: No connection — could not load recommendations” w miejsce całej sekcji.
+3. **Granica błędów przejmuje wyjątek.** `getDerivedStateFromError` zapisuje błąd w stanie, a `render` zwraca akapit „Something went wrong: No connection” w miejsce całej sekcji.
 
-Komunikat zastępuje napis ładowania po ok. 2,1 s od wejścia, bez przeładowania i bez zmiany adresu. Do tej chwili sekcją zajmuje się granica Suspense. Koszyk leży poza obiema granicami, więc kawa dodana w trakcie ładowania zostaje w nagłówku. W trybie deweloperskim React dopisuje własny wpis: „The above error occurred in the <RecommendedProducts> component. It was handled by the <ErrorBoundary> error boundary.”, który nazywa komponent zepsuty i granicę, która go przejęła.
+Komunikat zastępuje napis ładowania po ok. 2,1 s od wejścia, bez przeładowania i bez zmiany adresu. Do tej chwili sekcją zajmuje się granica Suspense. Koszyk leży poza obiema granicami, więc kawa dodana w trakcie ładowania zostaje w nagłówku. W trybie deweloperskim React dopisuje własny wpis: „The above error occurred in the <RecommendedList> component. It was handled by the <ErrorBoundary> error boundary.”, który nazywa komponent zepsuty i granicę, która go przejęła.
 
 <u>Odrzucony Promise zostaje odrzucony na zawsze</u>. Nowy `key` na `ErrorBoundary` montuje granicę od nowa, ale jej dziecko czyta ten sam obiekt z modułu i od razu rzuca ten sam wyjątek: komunikat wraca bez czekania. Ponowienie wymaga wymiany starego Promise na nowy.
 
-## Jak duża ma być granica
+## Zalety i koszty małej i dużej granicy
 
-Tejas Kumar w *Fluent React* pokazuje skrajny przypadek: granicę wokół całej aplikacji, w której jedno dziecko ładuje ciężki panel boczny. Treść zastępcza zasłania wtedy całą aplikację, dopóki panel się nie załaduje. Autor nazywa to kiepskim pomysłem, bo użytkownik traci dostęp do wszystkiego z powodu jednego panelu. Granica ma więc obejmować tylko komponenty, które czekają.
-
-Dokumentacja Suspense ostrzega przed drugą skrajnością. Domyślnie całe drzewo wewnątrz jednej granicy traktowane jest jako jedna całość: gdy zawiesi się choćby jedno dziecko, treść zastępcza zastępuje wszystkie. Zagnieżdżone granice tworzą za to **sekwencję ładowania**, w której każdy poziom odsłania się, gdy dotrą jego dane. Dokumentacja dodaje, że granice nie powinny być drobniejsze niż sekwencja, którą użytkownik ma zobaczyć, a jej miejsca najlepiej uzgodnić z projektantem interfejsu.
-
-Dla granic błędów dokumentacja podaje podobne kryterium:
+Granicę da się postawić wokół jednego komponentu albo wokół całej aplikacji, a każda skrajność ma swoją cenę. Tejas Kumar w *Fluent React* opisuje granicę Suspense wokół całej aplikacji, w której jedno dziecko ładuje ciężki panel boczny. Treść zastępcza zasłania wtedy wszystko, dopóki panel się nie załaduje. Autor nazywa to kiepskim pomysłem, bo użytkownik traci dostęp do wszystkiego z powodu jednego panelu. Dokumentacja Suspense ostrzega przed drugą skrajnością: granice nie powinny być drobniejsze niż sekwencja ładowania, którą użytkownik ma zobaczyć, a jej miejsca najlepiej uzgodnić z projektantem interfejsu. Dla granic błędów dokumentacja podaje podobne kryterium:
 
 > **„Przy wyborze szczegółowości granic błędów należy się zastanowić, gdzie ma sens wyświetlenie komunikatu o błędzie. Na przykład w komunikatorze sens ma granica wokół listy rozmów. Sens ma też granica wokół każdej pojedynczej wiadomości. Nie miałaby jednak sensu granica wokół każdego awatara.”**
 >
@@ -145,7 +140,12 @@ Dla granic błędów dokumentacja podaje podobne kryterium:
 >
 > — dokumentacja React, *Component*
 
-Sklep stosuje oba kryteria. Rekomendacje to osobna, niezależna sekcja, więc dostają własną parę granic. Koszyk i katalog nie korzystają z `use`, więc nie potrzebują granicy Suspense. Para wokół każdego z trzech polecanych produktów dałaby trzy napisy ładowania i trzy komunikaty o błędzie dla jednego zapytania. <u>Parę granic stawia się wokół fragmentu, który ma sens pokazać lub ukryć jako całość</u>. Pliki `loading.jsx` i `error.jsx` z Next.js tworzą tę samą parę dla całego segmentu trasy.
+Sklep stosuje oba kryteria. Rekomendacje to osobna, niezależna sekcja, więc dostają własną parę granic. Koszyk i katalog nie korzystają z `use`, więc nie potrzebują granicy Suspense. <u>Parę granic stawia się wokół fragmentu, który ma sens pokazać lub ukryć jako całość</u>. Pliki `loading.jsx` i `error.jsx` z Next.js tworzą tę samą parę dla całego segmentu trasy.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| **Mała granica**, na przykład para wokół każdego z dwóch polecanych produktów: nic nie zasłania reszty, a ładowanie i awaria dotyczą tylko jednego kawałka. | Dwa napisy ładowania i dwa komunikaty o błędzie dla jednego zapytania. Zagnieżdżone granice dają sekwencję ładowania, której miejsca trzeba zaplanować. | Gdy kawałki i tak pojawiają się razem: jedna para wokół całego fragmentu, jak w `Recommended`. |
+| **Duża granica**, na przykład jedna wokół całej aplikacji: jedna para i jedno miejsce na komunikat. | Gdy zawiesi się choćby jedno dziecko, treść zastępcza zasłania wszystkie. Awaria jednego panelu odbiera dostęp do całej aplikacji. | Gdy fragmenty są niezależne, jak rekomendacje i koszyk: granica tylko wokół tych, które czekają. |
 
 Zagnieżdżanie ma jeszcze jedną konsekwencję. Według dokumentacji treść zastępcza, która sama się zawiesi, włącza najbliższą granicę Suspense nad nią. Treść zastępcza nie powinna więc ładować własnych danych. Napis „Loading recommendations...” niczego nie pobiera, więc pokazuje się od razu.
 

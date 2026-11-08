@@ -2,16 +2,20 @@
 
 ## Wartości, które zmieniają się w różnym tempie
 
-Przy jednym kontekście `{ cart, dispatch, addOptimistic }` każde dodanie produktu renderuje wszystkie pięć przycisków, choć żaden z nich nie potrzebuje koszyka. Wartości w obiekcie zmieniają się jednak w różnym tempie. Koszyk jest nowym obiektem po każdej akcji, także optymistycznej, a obie funkcje pozostają tymi samymi funkcjami przez cały czas życia dostawcy. Skoro React porównuje wartość kontekstu w całości, rozwiązaniem jest danie każdej z nich osobnego kontekstu. W `app/context/CartContext.jsx` jeden kontekst zamienia się na trzy:
+Przy jednym kontekście `{ cart, dispatch, addOptimistic }` każde dodanie produktu renderuje wszystkie pięć przycisków, choć żaden z nich nie potrzebuje koszyka. Wartości w obiekcie zmieniają się jednak w różnym tempie. Koszyk jest nowym obiektem po każdej akcji, także optymistycznej, a obie funkcje pozostają tymi samymi funkcjami przez cały czas życia dostawcy. Skoro React porównuje wartość kontekstu w całości, rozwiązaniem jest danie każdej z nich osobnego kontekstu. Poniższy podział nie należy do demo i służy jako przykład. W `app/context/CartContext.jsx` jeden kontekst zamieniłby się na trzy:
 
 ```jsx
+// Przykład spoza demo: trzy konteksty zamiast jednego
 const CartStateContext = createContext(null);      // zmienia się przy każdej akcji
 const CartDispatchContext = createContext(null);   // stała tożsamość: dispatch z useReducer
 const CartOptimisticContext = createContext(null); // stała tożsamość: setter z useOptimistic
 
 export function CartProvider({ children }) {
   const [cart, dispatch] = useReducer(cartReducer, initialCartState);
+  // Koszyk na ekranie = prawdziwy koszyk + akcje, które czekają na serwer.
+  // Ten sam reducer liczy oba.
   const [optimisticCart, addOptimistic] = useOptimistic(cart, cartReducer);
+
   return (
     <CartStateContext value={optimisticCart}>
       <CartDispatchContext value={dispatch}>
@@ -27,6 +31,7 @@ export function CartProvider({ children }) {
 `CartProvider` nadal trzyma jeden reducer i jeden hook optymistyczny, ale ich wyniki rozdziela między trzy konteksty. Każdy dostawca dostaje w `value` jedną wartość, a nie obiekt sklejany w JSX. Obu funkcji nie wkłada się do wspólnego obiektu: taki obiekt powstawałby od nowa przy każdym renderze dostawcy i zmieniałby wartość kontekstu tak samo jak koszyk. Pod dostawcą stoją trzy hooki zamiast `useCart`, każdy z własnym strażnikiem:
 
 ```jsx
+// Hook do wysyłania akcji koszyka.
 export function useCartDispatch() {
   const ctx = useContext(CartDispatchContext);
   if (ctx === null) throw new Error('useCartDispatch must be used inside <CartProvider>');
@@ -41,28 +46,35 @@ export function useCartDispatch() {
 Podział zmienia interfejs pliku: zamiast `useCart` są trzy hooki, a każdy konsument bierze tylko te, których potrzebuje. Przycisk dodawania korzysta z obu stałych funkcji, więc importuje dwa hooki.
 
 ```jsx
+// Przykład spoza demo: AddToCartButton po podziale
 import { useCartDispatch, useCartOptimistic } from '../context/CartContext';
 
 const dispatch = useCartDispatch();
 const addOptimistic = useCartOptimistic();
 ```
 
-`CartItem` zmienia ilość i usuwa pozycję, więc wystarczy mu `const dispatch = useCartDispatch();` z tym samym importem bez drugiej nazwy.
-
-`CartSummary` i `app/cart/page.jsx` pokazują koszyk i mają przycisk czyszczenia, więc biorą oba hooki.
+`CartSummary` tylko wyświetla koszyk, więc wystarczy mu stan. Strona `app/cart/page.jsx` pokazuje koszyk i ma przyciski usuwania oraz czyszczenia, więc bierze stan i `dispatch`.
 
 ```jsx
+// Przykład spoza demo: CartSummary po podziale
+import { useCartState } from '../context/CartContext';
+
+const cart = useCartState();
+```
+
+```jsx
+// Przykład spoza demo: app/cart/page.jsx po podziale
 import { useCartState, useCartDispatch } from '../context/CartContext';
 
 const cart = useCartState();
 const dispatch = useCartDispatch();
 ```
 
-Komponent, który wywołuje oba hooki, subskrybuje oba konteksty, więc po zmianie koszyka renderuje się tak jak przed podziałem. Zysk pojawia się tylko w komponentach, które czytają same funkcje.
+Komponent, który czyta stan, subskrybuje jego kontekst, więc po zmianie koszyka renderuje się tak jak przed podziałem. Zysk pojawia się tylko w komponentach, które czytają same funkcje.
 
 ## Wynik drugiego pomiaru
 
-Ten sam pomiar co przy jednym kontekście, z `console.log` w `AddToCartButton` i `CartSummary` oraz jednym dodaniem kawy, daje teraz inny wynik:
+Ten sam pomiar co przy jednym kontekście, z `console.log` w `AddToCartButton` i `CartSummary` oraz jednym dodaniem kawy, daje po podziale inny wynik:
 
 | Komponent | Jeden kontekst | Trzy konteksty |
 |---|---|---|
@@ -80,13 +92,14 @@ flowchart LR
     R["CartProvider<br/>useReducer, useOptimistic"] --> S["CartStateContext<br/>value = optimisticCart, zmienia się"]
     R --> D["CartDispatchContext<br/>value = dispatch, stały"]
     R --> O["CartOptimisticContext<br/>value = addOptimistic, stały"]
-    S --> CS["CartSummary, CartPage<br/>render po każdej akcji"]
-    D --> CS
-    D --> AB["AddToCartButton, CartItem<br/>bez renderu przez kontekst"]
+    S --> CS["CartSummary<br/>render po każdej akcji"]
+    S --> CP["strona /cart<br/>render po każdej akcji"]
+    D --> CP
+    D --> AB["AddToCartButton<br/>bez renderu przez kontekst"]
     O --> AB
 ```
 
-Na Rysunku 4.12 stan koszyka powstaje tylko w `CartProvider`. Stan i obie funkcje rozchodzą się do trzech kontekstów. Komponenty po lewej stronie dolnego rzędu czytają oba, bo wyświetlają koszyk i mogą go wyczyścić. Komponenty po prawej czytają tylko konteksty z funkcjami, których wartość nigdy się nie zmienia. Zmiana koszyka nie dociera do nich przez kontekst w ogóle. `CartItem` renderuje się mimo to po zmianie koszyka, bo tworzy go od nowa rodzic `CartPage`, który czyta stan.
+Na Rysunku 4.12 stan koszyka powstaje tylko w `CartProvider`. Stan i obie funkcje rozchodzą się do trzech kontekstów. `CartSummary` czyta wyłącznie kontekst stanu, a strona `/cart` stan i `dispatch`, bo wyświetla koszyk i ma przyciski usuwania. `AddToCartButton` czyta tylko konteksty z funkcjami, których wartość nigdy się nie zmienia. Zmiana koszyka nie dociera do niego przez kontekst w ogóle, a rodzica, który mógłby go wyrenderować od nowa, nie ma: listę produktów układa serwerowa strona główna.
 
 ## Ten sam podział w dokumentacji
 
@@ -98,7 +111,7 @@ Dwa osobne konteksty to układ, który dokumentacja Reacta pokazuje jako podstaw
 >
 > — dokumentacja React, *Scaling Up with Reducer and Context*
 
-Sklep dokłada do tego układu trzeci kontekst, bo ma drugą stałą funkcję, setter koszyka optymistycznego. Dokumentacja nie uzasadnia podziału liczbą renderów. Uzasadnienie wynika z pomiaru i z mechanizmu porównania wartości. Podział ma też drugi zysk: z importów widać od razu, który komponent coś zmienia, a który tylko wyświetla.
+Wariant z trzema kontekstami dokłada do tego układu trzeci, bo sklep ma drugą stałą funkcję, setter koszyka optymistycznego. Dokumentacja nie uzasadnia podziału liczbą renderów. Uzasadnienie wynika z pomiaru i z mechanizmu porównania wartości. Podział ma też drugi zysk: z importów widać od razu, który komponent coś zmienia, a który tylko wyświetla.
 
 ## Dlaczego `dispatch` się nie zmienia
 
@@ -116,11 +129,21 @@ Po jednym `ADD_ITEM` komponent ma za sobą dwa rendery. `dispatch` z pierwszego 
 
 Stąd bierze się przewaga reducera przy podziale kontekstu. Dostawca zbudowany na `useState` z funkcjami `addItem`, `removeItem` i `clearCart`, zapisanymi w jego ciele, tworzyłby je przy każdym renderze od nowa. Kontekst z takimi funkcjami zmieniałby wartość tak samo jak kontekst ze stanem i przyciski znów renderowałyby się po każdej akcji. Takie funkcje da się zapamiętać między renderami hookiem `useCallback`, ale memoizacja to osobna technika, z własną tablicą zależności do pilnowania. <u>Reducer daje stałą funkcję bez memoizacji, bo wszystkie zmiany koszyka idą przez jedno `dispatch` o stałej tożsamości</u>, a ich logika siedzi w `cartReducer` poza komponentem.
 
-Ta sama reguła działa w drugą stronę dla stanu. `cartReducer` zwraca nowy obiekt także wtedy, gdy akcja niczego nie zmienia: `CLEAR_CART` na pustym koszyku daje `{ ...state, items: [] }`, czyli inny obiekt niż poprzedni. Konsumenci stanu wyrenderowaliby się wtedy mimo braku zmiany, a konsumenci funkcji nadal by milczeli. W sklepie ten przypadek nie zachodzi z interfejsu, bo przycisk „Clear cart” w `CartSummary` jest przy pustym koszyku zablokowany, a `/cart` pokazuje wtedy osobny widok bez przycisku.
+Ta sama reguła działa w drugą stronę dla stanu. `cartReducer` zwraca nowy obiekt także wtedy, gdy akcja niczego nie zmienia: `CLEAR_CART` na pustym koszyku daje `{ items: [] }`, czyli inny obiekt niż poprzedni. Konsumenci stanu renderują się wtedy mimo braku zmiany. Widać to po kliknięciu „Clear cart” na stronie `/cart` przy pustym koszyku: w konsoli pojawia się jedna para wpisów `CartSummary render`.
 
 ## Gdzie koszyk mieszka na końcu
 
-Koszyk żyje w stanie `CartProvider`, czyli w pamięci jednej karty przeglądarki: przeładowanie strony na `/cart` pokazuje „Your cart is empty.”. Funkcje `fakeAddToCart` i `fetchRecommended` tylko udają serwer opóźnieniem, a nic poza kartą nie wie o zawartości koszyka. Trwały koszyk wymaga zapisu w miejscu, które przeżyje przeładowanie i będzie wspólne dla urządzeń użytkownika.
+Koszyk żyje w stanie `CartProvider`, czyli w pamięci jednej karty przeglądarki: przeładowanie strony na `/cart` pokazuje „Cart: 0 pcs — 0.00 PLN”. Funkcje `fakeAddToCart` i `fetchRecommended` tylko udają serwer opóźnieniem, a nic poza kartą nie wie o zawartości koszyka. Trwały koszyk wymaga zapisu w miejscu, które przeżyje przeładowanie i będzie wspólne dla urządzeń użytkownika.
+
+## Zalety i koszty podziału kontekstu
+
+Podział usuwa zbędne rendery przycisków za cenę większej liczby kontekstów i hooków. Opłaca się tam, gdzie pomiar z poprzedniego slajdu pokazał rendery, których nikt nie potrzebuje.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Przyciski bez renderów po zmianie koszyka: 0 wpisów w konsoli zamiast 4 na każdy z pięciu. | Trzy konteksty i trzy hooki zamiast jednego. Konsument musi wiedzieć, który wybrać. | Rendery nie spowalniają aplikacji (pięć przycisków to koszt pomijalny): zostać przy jednym kontekście. Najpierw mierzyć, potem dzielić. |
+| Z importów widać od razu, który komponent coś zmienia, a który tylko wyświetla. | Zmiana interfejsu pliku: `useCart` znika, więc na czas przepisywania konsumentów potrzebny jest adapter (rozszerzenie). | Komponent ma się renderować po zmianie jednego pola: wbudowany kontekst nie wystarcza, potrzebny jest selektor z biblioteki. |
+| Stała funkcja daje się rozdzielić bez memoizacji, bo `dispatch` z `useReducer` ma stałą tożsamość. | Stan nadal zmienia się przy każdej akcji, także takiej, która niczego nie zmienia (`CLEAR_CART` na pustym koszyku), więc jego konsumenci renderują się mimo to. | Dostawca na `useState` z funkcjami w ciele: powstają od nowa przy każdym renderze, więc podział nie pomoże bez `useCallback` (osobna technika, z tablicą zależności). |
 
 > 💡 **Zapamiętaj:** koszyk i każda stała funkcja trafiają do osobnych kontekstów. Komponent, który tylko wysyła akcje, czyta konteksty z funkcjami i nie renderuje się po zmianie koszyka, bo `dispatch` z `useReducer` i setter z `useOptimistic` mają stałą tożsamość. Gdy potrzebny jest render po zmianie jednego pola, wbudowany kontekst nie wystarcza i potrzebny jest selektor z biblioteki.
 

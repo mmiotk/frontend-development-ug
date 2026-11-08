@@ -6,7 +6,7 @@ Powrót: [`slide_03_usereducer-czy-usestate.md`](../slide_03_usereducer-czy-uses
 
 Dokumentacja dzieli zamianę `useState` na `useReducer` na trzy kroki. Najpierw procedury obsługi przestają ustawiać stan i zaczynają wysyłać akcje. Potem powstaje funkcja reducera z jedną gałęzią na każdą akcję. Na końcu komponent zamienia `useState` na `useReducer`.
 
-W koszyku opartym na `useState` pierwszy krok zmienia cztery procedury obsługi. Funkcja `handleAdd(product)` przestaje liczyć nową listę i wysyła akcję:
+W koszyku opartym na `useState` pierwszy krok zmienia trzy procedury obsługi. Funkcja `handleAdd(product)` przestaje liczyć nową listę i wysyła akcję:
 
 ```jsx
 // Spoza demo: krok 1, procedura obsługi wysyła akcję zamiast liczyć listę.
@@ -15,11 +15,11 @@ function handleAdd(product) {
 }
 ```
 
-Pozostałe trzy zmieniają się tak samo. Funkcja `handleQtyChange` wysyła `UPDATE_QTY` z polami `id` i `qty`, `handleRemove` wysyła `REMOVE_ITEM`, a `handleClear` wysyła `CLEAR_CART`. W drugim kroku reguły z tych funkcji przechodzą do `cartReducer`: zwiększanie ilości tego samego produktu do gałęzi `ADD_ITEM`, a dolna granica 1 do gałęzi `UPDATE_QTY`. Po trzecim kroku każda procedura obsługi ma jedną linię i żadnej reguły koszyka.
+Pozostałe dwie zmieniają się tak samo: `handleRemove` wysyła `REMOVE_ITEM`, a `handleClear` wysyła `CLEAR_CART`. W drugim kroku reguła z `handleAdd` przechodzi do `cartReducer`: zwiększanie ilości tego samego produktu trafia do gałęzi `ADD_ITEM`. Po trzecim kroku każda procedura obsługi ma jedną linię i żadnej reguły koszyka.
 
 Kolejność ma znaczenie. Dopóki w kodzie zostaje choć jedno stare wywołanie `setItems`, koszyk ma dwa źródła zmian. <u>Hook wymienia się dopiero wtedy, gdy wszystkie procedury obsługi wysyłają już akcje</u>. Po wymianie stary setter przestaje istnieć, więc każde pominięte wywołanie od razu zgłosi błąd.
 
-Miarą poprawnego przejścia jest ta sama seria akcji przed zmianą i po niej. Dwa dodania tej samej kawy mają dać jedną pozycję z `qty: 2`, a ilość 0 ma zostać zamieniona na 1. Sprawdzenia z `node:assert` opisują dokładnie tę serię, więc po drugim kroku da się je uruchomić, zanim komponent w ogóle zobaczy reducer. Inny wynik znaczy, że reguła zgubiła się po drodze: została w procedurze obsługi, której nikt już nie wywołuje, albo nie trafiła do gałęzi reducera.
+Miarą poprawnego przejścia jest ta sama seria akcji przed zmianą i po niej. Dwa dodania tej samej kawy mają dać jedną pozycję z `qty: 2`, a usunięcie tej pozycji ma opróżnić koszyk. Sprawdzenia z `node:assert` opisują dokładnie tę serię, więc po drugim kroku da się je uruchomić, zanim komponent w ogóle zobaczy reducer. Inny wynik znaczy, że reguła zgubiła się po drodze: została w procedurze obsługi, której nikt już nie wywołuje, albo nie trafiła do gałęzi reducera.
 
 ## Rozszerzenie: `useState` zapisany przez `useReducer`
 

@@ -8,7 +8,7 @@ Dla porównania poniższy kod, który nie należy do projektu, pobiera rekomenda
 
 ```jsx
 // Rozszerzenie spoza demo: ta sama sekcja bez use() i bez Suspense.
-function RecommendedProducts() {
+function RecommendedList() {
   const [recommended, setRecommended] = useState([]);
   const [isLoading, setIsLoading] = useState(true);   // flaga ładowania
   const [error, setError] = useState(null);           // komunikat błędu
@@ -113,8 +113,8 @@ const [promise, setPromise] = useState(recommendedPromise);
 ```
 
 ```text
-„Refresh”               → po 0,1 s: 0 z 3 <li> widocznych, Loading recommendations...; po 2 s: 3 <li>
-„Refresh in transition” → przez 2,5 s: 3 widoczne <li>, treść zastępcza się nie pojawia
+„Refresh”               → po 0,1 s: 0 z 2 <li> widocznych, Loading recommendations...; po 2 s: 2 <li>
+„Refresh in transition” → przez 2,5 s: 2 widoczne <li>, treść zastępcza się nie pojawia
 ```
 
-Zwykła aktualizacja chowa trzy polecane produkty: elementy `<li>` zostają w DOM, ale są ukryte. Przejście zostawia starą listę na ekranie, dopóki nowy Promise się nie spełni.
+Zwykła aktualizacja chowa dwa polecane produkty: elementy `<li>` zostają w DOM, ale są ukryte. Przejście zostawia starą listę na ekranie, dopóki nowy Promise się nie spełni.

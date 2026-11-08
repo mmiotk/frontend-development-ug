@@ -8,25 +8,31 @@ Podnoszenie stanu wynika z ogólniejszej zasady. Według dokumentacji Reacta ka�
 
 Ta sama strona dokumentacji opisuje też proces. Stan przenosi się w dół albo z powrotem w górę, dopóki nie wiadomo, gdzie ma mieszkać. Dokumentacja pisze, że to zwykła część pracy (*„This is all part of the process!”*).
 
-W sklepie właścicieli jest więcej niż jeden. Koszyk należy do komponentu na samej górze, a liczba wpisywana w wierszu przed zatwierdzeniem może należeć do samego wiersza:
+W sklepie właścicieli jest więcej niż jeden. Koszyk należy do komponentu na samej górze. Liczba wpisywana przy produkcie przed dodaniem może należeć do samego przycisku:
 
 ```jsx
-// Przykład spoza demo: ilość do zatwierdzenia należy do wiersza koszyka
-function QtyEditor({ item }) {
-  const dispatch = useCartDispatch();
-  const [draft, setDraft] = useState(item.qty);  // stan wiersza: nikt wyżej go nie czyta
+// Przykład spoza demo: ilość do dodania należy do przycisku, nie do koszyka.
+function AddMany({ product }) {
+  const { dispatch } = useCart();
+  const [n, setN] = useState(1);   // stan przycisku: nikt wyżej go nie czyta
   return (
     <>
-      <input type="number" min="1" value={draft} onChange={e => setDraft(Number(e.target.value))} />
-      <button onClick={() => dispatch({ type: 'UPDATE_QTY', id: item.id, qty: draft })}>Set</button>
+      <input type="number" min="1" value={n} onChange={e => setN(Number(e.target.value))} />
+      <button
+        onClick={() => {
+          for (let i = 0; i < n; i++) dispatch({ type: 'ADD_ITEM', product });
+        }}
+      >
+        Add {n}
+      </button>
     </>
   );
 }
-// kawa w koszyku, w polu wpisane 3 → nagłówek: Cart: 1 pcs — 49.99 PLN
-// po kliknięciu „Set”              → nagłówek: Cart: 3 pcs — 149.97 PLN
+// przy kawie wpisane 3, przed kliknięciem → nagłówek: Cart: 0 pcs — 0.00 PLN
+// po kliknięciu „Add 3”             → nagłówek: Cart: 3 pcs — 149.97 PLN
 ```
 
-Koszyk dowiaduje się o nowej liczbie dopiero z akcji `UPDATE_QTY`. Podniesienie `draft` wyżej dodałoby tylko pośredników, bo nikt poza wierszem go nie czyta.
+Koszyk dowiaduje się o nowej liczbie dopiero z kilku akcji `ADD_ITEM`, które reducer już zna. Podniesienie `n` wyżej dodałoby tylko pośredników, bo nikt poza przyciskiem go nie czyta.
 
 ## Rozszerzenie: druga alternatywa, kompozycja
 
@@ -34,7 +40,7 @@ Zanim sięgnie się po kontekst, dokumentacja proponuje kompozycję: rodzic budu
 
 ```jsx
 // Przykład spoza demo: ProductList przyjmuje gotowe wiersze przez children
-// AddButton, products, cartReducer i initialCartState jak w demo i na slajdzie 04
+// AddToCartButton, products, cartReducer i initialCartState jak na slajdzie 04
 function ProductList({ children }) {
   return <ul>{children}</ul>;                    // lista nie zna dispatch ani przycisków
 }
@@ -47,7 +53,7 @@ export default function HomePage() {
       <ProductList>
         {products.map(product => (
           <li key={product.id}>
-            <AddButton product={product} dispatch={dispatch} />  {/* prop idzie wprost z HomePage */}
+            <AddToCartButton product={product} dispatch={dispatch} />  {/* prop idzie wprost z HomePage */}
           </li>
         ))}
       </ProductList>

@@ -2,7 +2,7 @@
 
 ## Co React robi z wyjątkiem w renderze
 
-Promise z rekomendacjami może zostać odrzucony. Wtedy `use` w komponencie `RecommendedProducts` zamiast danych rzuci wyjątek w trakcie renderu. Bez żadnej ochrony skutek obejmuje całą aplikację:
+Promise z rekomendacjami może zostać odrzucony. Wtedy `use` w komponencie `RecommendedList` zamiast danych rzuci wyjątek w trakcie renderu. Bez żadnej ochrony skutek obejmuje całą aplikację:
 
 > **„Domyślnie, jeśli aplikacja rzuci wyjątek w trakcie renderowania, React usunie jej interfejs z ekranu. Żeby temu zapobiec, fragment interfejsu można owinąć w granicę błędów.”**
 >
@@ -30,25 +30,25 @@ Komponent klasowy to starszy zapis komponentu, który w nowym kodzie zastąpiły
 
 ```js
 class Counter {
-  constructor(start) { this.value = start; }           // new wywołuje konstruktor, this to nowy egzemplarz
+  value = 0;                                           // pole klasy: każdy egzemplarz ma własne
   increment() { this.value += 1; }
   static describe(c) { return `counter: ${c.value}`; } // metoda klasy, a nie egzemplarza
 }
 class StepCounter extends Counter {                    // dziedziczy pola i metody po Counter
-  constructor(start, step) { super(start); this.step = step; } // super przed pierwszym this
+  step = 5;                                            // dodatkowe pole klasy pochodnej
   increment() { this.value += this.step; }             // zastępuje metodę z Counter
 }
-const c = new StepCounter(0, 5);
+const c = new StepCounter();
 c.increment(); c.increment();
 Counter.describe(c);  // → 'counter: 10'
 c.describe;           // → undefined (egzemplarz nie ma metody statycznej)
 ```
 
-**Konstruktor** (`constructor`) wykonuje się raz, przy `new`, i ustawia pola nowego egzemplarza. Słowo **`this`** wewnątrz konstruktora i metod wskazuje egzemplarz, na którym metoda została wywołana.
+**Pole klasy** (*class field*) to zapis `nazwa = wartość;` w ciele klasy. Wyrażenie po prawej wykonuje się przy każdym `new` i daje nowemu egzemplarzowi własną kopię pola. Słowo **`this`** wewnątrz metod wskazuje egzemplarz, na którym metoda została wywołana, więc `this.value` jest polem tego egzemplarza.
 
-**`extends`** sprawia, że `StepCounter` ma wszystkie metody `Counter`, a własna metoda `increment` zastępuje odziedziczoną. **`super(start)`** uruchamia konstruktor klasy bazowej. Klasa pochodna musi go wywołać przed pierwszym użyciem `this`, inaczej `new` kończy się wyjątkiem `ReferenceError: Must call super constructor in derived class before accessing 'this' or returning from derived constructor`.
+**`extends`** sprawia, że `StepCounter` ma wszystkie pola i metody `Counter`, a własna metoda `increment` zastępuje odziedziczoną. Metoda oznaczona **`static`** należy do samej klasy. Wywołuje się ją przez nazwę klasy (`Counter.describe(c)`), a egzemplarz jej nie ma, stąd `undefined` w ostatniej linii. Metoda statyczna nie ma też dostępu do pól egzemplarza przez `this`. Wszystko, czego potrzebuje, dostaje w argumentach.
 
-Metoda oznaczona **`static`** należy do samej klasy. Wywołuje się ją przez nazwę klasy (`Counter.describe(c)`), a egzemplarz jej nie ma, stąd `undefined` w ostatniej linii. Metoda statyczna nie ma też dostępu do pól egzemplarza przez `this`. Wszystko, czego potrzebuje, dostaje w argumentach.
+Pola można ustawić też w **konstruktorze** (`constructor`), czyli metodzie wykonywanej raz, przy `new`. Klasa pochodna musi w nim wywołać `super(...)`, czyli konstruktor klasy bazowej, przed pierwszym użyciem `this`. Granica błędów w sklepie obchodzi się bez konstruktora, więc pełny przykład z `super` stoi w rozszerzeniu.
 
 ## Komponent klasowy w Reakcie
 
@@ -56,10 +56,7 @@ Komponent klasowy to klasa dziedzicząca po `Component` z pakietu `react`. Najmn
 
 ```jsx
 class Clicker extends Component {
-  constructor(props) {
-    super(props);                  // konstruktor Component zapisuje propsy w this.props
-    this.state = { count: 0 };     // stan to jedno pole egzemplarza
-  }
+  state = { count: 0 };            // stan to pole o nazwie state, React go odczytuje
   render() {                       // React wywołuje tę metodę przy każdym renderze
     return (
       <button onClick={() => this.setState({ count: this.state.count + 1 })}>
@@ -70,7 +67,7 @@ class Clicker extends Component {
 }
 ```
 
-Po dwóch kliknięciach przycisk `<Clicker label="Clicks" />` pokazuje „Clicks: 2”. React tworzy egzemplarz klasy raz, przy montowaniu, a potem przy każdym renderze wywołuje tylko jego metodę `render`. Stan jest jednym obiektem w `this.state`. Metoda `this.setState` przyjmuje obiekt z polami do zmiany, według dokumentacji `Component` łączy go płytko z bieżącym stanem i planuje render. Funkcja strzałkowa w `onClick` przejmuje `this` z metody `render`, więc wskazuje ten sam egzemplarz.
+Po dwóch kliknięciach przycisk `<Clicker label="Clicks" />` pokazuje „Clicks: 2”. React tworzy egzemplarz klasy raz, przy montowaniu, a potem przy każdym renderze wywołuje tylko jego metodę `render`. Stan jest jednym obiektem w `this.state`, a propsy leżą w `this.props`, które klasa bazowa `Component` wypełnia sama. Metoda `this.setState` przyjmuje obiekt z polami do zmiany, według dokumentacji `Component` łączy go płytko z bieżącym stanem i planuje render. Funkcja strzałkowa w `onClick` przejmuje `this` z metody `render`, więc wskazuje ten sam egzemplarz.
 
 ## Klasa `ErrorBoundary` w sklepie
 
@@ -81,37 +78,24 @@ Sklep dostaje własną granicę w nowym pliku `app/components/ErrorBoundary.jsx`
 
 import { Component } from 'react';
 
-// Granica błędów w React 19 musi być komponentem klasowym.
-// Łapie wyjątki z renderu poddrzewa, także odrzucony Promise czytany przez use().
+// Granice błędów są w React 19 nadal komponentami klasowymi.
 export default class ErrorBoundary extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+  state = { error: null };
 
   // React wywołuje ją w trakcie renderu, gdy któreś dziecko rzuci wyjątek.
   // Musi być czystą funkcją: dostaje błąd i zwraca nowy stan.
   static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  // React wywołuje ją po zatwierdzeniu zmian, więc wolno tu wykonać efekt uboczny (zapis do konsoli).
-  componentDidCatch(error, info) {
-    console.error('ErrorBoundary caught:', error, info.componentStack);
+    return { error };
   }
 
   render() {
-    if (this.state.hasError) {
-      return <p>Something went wrong: {this.state.error?.message}</p>;
-    }
+    if (this.state.error) return <p>Something went wrong: {this.state.error.message}</p>;
     return this.props.children;
   }
 }
 ```
 
-Konstruktor i `render` działają tak jak w liczniku. Nowe są dwie metody, które React wywołuje sam, gdy któryś potomek rzuci wyjątek. `getDerivedStateFromError` zwraca stan z flagą `hasError` i obiektem błędu, a `render` pokazuje wtedy komunikat z treścią błędu. Dopóki nic się nie psuje, granica jest niewidoczna, bo oddaje `this.props.children` bez zmian.
-
-Operator `?.` w `this.state.error?.message` zabezpiecza odczyt na wypadek wyjątku, który nie jest obiektem `Error`. Dokumentacja `Component` przypomina, że JavaScript pozwala rzucić dowolną wartość, także napis, a nawet `null` (*„JavaScript allows to `throw` any value, including strings or even `null`”*). Po `throw null` zwykłe `error.message` samo rzuciłoby wyjątek w komunikacie zastępczym, a z `?.` komunikat kończy się na „Something went wrong:”. Dotyczy to wyjątku rzuconego w przeglądarce, na przykład po kliknięciu. Ten sam rzut w pierwszym renderze na serwerze daje w `next dev` błąd TypeError „Cannot read properties of null (reading 'digest')”, a w wersji zbudowanej „Internal Server Error”.
+Pole `state` i `render` działają tak jak w liczniku. Nowa jest metoda statyczna, którą React wywołuje sam, gdy któryś potomek rzuci wyjątek. `getDerivedStateFromError` zwraca stan z obiektem błędu, a `render` pokazuje wtedy komunikat z jego treścią. Dopóki nic się nie psuje, `state.error` ma wartość `null`, więc granica jest niewidoczna i oddaje `this.props.children` bez zmian. Warunek `if (this.state.error)` zakłada, że rzucono obiekt `Error`, a nie `null` albo napis. Kod sklepu rzuca tylko `Error`, więc to założenie wystarcza.
 
 Plik zaczyna się od `'use client'`, bo granica trzyma stan i przełącza widok w przeglądarce, a stan mają tylko komponenty klienckie. Metoda statyczna nie widzi `this`, więc `getDerivedStateFromError` nie może niczego zapisać ani wysłać. Może tylko wyliczyć nowy stan z błędu.
 
@@ -125,13 +109,13 @@ Dokumentacja zaleca pisanie komponentów jako funkcji. Granica błędów jest wy
 >
 > — dokumentacja React, *Component*
 
-Dokumentacja przy obu metodach zaznacza, że w komponentach funkcyjnych nie ma jeszcze ich bezpośredniego odpowiednika. Hooki nie mają więc sposobu, żeby przechwycić wyjątek z renderu potomka. Sklep pisze klasę samodzielnie, żeby było widać, co robi każda metoda.
+Dokumentacja przy obu metodach granicy zaznacza, że w komponentach funkcyjnych nie ma jeszcze ich bezpośredniego odpowiednika. Hooki nie mają więc sposobu, żeby przechwycić wyjątek z renderu potomka. Sklep pisze klasę samodzielnie, żeby było widać, co robi każda metoda.
 
 ## Dwie metody, dwie fazy
 
-Podział na dwie metody wynika z faz pracy Reacta: najpierw render, czyli wyliczenie nowego drzewa, potem zatwierdzenie, czyli zmiana DOM. Dokumentacja opisuje `getDerivedStateFromError` jako metodę, która powinna być **czystą funkcją**. Działa w trakcie renderowania, więc dostaje błąd i zwraca stan, na podstawie którego `render` pokaże komunikat. Render może zostać przerwany i powtórzony, dlatego nie wolno w nim wysyłać żądań ani zapisywać czegokolwiek na zewnątrz. Jeśli potrzebny jest efekt uboczny, na przykład wysłanie raportu do serwisu analitycznego, trzeba według dokumentacji zaimplementować także `componentDidCatch`.
+Granica ma do dyspozycji dwie metody, bo React pracuje w dwóch fazach: najpierw render, czyli wyliczenie nowego drzewa, potem zatwierdzenie, czyli zmiana DOM. Dokumentacja opisuje `getDerivedStateFromError` jako metodę, która powinna być **czystą funkcją**. Działa w trakcie renderowania, więc dostaje błąd i zwraca stan, na podstawie którego `render` pokaże komunikat. Render może zostać przerwany i powtórzony, dlatego nie wolno w nim wysyłać żądań ani zapisywać czegokolwiek na zewnątrz.
 
-`componentDidCatch` działa po zatwierdzeniu zmian, więc efekty uboczne są w niej dozwolone. Drugi argument, obiekt `info`, ma pole `componentStack`. To lista komponentów od tego, który rzucił wyjątek, w górę drzewa, z nazwami i położeniem w kodzie. W wersji produkcyjnej nazwy są według dokumentacji skrócone przez minifikację.
+Jeśli potrzebny jest efekt uboczny, na przykład wysłanie raportu do serwisu analitycznego, trzeba według dokumentacji zaimplementować także `componentDidCatch(error, info)`. Działa po zatwierdzeniu zmian, więc efekty uboczne są w niej dozwolone. Obiekt `info` ma pole `componentStack`, czyli listę komponentów od tego, który rzucił wyjątek, w górę drzewa. Granica w sklepie niczego nie raportuje, więc tej metody nie pisze. Uruchomiony przykład z nią stoi w rozszerzeniu.
 
 ## Rysunek 4.9 — co granica łapie, a czego nie
 
@@ -171,7 +155,7 @@ function SaveButton() {
 }
 ```
 
-Gdy `save()` zwraca odrzucony Promise, `<ErrorBoundary><SaveButton /></ErrorBoundary>` pokazuje „Something went wrong: Save failed”. Ślad komponentów w `componentDidCatch` zaczyna się wtedy od `SaveButton`. React zgłasza błąd przejścia w renderze komponentu, do którego przejście należy, więc wyjątek trafia do drzewa w tym samym miejscu co błąd renderu i przejmuje go najbliższa granica nad przyciskiem. Ten sam przycisk z `startTransition` zaimportowanym z `react` zostaje na ekranie, a wyjątek dociera do przeglądarki jako niezłapany błąd strony. Dokumentacja `useTransition` podaje przyczynę:
+Gdy `save()` zwraca odrzucony Promise, `<ErrorBoundary><SaveButton /></ErrorBoundary>` pokazuje „Something went wrong: Save failed”. React zgłasza błąd przejścia w renderze komponentu, do którego przejście należy, więc wyjątek trafia do drzewa w tym samym miejscu co błąd renderu i przejmuje go najbliższa granica nad przyciskiem. Ten sam przycisk z `startTransition` zaimportowanym z `react` zostaje na ekranie, a wyjątek dociera do przeglądarki jako niezłapany błąd strony. Dokumentacja `useTransition` podaje przyczynę:
 
 > **„Ponieważ samodzielna funkcja nie jest związana z żadnym komponentem, granica błędów nie może obsłużyć błędów z jej przejścia.”**
 >
@@ -187,9 +171,19 @@ Granica chroni to, co React wykonuje w trakcie renderu, bo tylko wtedy nie wie, 
 
 Granica nie chroni samej siebie. Błąd w jej komunikacie zastępczym trafia do granicy wyżej, a w sklepie wyżej żadnej granicy nie ma. Komunikat zastępczy powinien więc być najprostszym kodem w całej sekcji.
 
-Zwykły `try/catch` nie zastąpi granicy także w komponencie nadrzędnym. Blok `try` wokół `return <RecommendedProducts … />` nie złapie błędu dziecka, bo zwrócenie elementu niczego jeszcze nie renderuje. Dziecko renderuje się później, a jego błąd idzie w górę drzewa komponentów, omijając ten blok. <u>Błąd renderu dziecka łapie tylko granica błędów nad nim.</u>
+Zwykły `try/catch` nie zastąpi granicy także w komponencie nadrzędnym. Blok `try` wokół `return <RecommendedList … />` nie złapie błędu dziecka, bo zwrócenie elementu niczego jeszcze nie renderuje. Dziecko renderuje się później, a jego błąd idzie w górę drzewa komponentów, omijając ten blok. <u>Błąd renderu dziecka łapie tylko granica błędów nad nim.</u>
 
-> 💡 **Zapamiętaj:** granica błędów to klasa z `getDerivedStateFromError` (czysta, zwraca stan) i opcjonalnie `componentDidCatch` (logowanie). Łapie błędy renderu poddrzewa i przejść z `useTransition`, ale nie błędy z procedur obsługi zdarzeń ani z samodzielnej funkcji `startTransition`. Po awarii granica nie wraca sama, potrzebuje nowego `key`.
+## Zalety i koszty granicy błędów
+
+Granica zamienia awarię całej strony w awarię jednej sekcji. Za tę ochronę płaci się klasą w kodzie i ograniczonym zasięgiem: łapie tylko to, co React wykonuje w trakcie renderu.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Awaria sekcji rekomendacji nie zabiera koszyka, katalogu i nawigacji, a użytkownik widzi komunikat w miejscu sekcji. | Granica to klasa, bo hooki nie przechwytują wyjątku z renderu potomka. Żeby klasy nie pisać, można użyć `react-error-boundary`. | Błąd całej trasy: plik `error.jsx` z Next.js (L03). |
+| Przejmuje odrzucony Promise z `use` oraz wyjątek z przejścia z `useTransition`. | Nie widzi wyjątków z procedur obsługi zdarzeń, z samodzielnego `startTransition` ani z kodu asynchronicznego, jak `setTimeout`. Stąd `try/catch` w `AddToCartButton`. | Błąd w `onClick` lub po `await`: zwykły `try/catch` w tym kodzie. |
+| Granice da się składać i zawężać do fragmentów interfejsu. | Po awarii granica nie wraca sama (potrzebuje nowego `key`) i trzeba zdecydować o jej rozmiarze. | Komunikat zastępczy ma być najprostszym kodem sekcji, bo granica nie chroni samej siebie. |
+
+> 💡 **Zapamiętaj:** granica błędów to klasa z `getDerivedStateFromError` (czysta, zwraca stan) i opcjonalnie z `componentDidCatch` (logowanie). Łapie błędy renderu poddrzewa i przejść z `useTransition`, ale nie błędy z procedur obsługi zdarzeń ani z samodzielnej funkcji `startTransition`. Po awarii granica nie wraca sama, potrzebuje nowego `key`.
 
 
 Materiał rozszerzony do tego slajdu: [`rozszerzenia/r09_error-boundary.md`](rozszerzenia/r09_error-boundary.md)

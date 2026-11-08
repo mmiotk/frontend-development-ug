@@ -7,28 +7,24 @@ Przycisk dodawania obsługiwał **zapis**, czyli zmianę danych wywołaną przez
 Pod listą produktów sklep pokaże sekcję „You may also like”. Dane do niej przychodzą z symulowanego serwera. Na końcu pliku `app/lib/fakeApi.js`, pod funkcją `fakeAddToCart`, dochodzi druga funkcja:
 
 ```js
-// Symulacja pobrania polecanych produktów (opóźnienie 2 s).
-// shouldFail = true: Promise zostaje odrzucony, czyli droga błędu sekcji.
-export function fetchRecommended(shouldFail = false) {
+// Udawane pobranie polecanych produktów (opóźnienie 2 s).
+// fail = true: Promise zostaje odrzucony, czyli droga błędu sekcji.
+export function fetchRecommended(fail = false) {
   return new Promise((resolve, reject) =>
-    setTimeout(
-      () =>
-        shouldFail
-          ? reject(new Error('No connection — could not load recommendations'))
-          : resolve([
-              { id: 10, name: 'Manual coffee grinder', price: 89.99 },
-              { id: 11, name: 'Thermos 0.5L',            price: 55.00 },
-              { id: 12, name: 'Coffee filters x100',     price: 12.50 },
-            ]),
-      2000
-    )
+    setTimeout(() => {
+      if (fail) reject(new Error('No connection'));
+      else resolve([
+        { id: 10, name: 'Manual coffee grinder', price: 89.99 },
+        { id: 11, name: 'Thermos 0.5L', price: 55.0 },
+      ]);
+    }, 2000)
   );
 }
 ```
 
-Funkcja działa jak `fakeAddToCart`, tylko czeka dłużej. Po 2000 ms Promise spełnia się tablicą trzech produktów: młynka do kawy, termosu i filtrów. Z argumentem `true` zostaje odrzucony z komunikatem o braku połączenia. Identyfikatory zaczynają się od 10, więc nie kolidują z produktami z katalogu.
+Funkcja działa jak `fakeAddToCart`, tylko czeka dłużej. Po 2000 ms Promise spełnia się tablicą dwóch produktów: młynka do kawy i termosu. Z argumentem `true` zostaje odrzucony z komunikatem „No connection”. Identyfikatory zaczynają się od 10, więc nie kolidują z produktami z katalogu.
 
-Przez te dwie sekundy strona musi coś pokazać. Koszyk i lista produktów mają dane od razu. Bez osobnego mechanizmu cała strona czekałaby na najwolniejszy fragment albo każdy komponent musiałby sam pilnować flagi ładowania.
+Przez te dwie sekundy strona musi coś pokazać, a koszyk i lista produktów mają dane od razu. Bez osobnego mechanizmu komponent z rekomendacjami sam pilnuje trzech stanów: trzyma w stanie dane, flagę ładowania i komunikat błędu, a pobranie rusza z `useEffect` dopiero po pierwszym renderze. Taką wersję pokazuje rozszerzenie do tego slajdu. Każda kolejna sekcja z danymi z sieci powtarzałaby te same trzy zmienne i dwa warunki przed listą. Druga droga jest gorsza: czekanie całej strony na najwolniejszy fragment.
 
 ## Najmniejszy przykład: `use` pod granicą Suspense
 
@@ -67,47 +63,65 @@ Maximilian Schwarzmüller w *React Key Concepts* opisuje współpracę obu czę�
 
 ## Komponent z rekomendacjami
 
-Nowy plik `app/components/RecommendedProducts.jsx` stosuje ten sam wzór w sklepie:
+Nowy plik `app/components/Recommended.jsx` stosuje ten sam wzór w sklepie. Zawiera dwa komponenty: `RecommendedList` czyta dane, a `Recommended` stawia nad nim granicę Suspense.
 
 ```jsx
 'use client';
 
-import { use } from 'react';
+import { Suspense, use } from 'react';
+import { fetchRecommended } from '../lib/fakeApi';
 
-// Komponent zawiesza się, dopóki Promise się nie spełni.
-// Rodzic musi go owinąć w <Suspense fallback={...}>.
-// Gdy Promise zostanie odrzucony, wyjątek przejmuje najbliższa granica błędów.
-export default function RecommendedProducts({ recommendedPromise }) {
+// Promise powstaje raz, przy załadowaniu modułu, a nie przy każdym renderze.
+const recommendedPromise = fetchRecommended();
+
+function RecommendedList() {
   const recommended = use(recommendedPromise); // tu komponent czeka na dane
+  return (
+    <ul>
+      {recommended.map(p => (
+        <li key={p.id}>{p.name} — {p.price.toFixed(2)} PLN</li>
+      ))}
+    </ul>
+  );
+}
 
+export default function Recommended() {
   return (
     <section>
-      <h3>You may also like</h3>
-      <ul>
-        {recommended.map(p => (
-          <li key={p.id}>
-            {p.name} — {p.price.toFixed(2)} PLN
-          </li>
-        ))}
-      </ul>
+      <h2>You may also like</h2>
+      <Suspense fallback={<p>Loading recommendations...</p>}>
+        <RecommendedList />
+      </Suspense>
     </section>
   );
 }
 ```
 
-Komponent dostaje Promise w propsie `recommendedPromise` i czyta go wywołaniem `use(recommendedPromise)`. Kod poniżej tej linii zakłada, że dane już są: `recommended` to zwykła tablica, po której przechodzi `map`. Komentarze w kodzie mówią, kto obsłuży oba przypadki brzegowe. <u>Czekanie obsłuży granica Suspense postawiona przez rodzica, a odrzucenie najbliższa granica błędów</u>, czyli komponent, który w miejsce zepsutego poddrzewa pokazuje komunikat.
+`RecommendedList` czyta Promise wywołaniem `use(recommendedPromise)`. Kod poniżej tej linii zakłada, że dane już są: `recommended` to zwykła tablica, po której przechodzi `map`. <u>Czekanie obsłuży granica Suspense postawiona przez `Recommended`, a ewentualne odrzucenie najbliższa granica błędów</u>, czyli komponent, który w miejsce zepsutego poddrzewa pokazuje komunikat. Granicy błędów na razie nie ma, więc odrzucony Promise zepsułby całą stronę.
 
-Komponent nie dowiaduje się o czekaniu w żaden jawny sposób. Jego kod jest napisany tak, jakby dane były zawsze gotowe, a cała obsługa czekania leży poza nim. Promise przychodzi z zewnątrz, w propsie. `RecommendedProducts` tylko czyta wynik, a o tym, kiedy zapytanie startuje, decyduje rodzic. W sklepie rodzic tworzy ten Promise raz, na poziomie swojego modułu.
+Komponent nie dowiaduje się o czekaniu w żaden jawny sposób. Jego kod jest napisany tak, jakby dane były zawsze gotowe, a cała obsługa czekania leży poza nim. Promise leży w stałej `recommendedPromise` poza funkcjami komponentów, więc każda próba renderu dostaje ten sam obiekt. Powód jest ten sam co w najmniejszym przykładzie: React porzuca przerwany render i wywołuje komponent od początku. Zapytanie rusza raz, przy pierwszym imporcie pliku.
 
-## Dwie sekundy z życia `RecommendedProducts`
+## Strona główna z sekcją rekomendacji
+
+Strona główna dostaje import i jedną sekcję pod listą produktów. W `app/page.jsx` dochodzą dwie linie:
+
+```jsx
+import Recommended from './components/Recommended';
+
+      <Recommended />
+```
+
+Strona nadal jest komponentem serwerowym i tylko układa sekcje. Koszyk i katalog leżą poza granicą Suspense, więc nie czekają na rekomendacje. Przycisk „Add to cart” kliknięty w czasie ładowania działa normalnie: nagłówek od razu pokazuje „Cart: 1 pcs — 49.99 PLN”, a pod listą dalej trwa ładowanie.
+
+## Dwie sekundy z życia `RecommendedList`
 
 Przebieg w sklepie, gdy komponent stoi pod granicą z treścią zastępczą „Loading recommendations...”, a Promise jeszcze trwa:
 
-1. **Chwila 0.** React renderuje stronę. `CartSummary` i `ProductList` kończą render od razu. `RecommendedProducts` dochodzi do linii z `use`, a Promise jest w toku.
+1. **Chwila 0.** React renderuje stronę. Podsumowanie koszyka i lista produktów kończą render od razu. `RecommendedList` dochodzi do linii z `use`, a Promise jest w toku.
 2. **Zawieszenie.** `use` przerywa render komponentu. Kod poniżej tej linii, z `map` i listą, w ogóle się nie wykonuje.
 3. **Treść zastępcza.** React szuka najbliższej granicy Suspense nad komponentem i w jej miejscu wyświetla napis ładowania. Reszta strony jest już na ekranie i działa: przycisk „Add to cart” można kliknąć w czasie ładowania.
-4. **Po 2000 ms.** Promise spełnia się tablicą trzech produktów, a React próbuje wyrenderować komponent jeszcze raz.
-5. **Drugi render.** `use` widzi spełniony Promise i od razu zwraca tablicę. `map` tworzy trzy elementy `<li>` z kluczami 10, 11 i 12, a treść zastępcza znika.
+4. **Po 2000 ms.** Promise spełnia się tablicą dwóch produktów, a React próbuje wyrenderować komponent jeszcze raz.
+5. **Drugi render.** `use` widzi spełniony Promise i od razu zwraca tablicę. `map` tworzy dwa elementy `<li>` z kluczami 10 i 11, a treść zastępcza znika.
 
 Zawieszenie dotyczy tylko poddrzewa pod granicą Suspense. Stan koszyka, jego reducer i przyciski działają w tym czasie tak samo jak na stronie bez sekcji rekomendacji.
 
@@ -121,19 +135,19 @@ Tejas Kumar w *Fluent React* tłumaczy kierunek działania porównaniem z obsłu
 >
 > — Tejas Kumar, *Fluent React*
 
-Sklep stosuje dokładnie ten układ. `use` stoi w pliku `RecommendedProducts.jsx`, a granicę z napisem ładowania stawia osobny komponent nadrzędny i obejmuje nią tylko ten jeden komponent. Komponent, który czeka, nie ma informacji o tym, kto i gdzie pokaże napis ładowania. Kumar sam zaznacza, że Suspense działa „podobnie, ale nie dokładnie tak samo” jak `catch`. Blok `catch` kończy wykonanie kodu w `try`. Granica Suspense tylko wstrzymuje wyświetlenie poddrzewa i pokazuje je, gdy dane dotrą.
+Sklep stosuje dokładnie ten układ. `use` stoi w komponencie `RecommendedList`, a granicę z napisem ładowania stawia komponent nadrzędny `Recommended` i obejmuje nią tylko ten jeden komponent. To, że oba komponenty leżą w jednym pliku, niczego nie zmienia: liczy się ich położenie w drzewie. Komponent, który czeka, nie ma informacji o tym, kto i gdzie pokaże napis ładowania. Kumar sam zaznacza, że Suspense działa „podobnie, ale nie dokładnie tak samo” jak `catch`. Blok `catch` kończy wykonanie kodu w `try`. Granica Suspense tylko wstrzymuje wyświetlenie poddrzewa i pokazuje je, gdy dane dotrą.
 
 ## Rysunek 4.8 — co włącza granicę Suspense
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
 flowchart LR
-    U["use(promise)<br/>RecommendedProducts"] --> S{"granica Suspense"}
+    U["use(promise)<br/>RecommendedList"] --> S{"granica Suspense"}
     S --> FB["treść zastępcza:<br/>Loading recommendations..."]
     E["pobieranie w useEffect<br/>lub w onClick"] -. "✗ granica nic nie widzi" .-> S
 ```
 
-Na Rysunku 4.8 ciągła strzałka pokazuje źródło, które włącza granicę: w sklepie jest nim `use(promise)` w `RecommendedProducts`. Strzałka przerywana oznacza drogę, która wygląda podobnie, ale nie działa. Dane pobierane w efekcie albo w procedurze obsługi zdarzenia nie zawieszają renderu, więc granica nie ma czego złapać. Dokumentacja mówi to wprost:
+Na Rysunku 4.8 ciągła strzałka pokazuje źródło, które włącza granicę: w sklepie jest nim `use(promise)` w `RecommendedList`. Strzałka przerywana oznacza drogę, która wygląda podobnie, ale nie działa. Dane pobierane w efekcie albo w procedurze obsługi zdarzenia nie zawieszają renderu, więc granica nie ma czego złapać. Dokumentacja mówi to wprost:
 
 > **„Suspense nie wykrywa pobierania danych wewnątrz efektu ani procedury obsługi zdarzenia. Włącza się wyłącznie w przypadkach wymienionych poniżej.”**
 >
@@ -142,6 +156,15 @@ Na Rysunku 4.8 ciągła strzałka pokazuje źródło, które włącza granicę: 
 > — dokumentacja React, *Suspense*
 
 Efekt uruchamia się dopiero po zakończeniu renderu, a procedura obsługi zdarzenia działa poza renderem w ogóle. Obie drogi kończą render normalnie i czekanie muszą obsłużyć same.
+
+## Zalety i koszty `use` z granicą Suspense
+
+Mechanizm przenosi czekanie z komponentu do drzewa nad nim. Komponent opisuje, jak wygląda gotowa lista, a granica opisuje, co widać do tego czasu. Cena jest taka, że o czekaniu decyduje kod poza komponentem.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Komponent pisany jak dla gotowych danych: `RecommendedList` ma samo `map`, bez flag ładowania i błędu. | Promise musi być stabilny między próbami renderu, więc w sklepie leży w stałej modułu. | Dane z serwera Next.js: w komponencie serwerowym prościej napisać `await`, a ładowanie segmentu obsługuje `loading.jsx` (L03, W05). |
+| Ładowanie deklaruje się granicą, a reszta strony działa w czasie czekania: „Add to cart” da się kliknąć, gdy sekcja się ładuje. | Granica pokazuje treść zastępczą za cały fragment pod sobą, nie za pojedynczy komponent. | Dane pobierane w efekcie albo w `onClick`: granica ich nie widzi (Rysunek 4.8), więc czekanie trzeba obsłużyć własną flagą. |
 
 > 💡 **Zapamiętaj:** komponent czytający Promise przez `use` zawiesza się do jego rozstrzygnięcia, a najbliższa granica `<Suspense>` nad nim pokazuje w tym czasie treść zastępczą. Komponent nie wie, że czeka: o tym, kiedy Promise powstaje i co widać w czasie czekania, decydują komponenty nad nim.
 

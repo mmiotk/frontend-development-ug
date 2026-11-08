@@ -1,18 +1,23 @@
-// Server Component — no 'use client' needed here.
-// Client Components (CartSummary, ProductList, RecommendedSection) bring
-// their own 'use client' directives and establish the client boundary themselves.
+// Server Component: the client parts bring their own 'use client'.
+import { products } from './data/products';
 import CartSummary from './components/CartSummary';
-import ProductList from './components/ProductList';
-import RecommendedSection from './components/RecommendedSection';
+import AddToCartButton from './components/AddToCartButton';
+import Recommended from './components/Recommended';
 
 export default function HomePage() {
   return (
     <main>
       <h1>Coffee shop</h1>
       <CartSummary />
-      <ProductList />
-      <hr />
-      <RecommendedSection />
+      <ul>
+        {products.map(product => (
+          <li key={product.id}>
+            {product.name} — {product.price.toFixed(2)} PLN{' '}
+            <AddToCartButton product={product} />
+          </li>
+        ))}
+      </ul>
+      <Recommended />
     </main>
   );
 }

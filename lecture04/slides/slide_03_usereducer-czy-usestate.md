@@ -2,7 +2,7 @@
 
 ## Ten sam stan, inne miejsce dla logiki
 
-Oba hooki przechowują stan tak samo: React trzyma wartość przy komponencie i renderuje go po zmianie. Różni się tylko miejsce kodu, który oblicza nową wartość. Przy `useState` leży on w procedurach obsługi zdarzeń, a przy `useReducer` w osobnej funkcji, która dostaje akcję.
+Oba hooki przechowują stan tak samo: React trzyma wartość przy komponencie i renderuje go po zmianie. Różni się tylko miejsce kodu, który oblicza nową wartość. Przy `useState` leży on w procedurach obsługi zdarzeń, a przy `useReducer` w osobnej funkcji, która dostaje akcję. Skoro oba działają, trzeba wybrać, a zły wybór kosztuje w obie strony. Koszyk na `useState` rozprasza regułę dodawania po procedurach (część o regułach koszyka), a pole wyszukiwania w reducerze dostaje akcję i gałąź tylko po to, żeby przepisać wartość.
 
 > **„Zawsze można przejść z `useState` na `useReducer` i z powrotem: są równoważne!”**
 >
@@ -16,7 +16,7 @@ Równoważność oznacza, że wybór nie zmienia tego, co użytkownik widzi na e
 
 Dokumentacja porównuje oba hooki w pięciu punktach. Każdy da się sprawdzić na koszyku sklepu kawowego.
 
-**Rozmiar kodu.** Na starcie `useState` wymaga mniej pisania. Reducer potrzebuje osobnej funkcji, instrukcji `switch` i obiektów akcji. Bez komentarzy i pustych linii `cartReducer.js` ma 40 linii, a cztery procedury obsługi z wersji na `useState` mają ich 17. Dokumentacja dodaje zastrzeżenie: reducer zmniejsza ilość kodu, gdy wiele procedur zmienia stan w podobny sposób. W koszyku pole ilości i przycisk „Remove” wysyłają po jednej linii `dispatch`, więc każdy kolejny komponent z koszykiem dokłada jedną linię, a nie kopię reguły.
+**Rozmiar kodu.** Na starcie `useState` wymaga mniej pisania. Reducer potrzebuje osobnej funkcji, instrukcji `switch` i obiektów akcji. Bez komentarzy i pustych linii `cartReducer.js` ma 22 linie, a trzy procedury obsługi z wersji na `useState` mają ich 14. Przy trzech akcjach reducer jest więc dłuższy. Dokumentacja dodaje zastrzeżenie: reducer zmniejsza ilość kodu, gdy wiele procedur zmienia stan w podobny sposób. W koszyku przyciski „Add to cart”, „Remove” i „Clear cart” wysyłają po jednej linii `dispatch`, więc każdy kolejny komponent z koszykiem dokłada jedną linię, a nie kopię reguły.
 
 **Czytelność.** Przy prostych zmianach `useState` czyta się łatwo. Gdy zmiany się komplikują, reducer według dokumentacji pozwala oddzielić to, *jak* zmienia się stan, od tego, *co się stało* w procedurze obsługi. W JSX strony procedury obsługi tylko wysyłają akcje.
 
@@ -28,7 +28,7 @@ Dokumentacja porównuje oba hooki w pięciu punktach. Każdy da się sprawdzić 
 >
 > — dokumentacja React, *Extracting State Logic into a Reducer*
 
-**Testowanie.** Reducer nie zależy od komponentu, więc sprawdza się go bez renderowania czegokolwiek. Wystarczy wywołać go ze stanem i akcją jako argumentami i porównać wynik z oczekiwanym stanem. Moduł `node:assert` z biblioteki standardowej Node.js wystarcza, żeby zapisać trzy reguły koszyka jako sprawdzenia:
+**Testowanie.** Reducer nie zależy od komponentu, więc sprawdza się go bez renderowania czegokolwiek. Wystarczy wywołać go ze stanem i akcją jako argumentami i porównać wynik z oczekiwanym stanem. Moduł `node:assert` z biblioteki standardowej Node.js wystarcza, żeby zapisać trzy sprawdzenia koszyka:
 
 ```js
 import assert from 'node:assert';
@@ -39,10 +39,10 @@ const s1 = cartReducer(initialCartState, { type: 'ADD_ITEM', product: coffee });
 const s2 = cartReducer(s1, { type: 'ADD_ITEM', product: coffee });
 assert.equal(s2.items[0].qty, 2);   // ten sam produkt zwiększa ilość
 assert.equal(s1.items[0].qty, 1);   // poprzedni stan został nietknięty
-assert.equal(cartReducer(s2, { type: 'UPDATE_QTY', id: 1, qty: 0 }).items[0].qty, 1);   // minimum 1
+assert.equal(cartReducer(s2, { type: 'REMOVE_ITEM', id: 1 }).items.length, 0);   // usunięcie pozycji
 ```
 
-Plik zapisany w katalogu projektu jako `cart.test.mjs` uruchamia polecenie `node cart.test.mjs`. Rozszerzenie `.mjs` mówi Node.js, że plik używa `import`. Node 24 doczyta też `cartReducer.js` jako moduł, choć wypisze ostrzeżenie o brakującym polu `"type": "module"` w `package.json`. `assert.equal` rzuca wyjątek, gdy wartości się różnią, więc zakończenie bez błędu oznacza, że wszystkie trzy reguły działają. Druga linia sprawdza coś, czego ekran nie pokaże: reducer nie zmienił stanu, który dostał.
+Plik zapisany w katalogu projektu jako `cart.test.mjs` uruchamia polecenie `node cart.test.mjs`. Rozszerzenie `.mjs` mówi Node.js, że plik używa `import`. Node 24 doczyta też `cartReducer.js` jako moduł, choć wypisze ostrzeżenie o brakującym polu `"type": "module"` w `package.json`. `assert.equal` rzuca wyjątek, gdy wartości się różnią, więc zakończenie bez błędu oznacza, że wszystkie trzy sprawdzenia przeszły. Druga linia sprawdza coś, czego ekran nie pokaże: reducer nie zmienił stanu, który dostał.
 
 **Preferencje.** Dokumentacja przyznaje, że jedni programiści lubią reducery, a inni nie, i nazywa to kwestią gustu.
 
@@ -69,10 +69,10 @@ flowchart LR
     Q1 -->|nie| U["useState<br/>np. tekst w polu wyszukiwania"]
     Q1 -->|tak| Q2{"Zmiana ma regułę, która<br/>musi działać zawsze?"}
     Q2 -->|nie| U2["useState wystarczy<br/>reducer opcjonalny"]
-    Q2 -->|tak| R["useReducer<br/>koszyk: reguły ilości"]
+    Q2 -->|tak| R["useReducer<br/>koszyk: reguła dodawania"]
 ```
 
-Na Rysunku 4.3 pytania czyta się od lewej strony dla każdego kawałka stanu osobno. Pierwsze pytanie odsiewa stan zmieniany w jednym miejscu. Drugie jest właściwym kryterium. Koszyk trafia do reducera dlatego, że jego reguły ilości muszą obowiązywać przy każdej zmianie, a rozmiar koszyka nie ma tu znaczenia. Drugie pytanie obejmuje też zmianę, która raz robi jedno, a raz drugie, jak `ADD_ITEM` dopisujące wiersz albo zwiększające ilość.
+Na Rysunku 4.3 pytania czyta się od lewej strony dla każdego kawałka stanu osobno. Pierwsze pytanie odsiewa stan zmieniany w jednym miejscu. Drugie jest właściwym kryterium. Koszyk trafia do reducera dlatego, że jego reguła dodawania musi obowiązywać przy każdej zmianie, a rozmiar koszyka nie ma tu znaczenia. Drugie pytanie obejmuje też zmianę, która raz robi jedno, a raz drugie, jak `ADD_ITEM` dopisujące wiersz albo zwiększające ilość.
 
 > **„Zalecamy reducer, jeśli w jakimś komponencie często pojawiają się błędy wynikające z niepoprawnych aktualizacji stanu i chce się nadać jego kodowi więcej struktury. Nie trzeba używać reducerów wszędzie: można je swobodnie mieszać!”**
 >
@@ -83,6 +83,18 @@ Na Rysunku 4.3 pytania czyta się od lewej strony dla każdego kawałka stanu os
 ## Oba hooki w jednym komponencie
 
 Koszyk może siedzieć w reducerze, a flaga „panel koszyka otwarty” w `useState` obok niego, w tym samym komponencie. <u>Każdy kawałek stanu dostaje narzędzie dopasowane do własnych reguł</u>. Pole wyszukiwania w reducerze wymagałoby akcji `SET_QUERY` i gałęzi, która tylko przepisuje wartość. Zysku brak, bo nie ma czego scentralizować.
+
+## Zalety i koszty `useReducer` wobec `useState`
+
+Pięć kryteriów da się zebrać w jednej tabeli. Pierwsza kolumna to kryterium, trzy następne mówią, co reducer daje, co kosztuje i kiedy lepiej zostać przy `useState`.
+
+| Kryterium | Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|---|
+| Rozmiar kodu | Każdy kolejny komponent z koszykiem dokłada jedną linię `dispatch`, a nie kopię reguły | 22 linie reducera wobec 14 linii trzech procedur, więc na starcie więcej pisania | Procedury nie zmieniają stanu w podobny sposób: `useState` (dokumentacja: reducer zmniejsza kod, gdy wiele procedur robi podobną zmianę) |
+| Czytelność | Procedury tylko wysyłają akcje, a to, jak zmienia się stan, leży w reducerze | Przy prostych zmianach `useState` czyta się łatwiej | Prosta zmiana jednej wartości: `useState` |
+| Debugowanie | Jedno `console.log(action)` na początku reducera pokazuje każdą zmianę z przyczyną | Trzeba przejść przez więcej kodu niż przy `useState`; w trybie ścisłym każdy wpis pojawia się dwa razy | Stan zmieniany w jednej procedurze: log w tej procedurze wystarcza, więc `useState` |
+| Testowanie | Reducer sprawdza się wywołaniem ze stanem i akcją, bez renderowania (`node:assert`) | Reducer musi być osobną funkcją z własnym zestawem akcji | Stan lokalny jednego komponentu, jak komunikat ostatniego błędu przy przycisku: `useState` (Rysunek 4.3) |
+| Preferencje | Wzorzec, który część programistów lubi (dokumentacja) | Dokumentacja przyznaje, że to kwestia gustu: część programistów reducerów nie lubi | Prosta wartość tekstowa lub liczbowa: według Schwarzmüllera hook rzadko się do tego nadaje |
 
 > 💡 **Zapamiętaj:** reducer wybiera się wtedy, gdy reguła zmiany stanu musi działać przy każdej zmianie. Wtedy reguły mieszkają w jednej funkcji, którą da się sprawdzić bez renderowania.
 

@@ -61,22 +61,26 @@ po 6 wpisów z każdego z 5 przycisków i z CartSummary, razem 36
 
 ## Rozszerzenie: rendery, które przychodzą od rodzica
 
-Kontekst to nie jedyne źródło renderu. Na stronie `/cart` każdy `CartItem` czyta z kontekstu tylko `dispatch`, ale renderuje go `CartPage`, który czyta stan koszyka. Zmiana ilości jednej pozycji renderuje `CartPage`, a ten tworzy od nowa elementy wszystkich wierszy, tak jak `PanelInline` tworzy `<Child />`.
+Kontekst to nie jedyne źródło renderu. Weźmy wiersz koszyka wydzielony do osobnego komponentu `CartRow`. Dostaje `item` i `dispatch` w propsach i kontekstu nie czyta. Wiersze renderuje strona, która czyta stan koszyka. Usunięcie jednej pozycji renderuje stronę, a ta tworzy od nowa elementy wszystkich wierszy, tak jak `PanelInline` tworzy `<Child />`.
 
 ```jsx
-// Przykład spoza demo: licznik renderów w CartItem
-export default function CartItem({ item }) {
-  const dispatch = useCartDispatch();
-  console.log('CartItem render', item.id);
-  // ...
+// Przykład spoza demo: wiersz koszyka jako osobny komponent, licznik renderów
+function CartRow({ item, dispatch }) {
+  console.log('CartRow render', item.id);
+  return (
+    <li>
+      {item.name} × {item.qty}{' '}
+      <button onClick={() => dispatch({ type: 'REMOVE_ITEM', id: item.id })}>Remove</button>
+    </li>
+  );
 }
 ```
 
-Trzy pozycje, ilość kawy zmieniona na 2 (`next dev`):
+Trzy pozycje w koszyku, usunięta kawa (`next dev`):
 
 ```text
-bez memo                         → CartItem render 1, 2 i 3: po 2 wpisy
-export default memo(CartItem)    → tylko CartItem render 1: 2 wpisy
+bez memo                  → CartRow render 2 i 3: po 2 wpisy
+const CartRow = memo(…)   → bez wpisów
 ```
 
-Ten render przychodzi od rodzica, więc żadna zmiana w kontekście go nie usunie, a `memo` go zatrzymuje, bo reducer zostawia pozostałe pozycje tymi samymi obiektami. Wpis w konsoli mówi tylko, że komponent się wyrenderował, a nie dlaczego.
+Ten render przychodzi od rodzica, więc żadna zmiana w kontekście go nie usunie. `memo` go zatrzymuje, bo reducer zostawia pozostałe pozycje tymi samymi obiektami, a `dispatch` ma stałą tożsamość. Gdyby wiersz sam czytał `useCart()`, `memo` nie pomogłoby, bo konsument kontekstu renderuje się po każdej zmianie wartości. Wpis w konsoli mówi tylko, że komponent się wyrenderował, a nie dlaczego.

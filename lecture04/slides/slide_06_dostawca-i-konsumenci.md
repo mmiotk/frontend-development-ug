@@ -1,27 +1,27 @@
 # Dostawca w layoucie, komponenty z koszykiem
 
+## Koszyk ma przeżyć zmianę trasy
+
+Kontekst koszyka istnieje, ale nikt go jeszcze nie dostarcza. Klient dodaje kawę na stronie głównej i klika link „Cart”. Koszyk ma być na `/cart` taki sam, jak przed chwilą na `/`. Stan, który zniknąłby przy przejściu, byłby bezużyteczny. Stan nie może też mieszkać w stronie serwerowej, bo hooki działają tylko w komponentach klienckich, a mimo to strona główna ma zostać komponentem serwerowym. Oba warunki spełnia dostawca postawiony we właściwym miejscu drzewa.
+
 ## Dostawca w layoucie głównym
 
-Kontekst działa tylko pod swoim dostawcą. Sklep potrzebuje jednego egzemplarza `CartProvider`, wspólnego dla strony głównej i strony `/cart`, więc dostawca musi stać nad obiema. Layout nie dopisze stronie propsów, ale może ją owinąć, więc dostawca trafia do layoutu głównego. W pliku `app/layout.jsx` dochodzą trzy importy:
+Kontekst działa tylko pod swoim dostawcą. Sklep potrzebuje jednego egzemplarza `CartProvider`, wspólnego dla strony głównej i strony `/cart`, więc dostawca musi stać nad obiema. Layout nie dopisze stronie propsów, ale może ją owinąć, więc dostawca trafia do layoutu głównego. W pliku `app/layout.jsx` dochodzi jeden import:
 
 ```jsx
-import Link from 'next/link';                       // nawigacja bez przeładowania strony
+import Link from 'next/link';
 import { CartProvider } from './context/CartContext'; // dostawca koszyka (komponent kliencki)
-import './globals.css';
 ```
 
-Zawartość `<body>` dostaje nawigację i dostawcę:
+Layout ma już nawigację z `Link`, więc w `<body>` zmienia się jedna linia: `{children}` trafia pod dostawcę.
 
 ```jsx
       <body>
         <nav>
-          <Link href="/">Shop</Link>
-          {' | '}
-          <Link href="/cart">Cart</Link>
+          <Link href="/">Shop</Link> | <Link href="/cart">Cart</Link>
         </nav>
-        <CartProvider>
-          {children}      {/* każda strona aplikacji trafia tu, czyli pod dostawcę */}
-        </CartProvider>
+        {/* każda strona aplikacji trafia tu, czyli pod dostawcę */}
+        <CartProvider>{children}</CartProvider>
       </body>
 ```
 
@@ -111,23 +111,6 @@ Po dwóch kliknięciach licznik pokazuje 2 i zachowuje tę wartość przy każdy
 
 W sklepie wynika z tego zachowanie koszyka. Layout główny zostaje na ekranie przy każdym przejściu przez `Link`, który podmienia tylko `children`, więc koszyk przetrwa nawigację po sklepie. Przeładowanie strony klawiszem F5 tworzy całą aplikację w przeglądarce od nowa, więc `useReducer` startuje od `initialCartState` i koszyk jest pusty.
 
-## Strona czyta koszyk przez `useCart()`
-
-Plik `app/page.jsx` przestaje trzymać reducer. Znikają importy `useReducer` i `cartReducer`, a w ich miejscu stoi import hooka:
-
-```jsx
-import { useCart } from './context/CartContext';
-```
-
-Dwie pierwsze linie funkcji `HomePage` czytają koszyk z kontekstu:
-
-```jsx
-  const { cart, dispatch } = useCart();   // stan i dispatch od najbliższego CartProvider
-  const total = cart.items.reduce((s, i) => s + i.price * i.qty, 0);
-```
-
-Strona przestała deklarować stan. Teraz go odczytuje, a `useReducer` żyje w `CartProvider`. Strona nadal zaczyna się od `'use client'`, bo wywołuje hook. Wersja jest uproszczona: nagłówek z liczbą pozycji i sumą, przycisk „Clear cart” z `disabled={cart.items.length === 0}` oraz przyciski „Remove” i „Add to cart”. Pole ilości i akapit „Total” znikają.
-
 ## Reducer i kontekst jako jeden wzorzec
 
 Sklep ma już obie części. Funkcja `cartReducer` trzyma wszystkie reguły koszyka, a `CartProvider` udostępnia jej wynik w całym poddrzewie. Dokumentacja Reacta nazywa takie połączenie osobnym wzorcem.
@@ -138,7 +121,7 @@ Sklep ma już obie części. Funkcja `cartReducer` trzyma wszystkie reguły kosz
 >
 > — dokumentacja React, *Scaling Up with Reducer and Context*
 
-Strona główna z jednego dużego pliku rozpada się teraz na komponenty, z których każdy sam pobiera z kontekstu to, czego potrzebuje. Morten Barklund w *React in Depth* opisuje cel takiego podziału. Chodzi o „wyraźną granicę między prezentacją a zarządzaniem danymi” (*„a clear boundary between presentation and data management”*). Dzięki niej jedną część da się wymienić bez dotykania drugiej. W sklepie ta granica przebiega przez hook `useCart`.
+Strona główna z jednego dużego pliku rozpada się teraz na komponenty, z których każdy sam pobiera z kontekstu to, czego potrzebuje. Strona przestaje trzymać reducer, więc z jej początku znikają importy `useReducer` i `cartReducer`. Morten Barklund w *React in Depth* opisuje cel takiego podziału. Chodzi o „wyraźną granicę między prezentacją a zarządzaniem danymi” (*„a clear boundary between presentation and data management”*). Dzięki niej jedną część da się wymienić bez dotykania drugiej. W sklepie ta granica przebiega przez hook `useCart`.
 
 ## Komponenty, które same sięgają po koszyk
 
@@ -147,125 +130,101 @@ Nowy plik `app/components/CartSummary.jsx` to nagłówek koszyka. Jego funkcja n
 ```jsx
 'use client';
 
-import Link from 'next/link';
 import { useCart } from '../context/CartContext';
 
 export default function CartSummary() {
-  const { cart, dispatch } = useCart();                            // wszystko z kontekstu
-  const count = cart.items.reduce((s, i) => s + i.qty, 0);          // liczba sztuk
-  const total = cart.items.reduce((s, i) => s + i.price * i.qty, 0); // wartość zamówienia
+  const { cart } = useCart();                                        // wszystko z kontekstu
+  const count = cart.items.reduce((sum, i) => sum + i.qty, 0);        // liczba sztuk
+  const total = cart.items.reduce((sum, i) => sum + i.price * i.qty, 0); // wartość zamówienia
 
-  return (
-    <section>
-      <h2>Cart: {count} pcs — {total.toFixed(2)} PLN</h2>
-      {/* ... link „Go to cart” (Link z importu) i przycisk „Clear cart” z dispatch */}
-    </section>
-  );
+  return <h2>Cart: {count} pcs — {total.toFixed(2)} PLN</h2>;
 }
 ```
 
-Licznik `count` sumuje ilości: dwie kawy i jedna herbata dają 3 sztuki przy dwóch pozycjach. Gdyby `CartSummary` leżał dziesięć poziomów głębiej, jego kod wyglądałby tak samo.
+Liczba sztuk `count` powstaje tak samo jak na stronie głównej. Nowa jest wartość `total`: cena razy ilość, dodana po wszystkich pozycjach, więc dwie kawy i herbata kosztują razem 118.48 PLN. Komponent czyta z kontekstu tylko `cart`, bo `dispatch` nie jest mu potrzebny. Gdyby `CartSummary` leżał dziesięć poziomów głębiej, jego kod wyglądałby tak samo.
 
-Nowy plik `app/components/CartItem.jsx` to jeden wiersz koszyka. Korzysta z obu dróg naraz:
-
-```jsx
-export default function CartItem({ item }) {   // pozycja przychodzi propsem od rodzica
-  const { dispatch } = useCart();               // dispatch przychodzi z kontekstu
-  // ... return (<li> z nazwą i ceną pozycji, potem pole ilości:
-      <input
-        type="number"
-        value={item.qty}
-        min="1"
-        onChange={e =>
-          dispatch({ type: 'UPDATE_QTY', id: item.id, qty: Number(e.target.value) })
-        }
-      />
-```
-
-Pozycję `item` wiersz dostaje od rodzica, bo rodzic przechodzi po `cart.items` i wie, który wiersz właśnie rysuje. Funkcję `dispatch` bierze z kontekstu, bo jest wspólna dla całej aplikacji. Propsy niosą dane konkretnego egzemplarza, a kontekst niesie to, co wspólne. Gdyby `CartItem` sam szukał swojej pozycji w kontekście, musiałby i tak dostać jej `id`, a do tego zależałby od kształtu całego stanu.
-
-Nowy plik `app/components/ProductList.jsx` wyświetla katalog i czyta z kontekstu tylko `dispatch`:
+Nowy plik `app/components/AddToCartButton.jsx` to przycisk przy produkcie. Korzysta z obu dróg naraz:
 
 ```jsx
-  const { dispatch } = useCart();
-  // ... return (<section> z nagłówkiem i listą <ul>:
-        {products.map(product => (
-          <li key={product.id}>
-            {product.name} — {product.price.toFixed(2)} PLN
-            {' '}
-            <button onClick={() => dispatch({ type: 'ADD_ITEM', product })}>
-              Add to cart
-            </button>
-          </li>
-        ))}
+'use client';
+
+import { useCart } from '../context/CartContext';
+
+export default function AddToCartButton({ product }) {   // produkt przychodzi propsem od rodzica
+  const { dispatch } = useCart();                         // dispatch przychodzi z kontekstu
+
+  return <button onClick={() => dispatch({ type: 'ADD_ITEM', product })}>Add to cart</button>;
+}
 ```
 
-Zapis `{ type: 'ADD_ITEM', product }` to skrócony zapis obiektu. Gdy nazwa pola jest taka sama jak nazwa zmiennej, wystarczy napisać ją raz:
+Produkt `product` przycisk dostaje od rodzica, bo rodzic przechodzi po liście produktów i wie, który wiersz właśnie rysuje. Funkcję `dispatch` bierze z kontekstu, bo jest wspólna dla całej aplikacji. Propsy niosą dane konkretnego egzemplarza, a kontekst niesie to, co wspólne. Gdyby przycisk sam szukał swojego produktu w kontekście, musiałby i tak dostać jego `id`, a do tego zależałby od kształtu całego stanu.
 
-```js
-const product = { id: 1 };
-const action = { type: 'ADD_ITEM', product }; // to samo co { type: 'ADD_ITEM', product: product }
-console.log(JSON.stringify(action));          // → {"type":"ADD_ITEM","product":{"id":1}}
-```
-
-Każdy z trzech plików zaczyna się od `'use client'` i importu `useCart`. Listę można wstawić na dowolną stronę pod dostawcą bez dopisywania żadnego propsa.
+Oba pliki zaczynają się od `'use client'` i importu `useCart`. Przycisk można wstawić na dowolną stronę pod dostawcą bez dopisywania propsa z `dispatch`.
 
 ## Strona główna znów jest serwerowa
 
 Plik `app/page.jsx` traci całą logikę i dyrektywę `'use client'`. Nowa treść pliku:
 
 ```jsx
-// Komponent serwerowy: 'use client' nie jest tu potrzebne.
-// CartSummary i ProductList to komponenty klienckie z własną dyrektywą 'use client'.
+// Komponent serwerowy: każdy kliencki fragment ma własne 'use client'.
+import { products } from './data/products';
 import CartSummary from './components/CartSummary';
-import ProductList from './components/ProductList';
+import AddToCartButton from './components/AddToCartButton';
 
 export default function HomePage() {
   return (
     <main>
       <h1>Coffee shop</h1>
       <CartSummary />
-      <ProductList />
+      <ul>
+        {products.map(product => (
+          <li key={product.id}>
+            {product.name} — {product.price.toFixed(2)} PLN{' '}
+            <AddToCartButton product={product} />
+          </li>
+        ))}
+      </ul>
     </main>
   );
 }
 ```
 
-Strona nie używa żadnego hooka, więc może znów być komponentem serwerowym. Renderuje dwa komponenty klienckie z własnymi dyrektywami. Oba znajdują kontekst, bo w drzewie Reacta stoją pod `CartProvider` z layoutu. Strona nie trzyma stanu i nie przekazuje go dzieciom, bo dostawca stoi nad nią, a dzieci pobierają dane same.
+Strona nie używa żadnego hooka, więc może znów być komponentem serwerowym. Sama przechodzi po katalogu produktów i wstawia pięć klienckich przycisków, każdemu podając jego produkt. Wszystkie komponenty klienckie znajdują kontekst, bo w drzewie Reacta stoją pod `CartProvider` z layoutu. Strona nie trzyma stanu i nie przekazuje go dzieciom, bo dostawca stoi nad nią, a dzieci pobierają dane same. Dwa kliknięcia przy kawie zmieniają nagłówek na „Cart: 2 pcs — 99.98 PLN”.
 
 ## Strona koszyka
 
-Ostatni plik tego etapu to nowa trasa `/cart`, czyli `app/cart/page.jsx`. Zaczyna się od `'use client'` i czyta koszyk tak jak nagłówek. Strona ma dwa warianty:
+Ostatni plik tego etapu to nowa trasa `/cart`, czyli `app/cart/page.jsx`. Zaczyna się od `'use client'` i czyta koszyk tak jak nagłówek, ale potrzebuje też `dispatch`:
 
 ```jsx
 'use client';
 
-import Link from 'next/link';
 import { useCart } from '../context/CartContext';
-import CartItem from '../components/CartItem';
+import CartSummary from '../components/CartSummary';
 
 export default function CartPage() {
   const { cart, dispatch } = useCart();
 
-  if (cart.items.length === 0) {        // wariant 1: pusty koszyk, wcześniejszy return
-    return (
-      <main>
-        <h1>Cart</h1>
-        <p>Your cart is empty.</p>
-        <Link href="/">Back to shop</Link>
-      </main>
-    );
-  }
-  // wariant 2: lista wierszy, każdy ze stałym kluczem
-  // ...
+  return (
+    <main>
+      <h1>Cart</h1>
+      <CartSummary />
+      <ul>
         {cart.items.map(item => (
-          <CartItem key={item.id} item={item} />
+          <li key={item.id}>
+            {item.name} × {item.qty}{' '}
+            <button onClick={() => dispatch({ type: 'REMOVE_ITEM', id: item.id })}>Remove</button>
+          </li>
         ))}
+      </ul>
+      <button onClick={() => dispatch({ type: 'CLEAR_CART' })}>Clear cart</button>
+    </main>
+  );
+}
 ```
 
-Pod listą stoją jeszcze suma „Total”, przycisk „Clear cart” i link „Continue shopping”. Plik musi być kliencki, choć strona główna z tego zrezygnowała. `HomePage` tylko układa gotowe komponenty, a `CartPage` sama czyta koszyk: od długości `cart.items` zależy, który wariant pokaże.
+Plik musi być kliencki, choć strona główna z tego zrezygnowała. `HomePage` tylko układa gotowe komponenty, a `CartPage` sama czyta koszyk i wysyła akcje. Nagłówek podsumowania to ten sam `CartSummary` co na stronie głównej, więc suma nie jest liczona drugi raz. Wiersze listy rysuje sama strona, bo tylko ona z nich korzysta.
 
-Kliknięcie „Go to cart” podmienia tylko zawartość `children` w layoucie. `CartProvider` zostaje na miejscu, a `CartPage` przy pierwszym renderze dostaje ten sam obiekt `cart`, który przed chwilą wyświetlał nagłówek. Komponent nigdy nie zmienia koszyka sam: zmiana pola ilości w `CartItem` wysyła `UPDATE_QTY`, reducer zwraca nowy stan, a dostawca przekazuje go dalej.
+Kliknięcie linku „Cart” w nawigacji podmienia tylko zawartość `children` w layoucie. `CartProvider` zostaje na miejscu, a `CartPage` przy pierwszym renderze dostaje ten sam obiekt `cart`, który przed chwilą wyświetlał nagłówek. Komponent nigdy nie zmienia koszyka sam: kliknięcie „Remove” wysyła `REMOVE_ITEM`, reducer zwraca nowy stan, a dostawca przekazuje go dalej.
 
 ## Rysunek 4.6 — gdzie w sklepie przebiega granica klienta
 
@@ -276,11 +235,20 @@ flowchart LR
     P -->|"children"| H["HomePage<br/>serwer"]
     P -->|"children"| C["CartPage (/cart)<br/>klient"]
     H --> S["CartSummary<br/>klient"]
-    H --> L["ProductList<br/>klient"]
-    C -->|"prop item"| I["CartItem<br/>klient"]
+    H -->|"prop product"| B["AddToCartButton × 5<br/>klient"]
+    C --> S2["CartSummary<br/>klient"]
 ```
 
-Rysunek 4.6 pokazuje, które komponenty sklepu wykonują się tylko na serwerze, a które także w przeglądarce. Granica klienta nie przebiega jedną linią przez całe drzewo. `CartProvider` jest kliencki, ale `HomePage` pod nim zostaje serwerowa, bo dociera do dostawcy jako `children`. Dopiero `CartSummary` i `ProductList` znów są klienckie, każdy z własnej dyrektywy. Wszystkie komponenty klienckie pod dostawcą czytają kontekst. Jedyny prop w obrazku płynie od `CartPage` do `CartItem` i niesie konkretną pozycję.
+Rysunek 4.6 pokazuje, które komponenty sklepu wykonują się tylko na serwerze, a które także w przeglądarce. Granica klienta nie przebiega jedną linią przez całe drzewo. `CartProvider` jest kliencki, ale `HomePage` pod nim zostaje serwerowa, bo dociera do dostawcy jako `children`. Dopiero `CartSummary` i pięć przycisków `AddToCartButton` znów są klienckie, każdy z własnej dyrektywy. Wszystkie komponenty klienckie pod dostawcą czytają kontekst, także `CartSummary` na stronie `/cart`. Jedyny prop w obrazku płynie od `HomePage` do przycisku i niesie konkretny produkt.
+
+## Zalety i koszty dostawcy w layoucie
+
+Dostawca w layoucie głównym rozwiązuje oba warunki ze wstępu, ale im wyżej stoi, tym więcej komponentów jest pod nim, a jego stan żyje tylko do przeładowania strony.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Dostawca w layoucie przeżywa nawigację przez `Link`, więc koszyk przechodzi z `/` na `/cart` | Im wyżej dostawca, tym więcej komponentów pod nim. Dokumentacja Next.js radzi stawiać go jak najgłębiej, a w sklepie głębiej się nie da, bo koszyk czytają dwie trasy | Stan jednej trasy: dostawca w layoucie tej trasy albo stan samej strony |
+| Strony pod dostawcą mogą zostać serwerowe, bo docierają do niego jako `children` | Stan znika po F5, bo przeładowanie tworzy aplikację od nowa i `useReducer` startuje od `initialCartState` (sekcja „Gdzie koszyk mieszka na końcu” na końcu wykładu) | Koszyk, który ma przetrwać przeładowanie, wymaga zapisu w miejscu, które przeżyje przeładowanie (koniec wykładu) |
 
 > 💡 **Zapamiętaj:** dostawca kontekstu w Next.js to komponent kliencki przyjmujący `children`, osadzony w layoucie serwerowym. Strony przekazane jako `children` mogą zostać serwerowe, a stan w kontekście żyje tak długo jak dostawca.
 

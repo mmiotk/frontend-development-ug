@@ -4,7 +4,7 @@ Powrót: [`slide_10_granice-razem.md`](../slide_10_granice-razem.md)
 
 ## Rozszerzenie: cena Promise w module
 
-Stabilność ma cenę: dane nigdy się nie odświeżają. Promise rozstrzyga się raz i zostaje rozstrzygnięty do przeładowania strony, więc powrót z `/cart` po upływie dwóch sekund od załadowania strony pokaże od razu te same trzy produkty. W sklepie z prawdziwymi rekomendacjami byłby to błąd.
+Stabilność ma cenę: dane nigdy się nie odświeżają. Promise rozstrzyga się raz i zostaje rozstrzygnięty do przeładowania strony, więc powrót z `/cart` po upływie dwóch sekund od załadowania strony pokaże od razu te same dwa produkty. W sklepie z prawdziwymi rekomendacjami byłby to błąd.
 
 Stała w module ma jeszcze jedno ograniczenie: mieści dokładnie jeden Promise. Rekomendacje osobne dla kawy i dla herbaty potrzebowałyby osobnego Promise na każdą kategorię. Dokumentacja `use` pokazuje na to **pamięć Promise z kluczem**, czyli mapę, w której kluczem jest adres zapytania, a wartością Promise. Stała `recommendedPromise` to szczególny przypadek tej mapy z jednym kluczem.
 
@@ -23,7 +23,7 @@ cache.delete('coffee');                            // unieważnienie wpisu
 console.log(getRecommended('coffee') === coffee);  // → false: nowe pobieranie
 ```
 
-Odświeżenie danych dokumentacja opisuje jako takie unieważnienie wpisu i nowe pobieranie wewnątrz `startTransition`, czyli aktualizacji, przy której React trzyma na ekranie poprzedni widok. W sklepie przycisk „Odśwież rekomendacje” wymagałby więc przeniesienia Promise ze stałej modułu do stanu `RecommendedSection`.
+Odświeżenie danych dokumentacja opisuje jako takie unieważnienie wpisu i nowe pobieranie wewnątrz `startTransition`, czyli aktualizacji, przy której React trzyma na ekranie poprzedni widok. W sklepie przycisk „Odśwież rekomendacje” wymagałby więc przeniesienia Promise ze stałej modułu do stanu `Recommended`.
 
 ## Rozszerzenie: wartość w module serwera jest wspólna dla żądań
 

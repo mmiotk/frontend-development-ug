@@ -2,22 +2,36 @@
 
 ## Jeden koszyk, wiele miejsc
 
-Sklep kawowy ma pięć produktów i koszyk. Ten sam koszyk zmienia lista produktów, nagłówek z sumą i osobna strona `/cart`, a każda zmiana musi przestrzegać tych samych reguł ilości. Dodanie produktu wymaga odpowiedzi serwera, która przychodzi po półtorej sekundy. Sekcja z rekomendacjami ładuje się dwie sekundy i może się nie załadować wcale. Aplikacja ma mimo to reagować od razu i nie tracić koszyka ani reszty strony przez jedną wolną albo zepsutą sekcję.
+Sklep kawowy ma pięć produktów i koszyk. Ten sam koszyk zmienia lista produktów, nagłówek z sumą i osobna strona `/cart`, a każda zmiana musi przestrzegać tych samych reguł. Dodanie produktu wymaga odpowiedzi serwera, która przychodzi po półtorej sekundy. Sekcja z rekomendacjami ładuje się dwie sekundy i może się nie załadować wcale. Aplikacja ma mimo to reagować od razu i nie tracić koszyka ani reszty strony przez jedną wolną albo zepsutą sekcję.
 
-Projekt `cart-app` powstaje z kreatora `create-next-app` 16.4.0 bez TypeScriptu, Tailwinda, ESLinta, katalogu `src/` i kompilatora Reacta. Kompilator Reacta to narzędzie budowania, które samo dopisuje do komponentów memoizację, czyli zapamiętanie wyników. Bez niego liczba renderów zależy tylko od kodu, który widać na slajdach. Wersje w `package.json` są przypięte: `next` 16.4.0 oraz `react` i `react-dom` 19.3.0. Pliki `page.js` i `layout.js` dostają rozszerzenie `.jsx`, a stary `page.js` znika, bo przy dwóch plikach strony Next.js wybiera `page.js`. Aplikacja nie ma stylów: `app/globals.css` zawiera tylko komentarz, żeby uwaga szła na to, kto zmienia dane.
+## Pięć klas problemów stanu
+
+Te wymagania to pięć osobnych kłopotów. Bez odpowiedniego narzędzia każdy kończy się kodem, który działa, ale jest trudny do zmiany, a błąd w nim łatwo przeoczyć. Wykład idzie po kolei przez te klasy, a każde narzędzie wchodzi dopiero wtedy, gdy jego problem widać w sklepie.
+
+| Klasa problemu | Co działa źle w sklepie | Narzędzie | Slajdy |
+|---|---|---|---|
+| Reguły jednego stanu rozsiane po procedurach obsługi | reguła „ten sam produkt zwiększa ilość” żyje w jednej z trzech funkcji | reducer i `useReducer` | 01–03 |
+| Ten sam stan w wielu miejscach drzewa i na wielu trasach | nagłówek, lista i `/cart` mają widzieć jeden koszyk, a layout nie przekaże stronie propsów | propsy, kontekst, dostawca w layoucie | 04–06 |
+| Zmiana czeka na serwer | po kliknięciu nic się nie dzieje przez 1,5 s | `useOptimistic` | 07 |
+| Dane przychodzą później albo wcale | rekomendacje ładują się 2 s i mogą nie przyjść | `use`, `Suspense`, granica błędów | 08–10 |
+| Koszt rozprowadzania stanu | zmiana koszyka renderuje także przyciski, które go nie czytają | pomiar renderów, podział kontekstu | 11–12 |
+
+Każde z tych narzędzi ma cenę. Dlatego slajdy z nowym narzędziem kończą się sekcją „Zalety i koszty”, a w niej wskazaniem, kiedy lepiej wybrać coś prostszego. Pierwszą klasę pokazuje sekcja „Koszyk ma trzy rodzaje zmian”: trzy procedury `useState` z tą samą regułą w jednej z nich.
 
 ## Katalog produktów, layout i pierwsza strona
+
+Projekt `cart-app` powstaje z kreatora `create-next-app` 16.4.0 bez TypeScriptu, Tailwinda, ESLinta i kompilatora Reacta (flagi kreatora i porządki w plikach opisuje `demo/PROWADZACY.md`). Wersje `next` 16.4.0 oraz `react` i `react-dom` 19.3.0 są przypięte w `package.json`. Bez kompilatora, który sam dopisuje memoizację, liczba renderów zależy tylko od kodu ze slajdów.
 
 Katalog produktów leży w pliku `app/data/products.js`:
 
 ```js
-// Statyczny katalog; w prawdziwej aplikacji przyszedłby z serwera.
+// Statyczny katalog produktów (gotowy przed wykładem).
 export const products = [
   { id: 1, name: 'Arabica coffee beans 1kg', price: 49.99 },
-  { id: 2, name: 'Earl Grey tea 100g',     price: 18.50 },
-  { id: 3, name: 'Ceramic mug 350ml',     price: 34.00 },
-  { id: 4, name: 'Tea infuser',        price: 22.00 },
-  { id: 5, name: 'Cane sugar 500g',       price:  8.99 },
+  { id: 2, name: 'Earl Grey tea 100g', price: 18.5 },
+  { id: 3, name: 'Ceramic mug 350ml', price: 34.0 },
+  { id: 4, name: 'Tea infuser', price: 22.0 },
+  { id: 5, name: 'Cane sugar 500g', price: 8.99 },
 ];
 ```
 
@@ -28,15 +42,20 @@ Każdy produkt ma trzy pola. **`id`** posłuży jako klucz listy i jako sposób 
 (49.99 * 3).toFixed(2);   // → "149.97": zaokrąglenie do dwóch miejsc
 ```
 
-Layout główny obejmuje każdą stronę aplikacji, a stronę dostaje jako `children`. Eksport `metadata` ustawia tytuł karty przeglądarki:
+Layout główny obejmuje każdą stronę aplikacji, a stronę dostaje jako `children`. Eksport `metadata` ustawia tytuł karty przeglądarki. Komponent `Link` z `next/link` jest linkiem, który przechodzi na inną trasę bez przeładowania całej strony. Layout dostaje od razu nawigację z dwoma linkami:
 
 ```jsx
-export const metadata = { title: 'Coffee shop — demo' };
+import Link from 'next/link';
+
+export const metadata = { title: 'Coffee shop' };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        <nav>
+          <Link href="/">Shop</Link> | <Link href="/cart">Cart</Link>
+        </nav>
         {children}
       </body>
     </html>
@@ -44,38 +63,17 @@ export default function RootLayout({ children }) {
 }
 ```
 
-Plik `app/page.jsx` pokazuje listę produktów. Arkusz `page.module.css` z szablonu przestaje być potrzebny, więc znika z projektu:
+Strona główna `app/page.jsx` na tym etapie ma tylko nagłówek `<main><h1>Coffee shop</h1></main>`. Plik nie ma dyrektywy `'use client'`, więc strona jest komponentem serwerowym. Nic na niej się nie zmienia, bo nie ma jeszcze stanu. Link „Cart” prowadzi na razie do strony 404, bo trasa `/cart` powstanie dopiero po wprowadzeniu kontekstu.
 
-```jsx
-import { products } from './data/products';
+## Koszyk ma trzy rodzaje zmian
 
-export default function HomePage() {
-  return (
-    <main>
-      <h1>Coffee shop</h1>
-      <ul>
-        {products.map(p => (
-          <li key={p.id}>{p.name} — {p.price.toFixed(2)} PLN</li>
-        ))}
-      </ul>
-    </main>
-  );
-}
-```
+Koszyk przyjmuje trzy operacje. Produkt można **dodać**, a gdy już jest w koszyku, rośnie jego ilość. Pozycję można **usunąć**. Cały koszyk można **wyczyścić**. Pozycja ma kształt `{ id, name, price, qty }`, czyli dane produktu z dopisaną ilością.
 
-Plik nie ma dyrektywy `'use client'`, więc strona jest komponentem serwerowym. Nic na niej się nie zmienia, bo nie ma jeszcze stanu.
-
-## Koszyk ma cztery rodzaje zmian
-
-Koszyk przyjmuje cztery operacje. Produkt można **dodać**, a gdy już jest w koszyku, rośnie jego ilość. Pozycję można **usunąć**. Można **zmienić ilość** wpisaną w pole liczbowe, przy czym nie spadnie ona poniżej jednej sztuki. Cały koszyk można **wyczyścić**. Pozycja ma kształt `{ id, name, price, qty }`, czyli dane produktu z dopisaną ilością.
-
-Dwie z tych reguł opierają się na metodach `find` i `Math.max`. `find` zwraca pierwszy element spełniający warunek albo `undefined`, a `Math.max` zwraca większy z argumentów:
+Reguła dodawania opiera się na metodzie `find`, która zwraca pierwszy element spełniający warunek albo `undefined`:
 
 ```js
 [{ id: 1 }, { id: 2 }].find(i => i.id === 2);  // → { id: 2 }
 [{ id: 1 }].find(i => i.id === 9);             // → undefined: brak takiego elementu
-Math.max(1, 0);                                // → 1: dolna granica wygrywa
-Math.max(1, 3);                                // → 3
 ```
 
 Najprostsza droga to jedna tablica w `useState` i osobna funkcja dla każdej operacji. Poniższy kod nie należy do projektu. Pokazuje, czego kolejne kroki unikają:
@@ -97,11 +95,6 @@ export default function HomePage() {
     );
   }
 
-  // Reguła „ilość co najmniej 1” żyje tylko tutaj.
-  function handleQtyChange(id, qty) {
-    setItems(items.map((i) => (i.id === id ? { ...i, qty: Math.max(1, qty) } : i)));
-  }
-
   function handleRemove(id) {
     setItems(items.filter((i) => i.id !== id));
   }
@@ -109,11 +102,11 @@ export default function HomePage() {
   function handleClear() {
     setItems([]);
   }
-  // ...JSX z czterema przyciskami i polem <input>
+  // ...JSX z przyciskami
 }
 ```
 
-Każda funkcja z osobna jest poprawna, kłopot leży w miejscu reguł. Zasada „ten sam produkt zwiększa ilość” istnieje tylko w `handleAdd`. Zasada „ilość co najmniej 1” istnieje tylko w `handleQtyChange`. <u>Nowy przycisk „+1” przy pozycji musiałby sam pamiętać o obu</u>, a każda kolejna procedura obsługi powtarzałaby to samo ryzyko.
+Każda funkcja z osobna jest poprawna, kłopot leży w miejscu reguły. Każda musi też pamiętać, że nową tablicę buduje się z kopii (`map`, `filter`, rozwinięcie), a nie przez zmianę starej. Zasada „ten sam produkt zwiększa ilość” istnieje tylko w `handleAdd`, a stan zmieniają trzy osobne funkcje. <u>Nowy przycisk „+1” przy pozycji musiałby skopiować tę regułę</u>, a każda kolejna procedura obsługi powtarzałaby to samo ryzyko. Przy większej liczbie reguł rozsianych po funkcjach żadna z nich nie pokazuje, jakie zmiany koszyka w ogóle są dozwolone.
 
 > **„Komponenty z wieloma aktualizacjami stanu rozsianymi po wielu procedurach obsługi zdarzeń mogą stać się przytłaczające. W takich przypadkach całą logikę aktualizacji stanu można zebrać poza komponentem, w jednej funkcji nazywanej »reducerem«.”**
 >
@@ -128,17 +121,16 @@ Każda funkcja z osobna jest poprawna, kłopot leży w miejscu reguł. Zasada �
 flowchart LR
     subgraph A["useState: reguły w procedurach obsługi"]
         B1["handleAdd<br/>reguła: ten sam produkt → qty + 1"] --> S1["setItems(...)"]
-        B2["handleQtyChange<br/>reguła: ilość co najmniej 1"] --> S1
-        B3["handleRemove"] --> S1
-        B4["handleClear"] --> S1
+        B2["handleRemove"] --> S1
+        B3["handleClear"] --> S1
     end
     subgraph R["reducer: reguły w jednej funkcji"]
-        C1["przyciski i pole ilości<br/>tylko opisują zdarzenie"] --> F["cartReducer(state, action)<br/>wszystkie reguły"]
+        C1["przyciski<br/>tylko opisują zdarzenie"] --> F["cartReducer(state, action)<br/>wszystkie reguły"]
     end
     A -. "ten sam koszyk, inny podział pracy" .-> R
 ```
 
-Na Rysunku 4.1 lewa ramka odpowiada kodowi powyżej. Cztery procedury obsługi same liczą nową tablicę, a dwie z nich niosą reguły, których pozostałe nie znają. W prawej ramce przyciski i pole ilości tylko opisują, co się stało, a jedyne miejsce znające reguły to funkcja `cartReducer`.
+Na Rysunku 4.1 lewa ramka odpowiada kodowi powyżej. Trzy procedury obsługi same liczą nową tablicę, a jedna z nich niesie regułę, której pozostałe nie znają. W prawej ramce przyciski tylko opisują, co się stało, a jedyne miejsce znające reguły to funkcja `cartReducer`.
 
 ## Czym jest reducer
 
@@ -171,7 +163,7 @@ Dziennik audytu to zapis zdarzeń w kolejności. Według Kumara pozwala odtworzy
 
 ## Akcja opisuje, co się stało
 
-**Akcja** (*action*) to zwykły obiekt opisujący zdarzenie. Według dokumentacji może mieć dowolny kształt. Zwyczajowo dostaje tekstowe pole `type`, które opisuje, co się stało (*„it is common to give it a string type that describes what happened”*). Koszyk zna cztery akcje i każda niesie tylko swoje dane. `ADD_ITEM` niesie produkt w polu `product`, `REMOVE_ITEM` niesie `id`, `UPDATE_QTY` niesie `id` i `qty`, a `CLEAR_CART` nie niesie nic. Słowo „akcja” ma w React 19 także drugie znaczenie: funkcję asynchroniczną wykonywaną w przejściu, na przykład przekazaną do `<form action>`. W reducerze akcja jest zawsze obiektem z `type`, a o tym, które znaczenie chodzi, rozstrzyga kontekst.
+**Akcja** (*action*) to zwykły obiekt opisujący zdarzenie. Według dokumentacji może mieć dowolny kształt. Zwyczajowo dostaje tekstowe pole `type`, które opisuje, co się stało (*„it is common to give it a string type that describes what happened”*). Koszyk zna trzy akcje i każda niesie tylko swoje dane. `ADD_ITEM` niesie produkt w polu `product`, `REMOVE_ITEM` niesie `id`, a `CLEAR_CART` nie niesie nic. Słowo „akcja” ma w React 19 także drugie znaczenie: funkcję asynchroniczną wykonywaną w przejściu, na przykład przekazaną do `<form action>`. W reducerze akcja jest zawsze obiektem z `type`, a o tym, które znaczenie chodzi, rozstrzyga kontekst.
 
 > **„Powinna zawierać minimum informacji potrzebnych reducerowi do obliczenia następnego stanu.”**
 >
@@ -212,10 +204,7 @@ Dokumentacja zaleca dwa nawyki, które usuwają ten problem w reducerze.
 Reguły trafiają do pliku `app/lib/cartReducer.js`. Plik nie importuje Reacta i nie zawiera JSX. Pierwsza część to stan początkowy i gałąź dodawania:
 
 ```js
-// Czysty reducer stanu koszyka.
-// Kształt stanu: { items: [{ id, name, price, qty }] }
-// Reducer zawsze zwraca NOWY obiekt i nigdy nie zmienia stanu w miejscu.
-
+// Wszystkie zmiany koszyka w jednej czystej funkcji: (state, action) → nowy stan.
 export const initialCartState = { items: [] };
 
 export function cartReducer(state, action) {
@@ -225,19 +214,13 @@ export function cartReducer(state, action) {
       if (existing) {
         // Produkt już jest w koszyku: rośnie tylko jego ilość.
         return {
-          ...state,
           items: state.items.map(i =>
-            i.id === action.product.id
-              ? { ...i, qty: i.qty + 1 }
-              : i
+            i.id === action.product.id ? { ...i, qty: i.qty + 1 } : i
           ),
         };
       }
       // Nowy produkt: dopisana pozycja z ilością 1.
-      return {
-        ...state,
-        items: [...state.items, { ...action.product, qty: 1 }],
-      };
+      return { items: [...state.items, { ...action.product, qty: 1 }] };
     }
 ```
 
@@ -245,28 +228,16 @@ Pozostałe gałęzie zamykają funkcję:
 
 ```js
     case 'REMOVE_ITEM':
-      return {
-        ...state,
-        items: state.items.filter(i => i.id !== action.id),
-      };
-    case 'UPDATE_QTY':
-      return {
-        ...state,
-        items: state.items.map(i =>
-          i.id === action.id
-            ? { ...i, qty: Math.max(1, action.qty) }   // ilość co najmniej 1
-            : i
-        ),
-      };
+      return { items: state.items.filter(i => i.id !== action.id) };
     case 'CLEAR_CART':
-      return { ...state, items: [] };
+      return { items: [] };
     default:
-      throw new Error(`Unknown cart action: ${action.type}`);
+      throw new Error(`Unknown action: ${action.type}`);
   }
 }
 ```
 
-Stan jest obiektem `{ items: [] }`, a nie gołą tablicą, więc da się do niego dopisać kolejne pole bez zmiany kształtu gałęzi. W koszyku tylko `ADD_ITEM` deklaruje zmienną (`existing`), więc tylko ta gałąź potrzebuje klamer. Każda gałąź kończy się `return`, więc żadna nie przechodzi do następnej. Każda zaczyna też nowy obiekt od `...state`, więc dopisane później pole, na przykład kod rabatowy, nie zginie przy zmianie pozycji.
+Stan jest obiektem `{ items: [] }`, a nie gołą tablicą. Każda gałąź zwraca nowy obiekt z samą tablicą `items`, bo to jedyne pole stanu. Przy stanie z kilkoma polami każda gałąź musiałaby dopisać `...state`, żeby nie zgubić pozostałych. W koszyku tylko `ADD_ITEM` deklaruje zmienną (`existing`), więc tylko ta gałąź potrzebuje klamer. Każda gałąź kończy się `return`, więc żadna nie przechodzi do następnej.
 
 Reducer jest zwykłą funkcją, więc działa także poza komponentem. Dwa wywołania z produktem, który drugim razem niesie inną cenę, pokazują jedną regułę, której nikt nie zapisał wprost:
 
@@ -281,7 +252,7 @@ s.items;   // → [{ id: 1, name: 'Coffee', price: 49.99, qty: 2 }]
 
 ## Kopia w każdej gałęzi i czystość reducera
 
-<u>Reducer zwraca nowy obiekt zbudowany z kopii i nigdy nie modyfikuje argumentu `state`</u>. Wyjątkiem jest akcja, która niczego nie zmienia: wtedy wolno oddać ten sam obiekt. Każda gałąź `cartReducer` buduje wynik od `{ ...state }`, więc z wyjątku nie korzysta.
+<u>Reducer zwraca nowy obiekt zbudowany z kopii i nigdy nie modyfikuje argumentu `state`</u>. Wyjątkiem jest akcja, która niczego nie zmienia: wtedy wolno oddać ten sam obiekt. Każda gałąź `cartReducer` buduje nowy obiekt `{ items: … }`, więc z wyjątku nie korzysta.
 
 Reducer obowiązują te same zasady co funkcję komponentu, bo działa w trakcie renderowania.
 
@@ -295,9 +266,19 @@ W `cartReducer` nie ma `fetch`, `Date.now()` ani zapisu do `document.title`. Czy
 
 ## Nieznana akcja to błąd programisty
 
-Ostatnia gałąź rzuca wyjątek `Unknown cart action`, a literał szablonowy w odwrotnych apostrofach wstawia do komunikatu nazwę typu przez `${action.type}`. Literówka w typie, na przykład `'ADD_ITM'`, kończy się od razu czytelnym błędem z nazwą złego typu. Bez tej gałęzi funkcja zwróciłaby `undefined`, które zostałoby nowym stanem. Następny render przerwałby wtedy wyjątek `Cannot read properties of undefined (reading 'items')`, wskazujący na odczyt `cart.items`, a nie na literówkę.
+Ostatnia gałąź rzuca wyjątek `Unknown action`, a literał szablonowy w odwrotnych apostrofach wstawia do komunikatu nazwę typu przez `${action.type}`. Literówka w typie, na przykład `'ADD_ITM'`, kończy się od razu czytelnym błędem z nazwą złego typu. Bez tej gałęzi funkcja zwróciłaby `undefined`, które zostałoby nowym stanem. Następny render przerwałby wtedy wyjątek `Cannot read properties of undefined (reading 'items')`, wskazujący na odczyt `cart.items`, a nie na literówkę.
 
 Daniel Bugl w *Learn React Hooks* zauważa, że w Reduxie, czyli zewnętrznej bibliotece trzymającej stan całej aplikacji w jednym magazynie, reducer w przypadku domyślnym zwykle zwraca bieżący stan. Hook reducera nie trzyma całego stanu aplikacji. Każdy reducer obsługuje tylko akcje swojego kawałka stanu, więc akcja spoza listy jest błędem.
+
+## Zalety i koszty reducera
+
+Reducer nie robi niczego, czego nie zrobiłby `useState`. Zmienia miejsce, w którym leżą reguły, i to miejsce jest jego jedyną zaletą. Ma ona cenę widoczną już w tym slajdzie.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Wszystkie reguły koszyka w jednym pliku, a nowa zmiana to nowa gałąź `case` | Więcej kodu niż przy `useState`: 22 linie reducera wobec 14 linii trzech procedur (kryterium „Rozmiar kodu” w następnej części) | Stan zmieniany w jednym miejscu, bez reguły, która musi działać zawsze: `useState` (następna część) |
+| Czysta funkcja, którą da się sprawdzić bez Reacta, wywołaniem ze stanem i akcją (`node:assert`, następna część) | Typ akcji to napis: literówka wychodzi dopiero przy uruchomieniu, jako wyjątek z gałęzi `default` | Pole wyszukiwania w reducerze wymagałoby akcji `SET_QUERY` bez żadnej reguły do scentralizowania (następna część) |
+| Akcja opisuje zdarzenie, więc jedno `console.log(action)` pokazuje każdą zmianę koszyka z przyczyną (następna część) | Kod jednej funkcji komponentu rozdziela się na dwa pliki: reducer i stronę | Flaga „panel koszyka otwarty”: `useState` obok reducera w tym samym komponencie (następna część) |
 
 > 💡 **Zapamiętaj:** reducer zna wszystkie dozwolone zmiany stanu, a akcja tylko opisuje zdarzenie. Nieznany typ akcji kończy się wyjątkiem.
 

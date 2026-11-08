@@ -16,30 +16,31 @@ npm run dev
 
 | Trasa | Plik | Opis |
 |-------|------|------|
-| `/` | `app/page.jsx` | Komponent serwerowy: podsumowanie koszyka, lista produktów, rekomendacje |
-| `/cart` | `app/cart/page.jsx` | Komponent kliencki: pozycje koszyka, zmiana ilości, usuwanie |
+| `/` | `app/page.jsx` | Komponent serwerowy: podsumowanie koszyka, lista produktów z przyciskami, rekomendacje |
+| `/cart` | `app/cart/page.jsx` | Komponent kliencki: podsumowanie, pozycje koszyka, usuwanie, „Clear cart” |
 
 ## Etapy budowy aplikacji
 
-Kolejność i czasy: `../PROWADZACY.md` (120 min); kod każdego etapu jest też na slajdach `../../slides/`.
-Projekt zawiera stan końcowy (po kroku 6.3), pliki pośrednie powstają na zajęciach.
+Kolejność i czasy: `../PROWADZACY.md` (90 min, kod pisany ręcznie); kod każdego etapu jest też na slajdach `../../slides/`.
+Projekt zawiera stan końcowy (po kroku 5.3): 11 plików w `app/`, 228 linii. Pliki pośrednie powstają na zajęciach.
+Segment 6 (rendery kontekstu i podział, slajdy 11–12) jest tylko pokazem i nie zmienia kodu.
 
-| Etap | Slajd | Temat | Kluczowe pliki |
-|------|-------|-------|----------------|
-| 0 | 01 | Projekt + statyczny szkielet | `app/data/products.js`, `app/layout.jsx`, `app/page.jsx` |
-| 1 | 01–03 | Reducer i `useReducer` | `app/lib/cartReducer.js`, `app/page.jsx` |
+| Etap | Slajd | Temat | Nowe pliki |
+|------|-------|-------|------------|
+| 0 | 01 | Projekt i nawigacja (projekt i `products.js` gotowe przed wykładem) | `app/data/products.js`, `app/layout.jsx`, `app/page.jsx` |
+| 1 | 01–03 | Reducer i `useReducer` | `app/lib/cartReducer.js` |
 | 2 | 04–05 | Prop drilling i kontekst | `app/context/CartContext.jsx` |
-| 3 | 06 | Dostawca w layoucie, komponenty z koszykiem | `app/layout.jsx`, `app/components/CartSummary.jsx`, `CartItem.jsx`, `ProductList.jsx`, `app/cart/page.jsx` |
-| 4 | 07 | `useOptimistic`: koszyk optymistyczny | `app/lib/fakeApi.js`, `app/context/CartContext.jsx`, `app/components/AddToCartButton.jsx` |
-| 5 | 08–10 | `use`, `Suspense`, granica błędów | `app/components/RecommendedProducts.jsx`, `ErrorBoundary.jsx`, `RecommendedSection.jsx` |
-| 6 | 11–12 | Rendery kontekstu i jego podział | `app/context/CartContext.jsx` (stan osobno, funkcje osobno) |
+| 3 | 06 | Dostawca w layoucie, komponenty z koszykiem | `app/components/CartSummary.jsx`, `AddToCartButton.jsx`, `app/cart/page.jsx` |
+| 4 | 07 | `useOptimistic`: koszyk optymistyczny | `app/lib/fakeApi.js` (zmiany w `CartContext.jsx` i `AddToCartButton.jsx`; krok 4.2 to przejściowy przycisk bez `useOptimistic`) |
+| 5 | 08–10 | `use`, `Suspense`, granica błędów | `app/components/Recommended.jsx`, `ErrorBoundary.jsx` |
+| 6 | 11–12 | Rendery kontekstu i jego podział (tylko pokaz) | brak |
 
 ## Zgodność ze slajdami
 
 Pliki są kodem ze slajdów w stanie końcowym. Różnią się od bloków na slajdach tylko komentarzami (kontrola mechaniczna
-porównaniem bloków kodu ze slajdów 01–12 z plikami) oraz tym, że bloki pośrednie z `useCart()` (slajdy 05–07, 11)
-w stanie końcowym używają `useCartState()`, `useCartDispatch()` i `useCartOptimistic()` (slajd 12). Blok `CartContext.jsx` ze slajdu 12 ma jeszcze
-tymczasowy `useCart`, którego w projekcie już nie ma.
+porównaniem bloków kodu ze slajdów z plikami) oraz tym, że bloki pośrednie z `useCart()` (slajdy 05–07) są teraz stanem
+końcowym: demo kończy się na jednym kontekście `useCart()`. Slajd 12 (trzy konteksty z hookami `useCartState`, `useCartDispatch`
+i `useCartOptimistic`) to przykład spoza demo, w `app/` go nie ma.
 
 ## Uwagi
 

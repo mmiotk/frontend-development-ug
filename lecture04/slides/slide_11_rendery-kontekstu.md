@@ -2,23 +2,26 @@
 
 ## Render to wywołanie funkcji komponentu
 
-Wspólny kontekst ma koszt, który da się policzyć. **Render** komponentu funkcyjnego to jedno wywołanie jego funkcji: React woła ją, dostaje nowy JSX i porównuje go z poprzednim. DOM zmienia dopiero w fazie zatwierdzenia i tylko tam, gdzie wynik się różni. Render, po którym nic się na ekranie nie zmienia, nadal kosztuje wywołanie funkcji i porównanie wyniku, ale nie kosztuje operacji na DOM.
+Kontekst rozwiązał problem pośredników: nagłówek, przyciski i strona `/cart` czytają koszyk bez przekazywania go przez propsy. Ten wygodny układ ma koszt, którego na ekranie nie widać. Strona wygląda tak samo, a pod spodem może wywoływać funkcje komponentów, które nie dostały żadnej nowej informacji. Skoro tego nie widać, trzeba to zmierzyć, zanim uzna się, że jest problem albo że go nie ma. Pomiar odpowiada na pytanie, ile komponentów odpowiada na jedną zmianę koszyka i czy któryś z nich robi to niepotrzebnie.
 
-Licznik renderów to więc linia `console.log` w ciele funkcji komponentu. W wersji sklepu z jednym kontekstem `CartContext` (wartość `{ cart, dispatch, addOptimistic }`) taka linia stoi w `AddToCartButton` i analogicznie w `CartSummary`.
+Koszt da się policzyć. **Render** komponentu funkcyjnego to jedno wywołanie jego funkcji: React woła ją, dostaje nowy JSX i porównuje go z poprzednim. DOM zmienia dopiero w fazie zatwierdzenia i tylko tam, gdzie wynik się różni. Render, po którym nic się na ekranie nie zmienia, nadal kosztuje wywołanie funkcji i porównanie wyniku, ale nie kosztuje operacji na DOM.
+
+Licznik renderów to linia `console.log` w ciele funkcji komponentu. Sklep w obecnym stanie ma jeden kontekst `CartContext` (wartość `{ cart, dispatch, addOptimistic }`). Poniższe linie nie należą do projektu: to dopisek pomiarowy w `AddToCartButton` i analogicznie w `CartSummary`.
 
 ```jsx
+// Przykład spoza demo: pomiar, jedna linia na każde wywołanie funkcji komponentu
 export default function AddToCartButton({ product }) {
   const { dispatch, addOptimistic } = useCart();
-  console.log('AddToCartButton render', product.id); // tymczasowo: jeden wpis na każde wywołanie funkcji
+  console.log('AddToCartButton render', product.id);
   // ...
 }
 ```
 
-W trybie deweloperskim działa tryb ścisły (*Strict Mode*), który wywołuje funkcję komponentu dwa razy na każdy render, więc jeden render daje parę wpisów. Kontekst czytają na stronie głównej dwa rodzaje komponentów. Pięć egzemplarzy `AddToCartButton` bierze z `useCart()` tylko dwie funkcje: `dispatch` i `addOptimistic`. `CartSummary` bierze `cart` i `dispatch`. `ProductList` od wprowadzenia przycisku nie sięga do kontekstu wcale.
+W trybie deweloperskim działa tryb ścisły (*Strict Mode*), który wywołuje funkcję komponentu dwa razy na każdy render, więc jeden render daje parę wpisów. Kontekst czytają na stronie głównej dwa rodzaje komponentów. Pięć egzemplarzy `AddToCartButton` bierze z `useCart()` tylko dwie funkcje: `dispatch` i `addOptimistic`. `CartSummary` bierze `cart`. Reszta strony, czyli nagłówek, lista `<ul>` i sekcja `Recommended`, kontekstu nie czyta.
 
 ## Wynik: renderują się wszystkie przyciski
 
-Pomiar obejmuje jedno kliknięcie „Add to cart” przy kawie i 1,5 s do końca akcji. W trybie deweloperskim (Next.js 16.4.0, React 19.3.0) daje taki wynik:
+Pomiar obejmuje jedno kliknięcie „Add to cart” przy kawie i 1,5 s do końca akcji. W trybie deweloperskim (Next.js 16.4.0, React 19.3.0) daje taki wynik. Taka sama linia w `Recommended` nie wypisuje po kliknięciu nic.
 
 | Komponent | Wpisy w konsoli | Kiedy |
 |---|---|---|
@@ -28,7 +31,7 @@ Pomiar obejmuje jedno kliknięcie „Add to cart” przy kawie i 1,5 s do końca
 
 Wartość kontekstu zmienia się dwa razy. Przy kliknięciu dostawca renderuje się z koszykiem optymistycznym, a po 1,5 s z prawdziwym, który ma już kawę. Każdy z tych renderów to para wpisów, stąd cztery. Wpisy `CartSummary` są oczywiste: komponent pokazuje liczbę sztuk i sumę, które za każdym razem się zmieniają. Zaskakuje pięć przycisków, także cztery nieklikane. Każdy czyta z kontekstu wyłącznie dwie funkcje, a `dispatch` z `useReducer` i setter z `useOptimistic` są przy każdym renderze tymi samymi funkcjami. Przyciski nie dostały żadnej nowej informacji, a React mimo to wywołał ich funkcje ponownie.
 
-Ich render niczego na ekranie nie zmienia. W modelu sklepu z pięcioma przyciskami i jednym kontekstem obserwator zmian DOM (`MutationObserver`, interfejs przeglądarki zgłaszający każdą zmianę w drzewie DOM) nie notuje po kliknięciu ani jednej zmiany w przyciskach. Zbędny render kosztuje więc obliczenia, a ekran zostaje bez zmian. Przy pięciu przyciskach jest pomijalny, ale rośnie z liczbą konsumentów.
+Ich render niczego na ekranie nie zmienia. Obserwator zmian DOM (`MutationObserver`, interfejs przeglądarki zgłaszający każdą zmianę w drzewie DOM) nie notuje po kliknięciu ani jednej zmiany w wierszach z przyciskami. Zbędny render kosztuje więc obliczenia, a ekran zostaje bez zmian. Przy pięciu przyciskach jest pomijalny, ale rośnie z liczbą konsumentów.
 
 ## Dlaczego: React porównuje całą wartość
 
@@ -65,14 +68,14 @@ flowchart LR
     P["CartProvider<br/>ADD_ITEM: koszyk optymistyczny, potem prawdziwy"] --> V["value = { cart, dispatch, addOptimistic }<br/>nowy obiekt"]
     V -->|"Object.is: różne"| S["CartSummary<br/>czyta cart: render potrzebny"]
     V -->|"Object.is: różne"| B["AddToCartButton 1–5<br/>czytają funkcje: render zbędny"]
-    P -. "children: ten sam element" .-> H["HomePage, ProductList<br/>bez renderu"]
+    P -. "children: ten sam element" .-> H["reszta strony, Recommended<br/>bez renderu"]
 ```
 
 Na Rysunku 4.11 ciągłe strzałki prowadzą do konsumentów kontekstu. Oba dostają nowy obiekt wartości i oba się renderują. Render `CartSummary` jest potrzebny, bo zmieniły się dane, które pokazuje. Render przycisków jest zbędny, bo obie funkcje pozostały te same. Przerywana strzałka pokazuje resztę drzewa pod dostawcą. Te komponenty nie renderują się wcale, choć leżą pod `CartProvider`.
 
 ## Dlaczego nie renderuje się całe drzewo pod dostawcą
 
-`CartProvider` stoi w layoucie i dostaje stronę jako `children`. Gdy zmienia się jego stan, jego funkcja wykonuje się ponownie, ale `children` to ten sam element, który przyszedł od layoutu. W App Routerze strona `HomePage` jest komponentem serwerowym, więc w przeglądarce jej funkcja nie wykonuje się wcale. `CartProvider` dostaje `children` przygotowane na serwerze, a w nich elementy komponentów klienckich, takich jak `ProductList`. Element JSX to zwykły obiekt opisujący komponent i jego propsy. Jeśli rodzic nie utworzył go od nowa, React uznaje, że to poddrzewo nie ma powodu się zmienić. Różnicę widać na dwóch panelach z tym samym dzieckiem:
+`CartProvider` stoi w layoucie i dostaje stronę jako `children`. Gdy zmienia się jego stan, jego funkcja wykonuje się ponownie, ale `children` to ten sam element, który przyszedł od layoutu. W App Routerze strona `HomePage` jest komponentem serwerowym, więc w przeglądarce jej funkcja nie wykonuje się wcale. `CartProvider` dostaje `children` przygotowane na serwerze, a w nich elementy komponentów klienckich, takich jak `Recommended`. Element JSX to zwykły obiekt opisujący komponent i jego propsy. Jeśli rodzic nie utworzył go od nowa, React uznaje, że to poddrzewo nie ma powodu się zmienić. Różnicę widać na dwóch panelach z tym samym dzieckiem:
 
 ```jsx
 import { useState } from 'react';
@@ -98,7 +101,7 @@ Kliknięcie w `<Panel><Child /></Panel>` renderuje tylko `Panel`. Kliknięcie w 
 >
 > — dokumentacja React, *memo*
 
-Dlatego `ProductList`, choć jest komponentem klienckim pod dostawcą, nie renderuje się po zmianie koszyka: jego element przychodzi w `children` i się nie zmienia. Koszt rośnie z liczbą konsumentów kontekstu, a nie z liczbą komponentów pod dostawcą.
+Dlatego `Recommended`, choć jest komponentem klienckim pod dostawcą, nie renderuje się po zmianie koszyka: jego element przychodzi w `children` i się nie zmienia. Koszt rośnie z liczbą konsumentów kontekstu, a nie z liczbą komponentów pod dostawcą.
 
 Gdy stan i dostawca siedzą w komponencie, który sam tworzy resztę aplikacji, każda zmiana renderuje całe drzewo, tak jak w `PanelInline`. Samo wydzielenie dostawcy do osobnej funkcji, jak zaznacza Schwarzmüller w *React Key Concepts*, korzyści wydajnościowych nie przynosi. Zysk daje dopiero to, że stan mieszka w dostawcy, a reszta drzewa przychodzi do niego jako `children`. `CartProvider` w sklepie od początku ma tę postać: trzyma reducer u siebie, a layout nad nim nie ma stanu.
 

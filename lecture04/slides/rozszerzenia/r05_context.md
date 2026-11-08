@@ -39,19 +39,19 @@ Ten sam warunek tłumaczy rzadszą awarię. Narzędzie budujące może przez dow
 
 ```jsx
 // Przykład spoza demo: CartContextCopy.jsx to dosłowna kopia CartContext.jsx
-import { useCartState } from './CartContextCopy';   // dostawca w layoucie pochodzi z CartContext.jsx
+import { useCart } from './CartContextCopy';   // dostawca w layoucie pochodzi z CartContext.jsx
 
 function Badge() {
-  const cart = useCartState();                      // szuka dostawcy z kopii: nie ma go nad Badge
+  const { cart } = useCart();                    // szuka dostawcy z kopii: nie ma go nad Badge
   return <p>Items: {cart.items.length}</p>;
 }
-// <ErrorBoundary><Badge /></ErrorBoundary> → Something went wrong: useCartState must be used inside <CartProvider>
+// <ErrorBoundary><Badge /></ErrorBoundary> → Something went wrong: useCart must be used inside <CartProvider>
 
 // diagnoza z dokumentacji: obie kopie zapisują swój obiekt w window; po linii z createContext
-// dopisano w CartContext.jsx:      window.ctxMain = CartStateContext;
-// dopisano w CartContextCopy.jsx:  window.ctxCopy = CartStateContext;
+// dopisano w CartContext.jsx:      window.ctxMain = CartContext;
+// dopisano w CartContextCopy.jsx:  window.ctxCopy = CartContext;
 // porównanie w konsoli przeglądarki:
-window.ctxMain === window.ctxCopy;                  // → false
+window.ctxMain === window.ctxCopy;               // → false
 ```
 
 Dostawca korzysta z jednej kopii, odbiorca z drugiej i nie znajduje dostawcy. Dokumentacja radzi właśnie takie porównanie przez `===`: wynik `false` oznacza dwa obiekty kontekstu w paczce.

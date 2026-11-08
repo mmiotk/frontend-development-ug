@@ -2,7 +2,7 @@
 
 ## Wartość potrzebna daleko od miejsca, w którym powstaje
 
-Koszyk mieszka w jednym komponencie, a czytają go komponenty położone kilka poziomów niżej, także na innej trasie. Propsy musiałyby przejść przez każdego pośrednika po drodze, a od layoutu do strony nie da się ich przekazać wcale. React ma na to osobny mechanizm.
+Koszyk mieszka w jednym komponencie, a czyta go naraz nagłówek z sumą, pięć przycisków „Add to cart” i strona `/cart`. Część z nich leży kilka poziomów niżej, a część na innej trasie. Propsy musiałyby przejść przez każdego pośrednika po drodze, a od layoutu do strony nie da się ich przekazać wcale. Każdy nowy odbiorca koszyka oznaczałby więc zmiany w całym łańcuchu. React ma na to osobny mechanizm.
 
 > **„Kontekst pozwala komponentowi rodzica dostarczyć dane całemu drzewu pod nim.”**
 >
@@ -169,6 +169,16 @@ const { cart } = useCart();   // → Error: useCart must be used inside <CartPro
 ```
 
 Bez strażnika ten sam odczyt, czyli `const { cart } = useContext(CartContext);`, kończy się komunikatem `TypeError: Cannot destructure property 'cart' of '…' as it is null.`. Mówi on tylko, że coś jest `null`. Komunikat strażnika wymienia nazwę dostawcy, więc przy takim błędzie wystarczy sprawdzić, czy komponent leży w drzewie pod `<CartProvider>`. Dokumentacja Next.js stosuje ten sam wzorzec w przewodniku o aplikacjach jednostronicowych: jej hook `useUser` rzuca wyjątek `useUser must be used within a UserProvider`.
+
+## Zalety i koszty kontekstu
+
+Kontekst usuwa pośredników, ale zamienia jawny przepływ danych na ukrytą zależność. Dokumentacja Reacta ostrzega przed nadużywaniem go, a koszty widać w sklepie.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Brak pośredników: komponent z `useCart()` czyta wartość wprost od najbliższego dostawcy | Ukryta zależność: komponent działa tylko pod dostawcą, więc `useCart` ma strażnika, który rzuca wyjątek poza `<CartProvider>` (demo, ankieta A3) | Wartość potrzebna jeden lub dwa poziomy niżej: propsy albo kompozycja (część o propsach, rozszerzenie r04) |
+| Jedno źródło dla całego poddrzewa, także dla `/cart`, do której propsy nie dojdą | Komponent trudniej użyć ponownie, bo wymaga dostawcy (Bugl, część o propsach) | Dane z serwera: kontekst ich nie pobiera ani nie zapisuje, to temat następnego wykładu |
+| Zmiana stanu w dostawcy dociera do wszystkich odbiorców bez pracy w pośrednikach | Każdy komponent czytający kontekst renderuje się po zmianie wartości (pomiar w części o renderach kontekstu) | Wielu odbiorców i częste zmiany: podział na osobne konteksty (część o podziale kontekstu) albo biblioteka stanu z selektorami (rozszerzenie r12) |
 
 > 💡 **Zapamiętaj:** kontekst tworzy się przez `createContext` poza komponentem, dostarcza przez `<Ctx value>` i czyta przez `useContext` schowany we własnym hooku. Odczyt sięga do najbliższego dostawcy wyżej, a wartość domyślna działa tylko wtedy, gdy dostawcy nie ma wcale.
 

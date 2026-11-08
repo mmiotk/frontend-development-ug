@@ -1,37 +1,24 @@
 'use client';
 
-import Link from 'next/link';
-import { useCartState, useCartDispatch } from '../context/CartContext';
-import CartItem from '../components/CartItem';
+import { useCart } from '../context/CartContext';
+import CartSummary from '../components/CartSummary';
 
 export default function CartPage() {
-  const cart = useCartState();
-  const dispatch = useCartDispatch();
-
-  if (cart.items.length === 0) {
-    return (
-      <main>
-        <h1>Cart</h1>
-        <p>Your cart is empty.</p>
-        <Link href="/">Back to shop</Link>
-      </main>
-    );
-  }
-
-  const total = cart.items.reduce((s, i) => s + i.price * i.qty, 0);
+  const { cart, dispatch } = useCart();
 
   return (
     <main>
       <h1>Cart</h1>
+      <CartSummary />
       <ul>
         {cart.items.map(item => (
-          <CartItem key={item.id} item={item} />
+          <li key={item.id}>
+            {item.name} × {item.qty}{' '}
+            <button onClick={() => dispatch({ type: 'REMOVE_ITEM', id: item.id })}>Remove</button>
+          </li>
         ))}
       </ul>
-      <p>Total: <strong>{total.toFixed(2)} PLN</strong></p>
       <button onClick={() => dispatch({ type: 'CLEAR_CART' })}>Clear cart</button>
-      {' '}
-      <Link href="/">Continue shopping</Link>
     </main>
   );
 }
