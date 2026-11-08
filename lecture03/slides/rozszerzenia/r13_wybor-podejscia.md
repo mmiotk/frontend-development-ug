@@ -46,7 +46,7 @@ export default function EditIssueForm({ issue, onSave }) {
 ```
 
 ```text
-zgłoszenie #1 przychodzi po 1 s         → title „Login button does not work on Safari”, priority „high”
+zgłoszenie #1 przychodzi po 1 s         → title „Login button does not work”, priority „high”
 „Fixed title” wpisane przed danymi      → title „Fixed title”, priority „high”
 defaultValues: issue zamiast values     → po 1 s title puste, priority „low” (pierwsza opcja)
 ```

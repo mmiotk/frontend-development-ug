@@ -12,7 +12,7 @@ Przykład Formika ma `onSubmit` ze słowem `async` i to ma znaczenie dla przycis
 >
 > — dokumentacja Formik, *&lt;Formik /&gt;*
 
-Synchroniczne `onSubmit` bez tego wywołania zostawiłoby `isSubmitting` z wartością `true`, a przycisk „Create” zablokowany. Błąd zgłoszony przez serwer trafia do formularza funkcjami z drugiego argumentu `onSubmit`. W przykładzie serwer zastępuje funkcja `checkTitle`. Po 300 ms odpowiada ona, czy zgłoszenie o takim tytule już istnieje.
+Synchroniczne `onSubmit` bez tego wywołania zostawiłoby `isSubmitting` z wartością `true`, a przycisk „Add issue” zablokowany. Błąd zgłoszony przez serwer trafia do formularza funkcjami z drugiego argumentu `onSubmit`. W przykładzie serwer zastępuje funkcja `checkTitle`. Po 300 ms odpowiada ona, czy zgłoszenie o takim tytule już istnieje.
 
 ```jsx
 // Przykład spoza demo: błąd z serwera w formularzu Formika.
@@ -44,7 +44,7 @@ onSubmit: async (values, { resetForm, setFieldError, setStatus }) => {
 {formik.status && <p>{formik.status}</p>}
 ```
 
-Dla tytułu „Login button does not work on Safari” formularz pokazuje nad polem „Issue not saved.”, a pod nim „An issue with this title already exists.”. Następna litera uruchamia `validate` od nowa i błąd pola znika, a status zostaje do `resetForm()`.
+Dla tytułu „Login button does not work” formularz pokazuje nad polem „Issue not saved.”, a pod nim „An issue with this title already exists.”. Następna litera uruchamia `validate` od nowa i błąd pola znika, a status zostaje do `resetForm()`.
 
 TanStack Form przenosi taki błąd do walidatora `onSubmitAsync` na poziomie formularza. Sprawdza on wszystkie pola jednym zapytaniem do API.
 
@@ -96,7 +96,7 @@ export default function NewIssueFormik({ onCreate }) {
           </label>
           {/* akapit tylko przy touched.title i errors.title */}
           <ErrorMessage name="title" component="p" />
-          <button type="submit" disabled={isSubmitting}>Create</button>
+          <button type="submit" disabled={isSubmitting}>Add issue</button>
         </Form>
       )}
     </Formik>
@@ -108,7 +108,7 @@ Zachowanie jest takie samo jak w wersji z `useFormik`. Po „ab” akapitu jeszc
 
 ## Rozszerzenie: walidacja na serwerze w trakcie pisania
 
-Biblioteka umie też sprawdzać pole na serwerze w trakcie pisania, czego akcje nie mają. Strona *Form and Field Validation* opisuje walidator `onChangeAsync` z opóźnieniem `onChangeAsyncDebounceMs`. Opóźnienie (*debounce*) to odczekanie, aż zdarzenia przestaną napływać, zanim kod zareaguje. Walidator ustawia się przy polu tytułu w `NewIssueTanStack`.
+Biblioteka umie też sprawdzać pole na serwerze w trakcie pisania, czego akcje nie mają. Przykład uruchomiono w kopii projektu na danych demo. Strona *Form and Field Validation* opisuje walidator `onChangeAsync` z opóźnieniem `onChangeAsyncDebounceMs`. Opóźnienie (*debounce*) to odczekanie, aż zdarzenia przestaną napływać, zanim kod zareaguje. Walidator ustawia się przy polu tytułu w `NewIssueTanStack`.
 
 ```jsx
 // Przykład spoza demo: sprawdzenie tytułu na serwerze w trakcie pisania.
@@ -138,9 +138,9 @@ Biblioteka umie też sprawdzać pole na serwerze w trakcie pisania, czego akcje 
 ```
 
 ```text
-„Page loads slowly on mobile” (27 znaków), 100 ms między znakami  → 1 wywołanie checkTitle
-ten sam tytuł, 600 ms między znakami                              → 25 wywołań
-bez onChangeAsyncDebounceMs, 100 ms między znakami                → 25 wywołań
+„Page loads slowly” (17 znaków), 100 ms między znakami  → 1 wywołanie checkTitle
+ten sam tytuł, 600 ms między znakami                     → 15 wywołań
+bez onChangeAsyncDebounceMs, 100 ms między znakami       → 15 wywołań
 po ostatnim wywołaniu pod polem: An issue with this title already exists.
 ```
 

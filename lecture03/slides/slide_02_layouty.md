@@ -1,40 +1,30 @@
 # Ramka, która zostaje na miejscu przy nawigacji
 
-## Nawigacja w layoucie głównym
+## Pasek, który powtarza się na każdej stronie
 
-Lista zgłoszeń ma na razie jeden adres. Zanim pojawią się kolejne, aplikacja dostaje nawigację widoczną na każdej stronie. Jej miejscem jest layout główny, czyli komponent, który otacza wszystkie strony. Plik `app/layout.jsx` dostaje import `Link`, opis strony w metadanych i pasek nawigacji nad treścią:
+Lista zgłoszeń ma na razie jeden adres. Gdy pojawią się kolejne, użytkownik potrzebuje nawigacji na każdej z nich. Bez wspólnego miejsca każda strona powtarzałaby ten sam pasek, a jego zmiana wymagałaby poprawek w każdym pliku. Takim miejscem jest layout główny, czyli komponent, który otacza wszystkie strony. Plik `app/layout.jsx` dostaje import `Link`, tytuł strony w metadanych i pasek nawigacji nad treścią:
 
 ```jsx
-// app/layout.jsx: zastąpić całą zawartość
-// Layout główny: powłoka HTML wspólna dla wszystkich tras.
-// Nawigacja używa Link: przejście po stronie klienta, bez przeładowania strony.
-import "./globals.css";                      // arkusz ładowany raz, dla całej aplikacji
-import Link from "next/link";                // komponent linku z Next.js
+// app/layout.jsx
+import Link from "next/link";
 
-export const metadata = {                    // obiekt, z którego Next.js składa <head>
-  title: "Issue Tracker — Demo L03",
-  description: "Live-coding demo: routing and forms (React 19 + Next.js 16)", // opis strony w <head>
-};
+export const metadata = { title: "Issue Tracker" };
 
-export default function RootLayout({ children }) {  // children: strona bieżącego adresu
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <nav>                                {/* poza <main>: wspólne dla każdej trasy */}
-          <Link href="/">Issues</Link>
-          {" | "}                            {/* napis w klamrach, żeby JSX nie przyciął spacji */}
-          <Link href="/new">+ New Issue</Link>
+        <nav>
+          <Link href="/">Issues</Link> | <Link href="/new">New</Link>
         </nav>
-        <main>{children}</main>              {/* tu Next.js wstawia stronę bieżącego adresu */}
+        {children}
       </body>
     </html>
   );
 }
 ```
 
-Nad nagłówkiem „Issue Tracker” stoi pasek „Issues | + New Issue”. Drugi link prowadzi na razie do strony 404, bo `/new` nie ma jeszcze strony.
-
-Klamry wokół `" | "` są potrzebne, bo JSX przycina białe znaki na brzegach tekstu między znacznikami. Zapis bez klamer dałby linki sklejone z kreską bez spacji.
+Nad nagłówkiem „Issues” stoi pasek „Issues | New”, a karta przeglądarki dostaje tytuł „Issue Tracker” z obiektu `metadata`. Drugi link prowadzi na razie do strony 404, bo `/new` nie ma jeszcze strony. Pasek stoi poza `children`, więc każda trasa dostaje go bez własnego kodu. Znak `|` leży w tej samej linii co linki, więc JSX zachowuje spacje wokół niego.
 
 ## Layout w layoucie
 
@@ -43,24 +33,21 @@ Każdy katalog w `app/` może mieć własny `layout.jsx`. Layout z podkatalogu t
 Strony szczegółów zgłoszeń dostaną własną ramkę. Nowy plik `app/issue/layout.jsx` wygląda tak:
 
 ```jsx
-// app/issue/layout.jsx: utworzyć plik
-// Layout zagnieżdżony: renderuje się WEWNĄTRZ RootLayout i otacza każdą trasę /issue/*.
-// Pokazuje składanie layoutów: RootLayout > IssueLayout > strona.
+// app/issue/layout.jsx
+// Layout zagnieżdżony: obejmuje każdą trasę /issue/..., wewnątrz layoutu głównego
 import Link from "next/link";
 
 export default function IssueLayout({ children }) {
   return (
     <section>
-      <p>
-        <Link href="/">← Back to issues</Link>
-      </p>
+      <Link href="/">← Back to issues</Link>
       {children}
     </section>
   );
 }
 ```
 
-`IssueLayout` dokłada link „← Back to issues” nad każdą stroną w segmencie `issue`. Nie zwraca `<html>` ani `<body>`, bo te znaczniki ma już layout główny. Strona `/` tego linku nie dostanie, bo nie leży w katalogu `app/issue/`. Katalog nie ma jeszcze żadnej strony, więc adresy `/issue` i `/issue/1` kończą się stroną 404 pod paskiem nawigacji, bez linku powrotu. Layout otacza strony, więc w pustym katalogu nie ma czego otaczać.
+`IssueLayout` dokłada link „← Back to issues” nad każdą stroną w segmencie `issue`. Nie zwraca `<html>` ani `<body>`, bo te znaczniki ma już layout główny. Strona `/` tego linku nie dostanie, bo nie leży w katalogu `app/issue/`. Katalog nie ma jeszcze żadnej strony, więc adresy `/issue` i `/issue/1` kończą się stroną 404 pod paskiem nawigacji, bez linku powrotu. Layout otacza strony, więc w pustym katalogu nie ma czego otaczać. Link powrotu pojawi się dopiero razem z pierwszą stroną zgłoszenia.
 
 ## Częściowe renderowanie
 
@@ -70,11 +57,11 @@ Przy przejściu między stronami router porównuje dwa łańcuchy layoutów, sta
 
 To, że layout zachowuje stan, wynika z miejsca, w którym React ten stan trzyma. Jest nim **Fiber**, długowieczna struktura przypisana do komponentu na ekranie. Kumar zaznacza, że Fiber oprócz propsów i stanu zapisuje też pozycję komponentu w drzewie (*„The Fiber node also contains information about its position in the component tree”*). Uzgadnianie, czyli porównanie starego drzewa elementów z nowym, zostawia Fiber na miejscu, dopóki na tej pozycji stoi komponent tego samego typu.
 
-Na razie `app/issue/` nie ma strony, więc skutek widać dopiero w gotowej aplikacji, w której pod `app/issue/[id]/` stoi strona zgłoszenia `IssueDetailPage`. Przy przejściu z `/issue/1` na `/issue/2` `RootLayout` i `IssueLayout` stoją tam na tych samych pozycjach, więc ich Fibery zostają razem ze stanem. Strona zachowuje się inaczej, choć jej typ też się nie zmienia. Pole z `useState` w `IssueLayout` i drugie takie pole w `IssueDetailPage` dają po przejściu różny wynik. Pierwsze zachowuje wpisany tekst, drugie jest puste. Wynik zgadza się z założeniem, że router nadaje poddrzewu segmentu klucz z jego wartością, a inny klucz każe Reactowi zamontować stronę od nowa.
+Na razie `app/issue/` nie ma strony, więc skutek widać dopiero w gotowej aplikacji, w której pod `app/issue/[id]/` stoi strona zgłoszenia `IssuePage`. Przy przejściu z `/issue/1` na `/issue/2` `RootLayout` i `IssueLayout` stoją tam na tych samych pozycjach, więc ich Fibery zostają razem ze stanem. Strona zachowuje się inaczej, choć jej typ też się nie zmienia. Pole z `useState` w `IssueLayout` i drugie takie pole w `IssuePage` dają po przejściu różny wynik. Pierwsze zachowuje wpisany tekst, drugie jest puste. Wynik zgadza się z założeniem, że router nadaje poddrzewu segmentu klucz z jego wartością, a inny klucz każe Reactowi zamontować stronę od nowa.
 
-![Rysunek 3.3 — pole w układzie zgłoszeń po przejściu z `/issue/1` na `/issue/2`](../figures/out/rys_03_03.png)
+![Rysunek 3.3 — pola w układzie zgłoszeń i na stronie zgłoszenia po przejściu z `/issue/1` na `/issue/2`](../figures/out/rys_03_03.png)
 
-Na Rysunku 3.3 pole w `IssueLayout` zachowuje wpisane „abc” po przejściu na `/issue/2`. Pole tekstowe i link „Next issue →” dodano tylko na potrzeby zrzutu, gotowa aplikacja ich nie ma.
+Na Rysunku 3.3 pole w `IssueLayout` zachowuje wpisane „abc” po przejściu na `/issue/2`. Pole w `IssuePage`, w którym stało „xyz”, jest puste. Oba pola i link „Next issue →” dodano tylko na potrzeby zrzutu, gotowa aplikacja ich nie ma.
 
 Przy przejściu z `/issue/2` przez `/` z powrotem na `/issue/2` puste jest także pole w layoucie. Strona główna nie leży w katalogu `app/issue/`, więc po drodze `IssueLayout` zniknął z drzewa razem ze swoim Fiberem. <u>Stan layoutu przetrwa tylko te przejścia, w których layout ani na chwilę nie znika z drzewa</u>.
 
@@ -85,7 +72,7 @@ Przy przejściu z `/issue/2` przez `/` z powrotem na `/issue/2` puste jest takż
 flowchart LR
     subgraph K1["/issue/1 → /issue/2"]
         direction LR
-        A1["RootLayout<br/>zostaje"] --> B1["IssueLayout<br/>zostaje"] --> C1["IssueDetailPage<br/>montowana od nowa"]
+        A1["RootLayout<br/>zostaje"] --> B1["IssueLayout<br/>zostaje"] --> C1["IssuePage<br/>montowana od nowa"]
     end
     subgraph K2["/issue/2 → /"]
         direction LR
@@ -178,6 +165,16 @@ Mechanizm to zwykły klucz Reacta: zmiana `key` każe wyrzucić stare poddrzewo 
 Która nawigacja przebudowuje szablon, zależy od jego miejsca w drzewie. Szablon w katalogu `blog` powstaje od nowa przy przejściu z `/blog/first-post` na `/blog/second-post`, bo zmienił się segment pod nim. Szablon w korzeniu `app/` przy tym samym przejściu zostaje. Parametry po znaku `?` nie przebudowują żadnego szablonu. W `issuetracker` plik `app/issue/template.jsx` z polem wyszukiwania wyczyściłby to pole przy przejściu z `/issue/1` na `/issue/2`.
 
 <u>Layout wybiera się dla tego, co ma przetrwać nawigację, a szablon dla tego, co ma przy niej zacząć od zera</u>. Zamiana `layout.jsx` na `template.jsx` kosztuje cały stan ramki przy każdym przejściu, także ten, który miał zostać.
+
+## Zalety i koszty layoutów
+
+Layout daje ramkę, która powstaje raz i przeżywa nawigację razem ze swoim stanem. Z tej samej trwałości wynikają ograniczenia: layout nie widzi tego, co zmienia się między przejściami, i nie powinien niczego pilnować przy każdym przejściu.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Pasek nawigacji raz dla wszystkich stron (`RootLayout`) | Brak `searchParams` i bieżącej ścieżki w layoucie: wspólny layout nie renderuje się przy przejściu, więc wartości z adresu by się zestarzały | Ramka, która ma powstać od nowa przy każdym przejściu: `template.jsx` |
+| Wspólny layout nie renderuje się przy przejściu, więc zachowuje stan (pole w `IssueLayout` po przejściu z `/issue/1` na `/issue/2`) | Nie nadaje się do kontroli dostępu: sprawdzenie sesji w layoucie nie powtarza się przy nawigacji | Kontrola dostępu: na stronie, blisko danych, albo w `proxy.js` |
+| Layout zagnieżdżony obejmuje tylko trasy `/issue/...` (link powrotu) | Wolne dane w layoucie zatrzymują każdą stronę pod nim, a `loading.jsx` ich nie zastępuje | Dane jednej strony: pobrać w `page.jsx`; dane ramki: własna granica `<Suspense>` |
 
 > 💡 **Zapamiętaj:** <u>wspólny layout przy nawigacji nie wykonuje się ponownie</u>, dlatego zachowuje stan. Nie dostaje też `searchParams` i nie nadaje się do sprawdzania sesji. Layout zna tylko segmenty nad sobą, a aktywny segment poniżej odczytuje hook `useSelectedLayoutSegment`. Plik `template.jsx` ma budowę layoutu, ale przy każdej nawigacji powstaje od nowa.
 

@@ -48,13 +48,11 @@ import { initialIssues } from "../../data/issues";
 
 export default async function BrowsePage({ params }) {
   const { filter = [] } = await params;          // pod /browse filter to undefined, więc []
-  const [priority, status] = filter;             // np. ["high", "open"]
-  const issues = initialIssues.filter(
-    (i) => (!priority || i.priority === priority) && (!status || i.status === status)
-  );
+  const [priority] = filter;                      // pierwszy segment, np. "high"
+  const issues = initialIssues.filter((i) => !priority || i.priority === priority);
   return <p>{filter.join("/") || "all"}: {issues.length}</p>;
 }
-// → /browse → „all: 4”; /browse/high → „high: 2”; /browse/low/open → „low/open: 0”
+// → /browse → „all: 3”; /browse/high → „high: 1”; /browse/low/open → „low/open: 1”
 ```
 
-Wartość domyślna `= []` w destrukturyzacji usuwa jedyny przypadek bez tablicy, więc `join` działa także pod `/browse`.
+Wartość domyślna `= []` w destrukturyzacji usuwa jedyny przypadek bez tablicy, więc `join` działa także pod `/browse`. Dalsze segmenty, jak `open`, strona czyta jako część tablicy, ale ich nie używa.

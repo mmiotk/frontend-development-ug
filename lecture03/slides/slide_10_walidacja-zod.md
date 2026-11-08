@@ -1,10 +1,17 @@
 # Reguły walidacji zapisane w jednym schemacie
 
-## Od instrukcji `if` do opisu poprawnych danych
+## Ręczny `if` przepuszcza za krótki tytuł
 
-Formularz `/new` sprawdza na razie jeden warunek: `if (!title || title.trim() === "")`. Każda kolejna reguła, na przykład minimalna długość tytułu albo dozwolone wartości priorytetu, dopisałaby następny `if` z własnym komunikatem. Schwarzmüller w *React Key Concepts* pokazuje taki ręczny warunek w akcji formularza i zwraca z niego obiekt z komunikatem. Opisuje to jako typowe zastosowanie `useActionState`: walidację wartości z formularza i wyświetlenie komunikatu, gdy dane są niepoprawne.
+Formularz `/new` sprawdza na razie jeden warunek, zapisany w akcji dwoma liniami:
 
-Ręczne warunki opisują, jak sprawdzać dane. **Walidacja schematem** (*schema validation*) odwraca kierunek: opisuje, jak wyglądają dane poprawne, a sprawdzanie zostawia bibliotece. **Schemat** to obiekt, który mówi na przykład „tytuł jest napisem o długości od 3 do 100 znaków”. Ten sam schemat można przyłożyć do danych z formularza, z żądania HTTP albo z pliku. Reguły są wtedy zapisane raz i nie rozjeżdżają się między miejscami, które ich używają.
+```js
+  const title = formData.get("title").trim();
+  if (title === "") return { errors: { title: "Title must not be empty." } };
+```
+
+Pomiar na tej wersji: tytuł „ab” przechodzi, a na liście pojawia się wiersz „[medium] ab”. Warunek odrzuca tylko tytuł pusty. Każda kolejna reguła, na przykład minimalna długość albo dozwolone wartości priorytetu, dopisałaby następny `if` z własnym komunikatem. Schwarzmüller w *React Key Concepts* pokazuje taki ręczny warunek w akcji formularza i zwraca z niego obiekt z komunikatem. Opisuje to jako typowe zastosowanie `useActionState`: walidację wartości z formularza i wyświetlenie komunikatu, gdy dane są niepoprawne.
+
+Ręczne warunki opisują, jak sprawdzać dane. **Walidacja schematem** (*schema validation*) odwraca kierunek: opisuje, jak wyglądają dane poprawne, a sprawdzanie zostawia bibliotece. **Schemat** to obiekt, który mówi na przykład „tytuł jest napisem o długości co najmniej 3 znaków”. Ten sam schemat można przyłożyć do danych z formularza, z żądania HTTP albo z pliku. Reguły są wtedy zapisane raz i nie rozjeżdżają się między miejscami, które ich używają.
 
 Jedną z bibliotek tego typu w ekosystemie Reacta jest **Zod**. Jej strona zaczyna od typów TypeScriptu (*„TypeScript-first schema validation with static type inference”*), które w projekcie pisanym w JavaScripcie nie mają zastosowania. Zostaje druga połowa: schemat sprawdzany w czasie działania programu, w chwili, gdy przychodzą prawdziwe dane. Starszą biblioteką o tej samej roli jest Yup.
 
@@ -12,7 +19,7 @@ Jedną z bibliotek tego typu w ekosystemie Reacta jest **Zod**. Jej strona zaczy
 
 Zwykła funkcja walidująca odpowiada „tak” albo „nie” i zostawia dane takie, jakie były. Zod robi coś więcej. Dla danych poprawnych zwraca nowy obiekt zbudowany według schematu, a dla niepoprawnych opis tego, co się nie zgadza. Taki sposób pracy nazywa się **parsowaniem** (*parsing*): na wejściu są dane niepewnego pochodzenia, na wyjściu dane o znanym kształcie albo błąd. Stąd nazwy obu metod sprawdzających, `parse` i `safeParse`.
 
-Parsowanie zmienia to, gdzie w programie leży pewność. Kod przed wywołaniem schematu musi zakładać, że w tytule może być `null`, liczba albo trzy spacje. Kod po udanym wywołaniu dostaje napis o długości od 3 do 100 znaków i nie musi tego sprawdzać ponownie. Ta granica powinna leżeć jak najbliżej miejsca, w którym dane wchodzą do programu, czyli zaraz po odczycie `FormData`.
+Parsowanie zmienia to, gdzie w programie leży pewność. Kod przed wywołaniem schematu musi zakładać, że w tytule może być `null`, liczba albo trzy spacje. Kod po udanym wywołaniu dostaje napis o znanej długości i nie musi tego sprawdzać ponownie. Ta granica powinna leżeć jak najbliżej miejsca, w którym dane wchodzą do programu, czyli zaraz po odczycie `FormData`.
 
 ## Łańcuch reguł i jego kolejność
 
@@ -32,7 +39,7 @@ z.string().min(3).trim().safeParse("ab "); // → { success: true, data: "ab" }
 
 Ostatnia linia pokazuje, że kolejność w łańcuchu ma znaczenie. **`.trim()`** jest przekształceniem (dokumentacja Zod pokazuje je pod zdaniem *„To perform some simple string transforms”* z komentarzem *„trim whitespace”*) i zmienia napis dla wszystkich reguł stojących za nim. Postawione na końcu obcina spacje dopiero po sprawdzeniu długości, więc tytuł „ab ” przechodzi jako „ab”.
 
-Ręczny warunek z poprzedniej wersji akcji odrzucał tytuł z samych spacji, bo wywoływał `title.trim()`. Schemat bez `.trim()` tego nie robi: `z.string().min(3)` przepuszcza trzy spacje, bo to trzy znaki. Przejście z `if` na schemat zgubiłoby więc regułę bez żadnego komunikatu. <u>Przekształcenie stoi w łańcuchu przed regułami, które mają widzieć jego wynik</u>.
+Ręczny warunek z poprzedniej wersji akcji odrzucał tytuł z samych spacji, bo wywoływał `trim()`. Schemat bez `.trim()` tego nie robi: `z.string().min(3)` przepuszcza trzy spacje, bo to trzy znaki. Przejście z `if` na schemat zgubiłoby więc regułę bez żadnego komunikatu. <u>Przekształcenie stoi w łańcuchu przed regułami, które mają widzieć jego wynik</u>.
 
 ## Instalacja w wersji 3
 
@@ -42,32 +49,44 @@ npm install -E zod@3.25.76
 
 Samo `npm install zod` instaluje najnowsze wydanie, czyli Zod 4. Flaga **`-E`** (*save exact*) zapisuje w `package.json` dokładny numer bez znaku `^`. Znak `^` pozwala menedżerowi pakietów przejść na dowolne nowsze wydanie z tą samą pierwszą cyfrą, a dokładny numer blokuje także to. Projekt referencyjny ma ten wpis w `package.json` od początku.
 
-Pierwsza cyfra numeru to **wersja główna** (*major*). Według konwencji numerowania semantycznego jej zmiana zapowiada zmiany niezgodne wstecz, czyli kod napisany dla starej wersji może przestać działać. Zod 4 zmienia trzy elementy API, których używa ten projekt albo jego najbliższe rozszerzenia. Metoda `.flatten()` na błędzie jest przestarzała (dokumentacja Zod, *Migration guide*: *„The `.flatten()` method on `ZodError` has also been deprecated”*), a jej miejsce zajmuje funkcja `z.flattenError(result.error)`. Opcja `errorMap` w `z.enum` zmieniła nazwę na `error`. Sprawdzenie adresu e-mail `z.string().email()` zastępuje funkcja `z.email()`. Kod w tym slajdzie używa zapisu z Zod 3.
+Pierwsza cyfra numeru to **wersja główna** (*major*). Według konwencji numerowania semantycznego jej zmiana zapowiada zmiany niezgodne wstecz, czyli kod napisany dla starej wersji może przestać działać. Zod 4 zmienia trzy elementy API, których używa ten projekt albo jego warianty. Metoda `.flatten()` na błędzie jest przestarzała (dokumentacja Zod, *Migration guide*: *„The `.flatten()` method on `ZodError` has also been deprecated”*), a jej miejsce zajmuje funkcja `z.flattenError(result.error)`. Opcja `errorMap` w `z.enum` zmieniła nazwę na `error`. Sprawdzenie adresu e-mail `z.string().email()` zastępuje funkcja `z.email()`. Kod w tym slajdzie używa zapisu z Zod 3.
 
 ## Schemat zgłoszenia
 
-Nowy plik `app/lib/schema.js`:
+Plik `app/lib/schema.js` zbiera reguły z formularza w jednym miejscu:
 
 ```js
-// app/lib/schema.js: utworzyć plik
-// Schemat walidacji nowego zgłoszenia.
-// Leży poza katalogiem trasy, więc może go zaimportować każdy moduł aplikacji.
+// app/lib/schema.js
 import { z } from "zod";
 
 export const issueSchema = z.object({
-  title: z
-    .string() // wymaga napisu: null, liczba ani undefined nie przejdą
-    .trim() // obcina spacje z brzegów, zanim zadziałają reguły długości
-    .min(3, "Title must be at least 3 characters.") // drugi argument: komunikat dla użytkownika
-    .max(100, "Title is too long (max 100 characters)."),
-  priority: z.enum(["low", "medium", "high"], {
-    // tylko jedna z trzech wartości; errorMap to zapis z Zod 3
-    errorMap: () => ({ message: "Priority must be low, medium, or high." }),
-  }),
+  title: z.string().trim().min(3, "Title must be at least 3 characters."), // trim przed min
+  priority: z.enum(["low", "medium", "high"]),
 });
 ```
 
-**`z.object({ … })`** opisuje kształt obiektu: jakie klucze ma mieć i jaki schemat obowiązuje każdy z nich. Komunikaty pisze się samemu, więc użytkownik czyta zdanie z aplikacji zamiast technicznego opisu typu. Funkcja strzałkowa w `errorMap` zwraca obiekt, dlatego jego klamry stoją w nawiasach okrągłych; bez nich zostałyby odczytane jako ciało funkcji. Plik leży w `app/lib/`, poza katalogami tras, więc schemat może zaimportować każdy formularz i każdy moduł serwera.
+**`z.object({ … })`** opisuje kształt obiektu: jakie klucze ma mieć i jaki schemat obowiązuje każdy z nich. `z.string()` wymaga napisu, więc `null`, liczba ani `undefined` nie przejdą. `.trim()` obcina spacje z brzegów, zanim zadziała reguła długości, a drugi argument `.min()` to komunikat dla użytkownika. `z.enum` przepuszcza tylko jedną z trzech wartości. Plik leży w `app/lib/`, poza katalogami tras, więc schemat może zaimportować każdy formularz i każdy moduł serwera.
+
+Schemat z demo jest najkrótszy z możliwych. Dwie typowe rozbudowy to górna granica długości i własny komunikat dla priorytetu:
+
+```js
+// Przykład spoza demo: wariant schematu z górną granicą i własnym komunikatem (Zod 3).
+const strictSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(3, "Title must be at least 3 characters.")
+    .max(100, "Title is too long (max 100 characters)."),
+  priority: z.enum(["low", "medium", "high"], {
+    // errorMap to zapis z Zod 3; funkcja strzałkowa zwraca obiekt, więc jego klamry stoją w nawiasach
+    errorMap: () => ({ message: "Priority must be low, medium, or high." }),
+  }),
+});
+
+strictSchema.safeParse({ title: "x".repeat(101), priority: "low" }).error.flatten().fieldErrors;
+// → { title: ["Title is too long (max 100 characters)."] }
+issueSchema.safeParse({ title: "x".repeat(101), priority: "low" }).success; // → true (schemat z demo nie ma .max())
+```
 
 ## `parse` rzuca, `safeParse` zwraca
 
@@ -92,7 +111,7 @@ Dokumentacja Zod opisuje pierwszą metodę tak, że dla danych poprawnych zwraca
 >
 > — dokumentacja Zod, *Basic usage*
 
-Wybór ma bezpośredni skutek w akcji z `useActionState`. Wyjątek w akcji przejmuje najbliższa granica błędów, a za krótki tytuł to sytuacja spodziewana, którą użytkownik poprawi sam. Gdyby akcja z demo wywołała `parse` zamiast `safeParse`, tytuł „ab” kończyłby się na `/new` domyślnym ekranem „This page couldn’t load”, a w konsoli przeglądarki pojawiłby się nieobsłużony `ZodError`. <u>W akcji formularza używa się `safeParse()`, a błędy zwraca jako stan</u>.
+Wybór ma bezpośredni skutek w akcji z `useActionState`. Wyjątek w akcji przejmuje najbliższa granica błędów, a za krótki tytuł to sytuacja spodziewana, którą użytkownik poprawi sam. W kopii projektu akcja z `parse` zamiast `safeParse` kończyła tytuł „ab” domyślnym ekranem „This page couldn’t load” z przyciskami „Reload” i „Back”, a w konsoli pojawiał się nieobsłużony `ZodError`. <u>W akcji formularza używa się `safeParse()`, a błędy zwraca jako stan</u>.
 
 ## Błędy pogrupowane według pól
 
@@ -103,113 +122,81 @@ const result = issueSchema.safeParse({ title: "ab", priority: "urgent" });
 
 result.error.flatten().fieldErrors;
 // → { title: ["Title must be at least 3 characters."],
-//   priority: ["Priority must be low, medium, or high."] }
+//   priority: ["Invalid enum value. Expected 'low' | 'medium' | 'high', received 'urgent'"] }
 
 issueSchema.safeParse({ title: "abc", priority: "x" }).error.flatten().fieldErrors;
 // → { priority: [...] } (pole poprawne w ogóle nie występuje)
+
+strictSchema.safeParse({ title: "ab", priority: "urgent" }).error.flatten().fieldErrors.priority;
+// → ["Priority must be low, medium, or high."] (wariant z errorMap)
 ```
 
-Kluczem jest nazwa pola, a wartością tablica, bo jedno pole może złamać kilka reguł naraz. Pole poprawne nie ma w wyniku klucza, więc JSX musi sprawdzić, czy klucz istnieje, zanim weźmie pierwszy komunikat.
+Kluczem jest nazwa pola, a wartością tablica, bo jedno pole może złamać kilka reguł naraz. Pole poprawne nie ma w wyniku klucza, więc JSX czyta je przez `?.`. Priorytet z listy nie może być zły, bo przeglądarka wysyła tylko jedną z trzech opcji, więc komunikat Zod dla `priority` pojawia się dopiero przy żądaniu spoza formularza. Dlatego demo zostaje przy komunikacie domyślnym.
 
 ## Akcja ze schematem
 
-W `app/new/page.jsx` zmienia się pięć miejsc: import schematu, stan początkowy, treść `submitIssue`, komunikaty pod polami i wartość domyślna listy priorytetu. Dotychczasowy akapit `{state.error && …}` znika, bo stan ma teraz pole `errors` zamiast `error`, a jego miejsce zajmują dwie linie JSX, po jednej pod każdym polem. Zapis `state.errors?.title` używa operatora **`?.`** (*optional chaining*): gdy `state.errors` ma wartość `null`, wyrażenie daje `undefined` i nie rzuca wyjątku. Pozostałe linie zostają takie jak w poprzedniej wersji. Akcja podstawia domyślny priorytet operatorem `||`, który zwraca prawą stronę, gdy lewa jest fałszywa: `null || "medium"` daje `"medium"`, podobnie pusty napis.
+Plik `app/new/page.jsx` przechodzi z ręcznego warunku na schemat. Dochodzi import `issueSchema`, a trzy linie z `trim()` i `if` zastępuje `safeParse`:
 
 ```jsx
-// app/new/page.jsx: zastąpić całą zawartość
-// Formularz nowego zgłoszenia: wynik akcji przechowuje useActionState.
-// "use client": hook i akcja działają w przeglądarce,
-// a addIssue zapisuje do kopii magazynu w przeglądarce.
+// app/new/page.jsx
 "use client";
-import { useActionState } from "react"; // React 19
-import Link from "next/link";
+import { useActionState } from "react";
 import { issueSchema } from "../lib/schema";
 import { addIssue } from "../lib/store";
-import SubmitButton from "../components/SubmitButton";
 
-// errors zamiast error: komunikatów może być kilka, po zestawie na pole
-const INITIAL_STATE = { success: false, errors: null, issue: null };
-
-// Sygnatura: (prevState, formData), prevState wstawia useActionState.
-// prevState = wynik poprzedniego wywołania (albo INITIAL_STATE przy pierwszym).
-// Bez async i opóźnienia: sprawdzanie schematem jest synchroniczne.
-function submitIssue(prevState, formData) {
-  // FormData powstaje automatycznie ze wszystkich pól z atrybutem name.
-  const raw = {
+// akcja dostaje poprzedni stan i dane formularza, a zwraca nowy stan
+async function submitIssue(prevState, formData) {
+  await new Promise((r) => setTimeout(r, 600)); // udajemy zapis na serwerze: 0,6 s
+  const result = issueSchema.safeParse({
     title: formData.get("title"),
-    priority: formData.get("priority") || "medium", // brak pola: get() daje null, || podstawia "medium"
-  };
+    priority: formData.get("priority"),
+  });
+  if (!result.success) return { errors: result.error.flatten().fieldErrors };
 
-  const result = issueSchema.safeParse(raw);
-
-  if (!result.success) {
-    return {
-      success: false,
-      errors: result.error.flatten().fieldErrors, // { title: [...], priority: [...] }
-      issue: null,
-    };
-  }
-
-  const issue = addIssue(result.data); // zapis danych sprawdzonych, nie surowych
-  return { success: true, errors: null, issue };
+  const issue = addIssue(result.data); // zapis danych po walidacji
+  return { issue };
 }
 
 export default function NewIssuePage() {
-  // useActionState zwraca [state, formAction, isPending]; flaga isPending jest teraz w SubmitButton
-  const [state, formAction] = useActionState(submitIssue, INITIAL_STATE);
+  const [state, formAction, isPending] = useActionState(submitIssue, null);
 
   return (
-    <div>
-      <h1>New Issue</h1>
-
-      {state.success && (
-        <p>
-          Issue #{state.issue.id} added!{" "}
-          <Link href="/">View all issues</Link>
-        </p>
-      )}
-
+    <main>
+      <h1>New issue</h1>
+      {state?.issue && <p>Issue #{state.issue.id} added.</p>}
       <form action={formAction}>
-        <div>
-          {/* htmlFor łączy etykietę z polem o id="title" */}
-          <label htmlFor="title">Title</label>
-          <input id="title" name="title" type="text" />
-          {/* pod polem tytułu; ?. daje undefined, gdy errors jest null */}
-          {state.errors?.title && <p>{state.errors.title[0]}</p>}
-        </div>
-        <div>
-          <label htmlFor="priority">Priority</label>
-          <select id="priority" name="priority" defaultValue="medium">
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
+        <p>Title: <input name="title" /> {state?.errors?.title}</p>
+        <p>
+          Priority:{" "}
+          <select name="priority" defaultValue="medium">
+            <option value="low">low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
           </select>
-          {/* pod listą priorytetu */}
-          {state.errors?.priority && <p>{state.errors.priority[0]}</p>}
-        </div>
-        <SubmitButton /> {/* sam czyta stan oczekiwania, bez propsów */}
+        </p>
+        <button disabled={isPending}>Add issue</button>
       </form>
-    </div>
+    </main>
   );
 }
 ```
 
-Pusty tytuł i „ab” dają pod polem komunikat „Title must be at least 3 characters.”. Tytuł „abc” dopisuje zgłoszenie i pokazuje komunikat o sukcesie z jego numerem.
+Pomiar: pusty tytuł daje po 0,2 s wyłączony przycisk, a potem komunikat „Title must be at least 3 characters.” obok pola. Tytuł „  ab  ” daje ten sam komunikat, choć w poprzedniej wersji „ab” przechodził. Tytuł „Search returns nothing” z priorytetem „high” kończy się komunikatem „Issue #4 added.” i pustym polem. Komunikat to tablica z jednym napisem, a JSX wypisuje ją wprost, bo tablica napisów renderuje się jako ich ciąg.
 
-![Rysunek 3.20 — komunikat Zod pod polem tytułu po wysłaniu „ab”](../figures/out/rys_03_20.png)
+![Rysunek 3.20 — komunikat Zod obok pola tytułu po wysłaniu „  ab  ”](../figures/out/rys_03_20.png)
 
-Na Rysunku 3.20 komunikat stoi dokładnie tam, gdzie `state.errors.title[0]`, pod polem tytułu. Pole jest puste, bo React po akcji czyści formularz, a ekran błędu się nie pojawia.
+Na Rysunku 3.20 komunikat stoi tam, gdzie `state?.errors?.title`, obok pola tytułu. Pole jest puste, bo React po akcji czyści formularz, a ekran błędu się nie pojawia.
 
 ## Rysunek 3.21 — od `FormData` do komunikatu przy polu
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
 flowchart LR
-    F["FormData<br/>title, priority"] --> R["obiekt raw"]
-    R --> S{"issueSchema<br/>.safeParse(raw)"}
+    F["FormData<br/>title, priority"] --> R["obiekt z dwoma polami"]
+    R --> S{"issueSchema<br/>.safeParse(...)"}
     S -->|"success: true"| D["result.data<br/>→ addIssue"]
     S -->|"success: false"| E["flatten()<br/>.fieldErrors"]
-    E --> U["state.errors.title[0]<br/>pod polem Title"]
+    E --> U["state.errors.title<br/>obok pola Title"]
 ```
 
 Na Rysunku 3.21 strzałki idą od danych formularza do tego, co widzi użytkownik. Romb to granica parsowania: przed nim dane są niepewne, za nim albo sprawdzone, albo zamienione na komunikaty. Górna gałąź zapisuje zgłoszenie i dostaje obiekt zbudowany przez schemat. Dolna kończy się zwykłym obiektem stanu, więc ekran błędu w ogóle się nie pojawia.
@@ -228,16 +215,17 @@ formData.set("extra", "1"); // pole, którego schemat nie zna
 
 Object.fromEntries(formData); // → { title: "Bug", priority: "high", extra: "1" }
 issueSchema.safeParse(Object.fromEntries(formData)).data; // → { title: "Bug", priority: "high" }
+issueSchema.safeParse({ title: "  abc  ", priority: "low" }).data; // → { title: "abc", priority: "low" }
 ```
 
-Akcja demo buduje `raw` ręcznie z dwóch pól, więc nadmiarowych kluczy tu nie ma. Zapis `result.data` chroni jednak przed obydwoma przypadkami naraz: do magazynu trafia tytuł już obcięty ze spacji i tylko klucze opisane w schemacie.
+Akcja demo odczytuje dwa pola wprost, więc nadmiarowych kluczy tu nie ma. Zapis `result.data` chroni jednak przed obydwoma przypadkami naraz: do magazynu trafia tytuł już obcięty ze spacji i tylko klucze opisane w schemacie.
 
 ## Te same reguły bez biblioteki i w Yup
 
 Dwie reguły zgłoszenia da się zapisać także bez biblioteki albo w starszej bibliotece schematów. Porównanie pokazuje, za co płaci każdy wariant. **Ręczna funkcja** nie wymaga żadnej paczki:
 
 ```js
-// Przykład spoza projektu: walidacja bez biblioteki zwraca błędy, a danych nie zmienia.
+// Przykład spoza demo: walidacja bez biblioteki zwraca błędy, a danych nie zmienia.
 function checkIssue(raw) {
   const errors = {};
   if (typeof raw.title !== "string" || raw.title.trim().length < 3) {
@@ -259,7 +247,7 @@ Pusty obiekt oznacza brak błędów, ale tytuł dalej ma spacje na brzegach. Fun
 **Yup** zapisuje reguły schematem, podobnie jak Zod. Barklund w *React in Depth* wymienia go w grupie bibliotek do zarządzania formularzami, obok Formika i React Hook Form. Różnice wychodzą dopiero przy uruchomieniu (Yup 1.7.1):
 
 ```js
-// Przykład spoza projektu: schemat zgłoszenia w Yup.
+// Przykład spoza demo: schemat zgłoszenia w Yup.
 import * as yup from "yup";
 
 const schema = yup.object({
@@ -272,9 +260,7 @@ console.log(await schema.validate({ title: "  abc  ", priority: "low", extra: "1
 console.log(schema.cast({ title: 5, priority: "low" }));                                // → { priority: 'low', title: '5' }
 ```
 
-Metoda `validate` zwraca Promise, więc synchroniczna akcja musiałaby użyć jej wariantu `validateSync`. Klucz `extra`, którego schemat nie zna, zostaje w wyniku. Liczbę 5 Yup zamienia na napis „5”, a Zod tę samą wartość odrzuca komunikatem „Expected string, received number”. Yup domyślnie przerywa też na pierwszym błędzie: dla tytułu „ab” i priorytetu „urgent” zwraca tylko komunikat o priorytecie, a oba dopiero z opcją `abortEarly: false`.
-
-Obie biblioteki kosztują zależność w `package.json`. W zamian reguła, która przekształca wartość, i reguła, która ją sprawdza, stoją w jednym obiekcie, a wynik parsowania jest gotowy do zapisu. Między Yup a Zod rozstrzygają domyślne zachowania: Yup zamienia typy i zostawia nieznane klucze, a Zod odrzuca zły typ i usuwa klucze spoza schematu.
+Metoda `validate` zwraca Promise, więc synchroniczna akcja musiałaby użyć jej wariantu `validateSync`. Klucz `extra`, którego schemat nie zna, zostaje w wyniku. Liczbę 5 Yup zamienia na napis „5”, a Zod tę samą wartość odrzuca komunikatem „Expected string, received number”. Yup domyślnie przerywa też na pierwszym błędzie: dla tytułu „ab” i priorytetu „urgent” zwraca tylko komunikat o priorytecie, a oba dopiero z opcją `abortEarly: false`. Między Yup a Zod rozstrzygają domyślne zachowania: Yup zamienia typy i zostawia nieznane klucze, a Zod odrzuca zły typ i usuwa klucze spoza schematu.
 
 ## Granica zaufania: przeglądarka i serwer
 
@@ -291,6 +277,7 @@ Schemat w przeglądarce ma inne zadanie: daje użytkownikowi odpowiedź natychmi
 Reguły przy polach widzą tylko własną wartość. Warunek, który łączy dwa pola, na przykład „data końcowa nie wcześniej niż początkowa”, dopisuje się do całego obiektu metodą **`.refine()`**. Dostaje ona sparsowany obiekt i zwraca `true`, gdy dane są poprawne. Opcja `path` wskazuje pole, pod którym ma się pojawić komunikat:
 
 ```js
+// Przykład spoza demo: reguła łącząca dwa pola.
 const range = z
   .object({ from: z.number(), to: z.number() })
   .refine((r) => r.from <= r.to, {
@@ -312,6 +299,7 @@ Druga próba pokazuje kolejność. Funkcja z `.refine()` dostaje obiekt dopiero 
 Pole, które nie dotarło w `FormData`, ma wartość `null`, a pole pominięte w obiekcie wartość `undefined`. Zod 3 traktuje oba przypadki jako zły typ i bez dodatkowych opcji zwraca techniczny opis po angielsku. Konstruktor `z.string()` przyjmuje dwa własne komunikaty:
 
 ```js
+// Przykład spoza demo: własne komunikaty dla brakującej wartości.
 const title = z.string({
   required_error: "Title is missing", // gdy wartość to undefined
   invalid_type_error: "Title must be text", // gdy wartość ma inny typ, także null
@@ -322,7 +310,17 @@ title.safeParse(null).error.issues[0].message;      // → "Title must be text"
 z.string().safeParse(null).error.issues[0].message; // → "Expected string, received null"
 ```
 
-Rozróżnienie ma znaczenie dla formularzy. `formData.get("title")` dla pola bez atrybutu `name` zwraca `null`, więc zadziała `invalid_type_error`, a nie `required_error`. Schemat zgłoszenia nie ustawia żadnego z nich, dlatego po utracie atrybutu `name` pod polem zamiast „Title must be at least 3 characters.” pojawi się „Expected string, received null”. Komunikat o typie przy polu tekstowym oznacza, że wartość w ogóle nie przyszła z formularza.
+Rozróżnienie ma znaczenie dla formularzy. `formData.get("title")` dla pola bez atrybutu `name` zwraca `null`, więc zadziała `invalid_type_error`, a nie `required_error`. Schemat zgłoszenia nie ustawia żadnego z nich, dlatego po utracie atrybutu `name` obok pola zamiast „Title must be at least 3 characters.” pojawi się „Expected string, received null”. Komunikat o typie przy polu tekstowym oznacza, że wartość w ogóle nie przyszła z formularza.
+
+## Zalety i koszty walidacji schematem
+
+Schemat zastępuje rozproszone warunki jednym opisem, a w zamian wymaga dodatkowej paczki i znajomości jej domyślnych zachowań. Dobrze działa tam, gdzie reguł jest kilka i mają się powtarzać w kilku miejscach.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Reguły w jednym opisie; „  ab  ” jest odrzucone, choć ręczny `if` przepuszczał „ab” (pomiar) | Dodatkowa paczka w `package.json` i wersja główna do pilnowania (Zod 3 albo 4) | Jedno pole i jeden warunek: zwykły `if` |
+| `safeParse` zwraca błędy według pól, a `result.data` jest już przycięte (pomiar: „  abc  ” zapisane jako „abc”) | Kolejność łańcucha ma znaczenie: `.trim()` przed `.min()` | Dane, które mają tylko przejść dalej bez zmian: funkcja `checkIssue` zwracająca błędy |
+| Ten sam plik schematu obsługuje akcję i każdą bibliotekę formularzy | Walidacja w przeglądarce nie chroni danych na serwerze: ten sam schemat trzeba przyłożyć tam jeszcze raz | Schemat w Yup, gdy projekt już go ma: inne domyślne zachowania (zamiana typów, nieznane klucze zostają) |
 
 > 💡 **Zapamiętaj:** schemat Zod parsuje dane: zwraca nowy obiekt o znanym kształcie albo opis błędów, a reguły sprawdza w kolejności łańcucha, więc `.trim()` stoi przed `.min()`. W akcji formularza używa się `safeParse()` i zapisuje `result.data`. Walidacja chroni dane dopiero po stronie serwera.
 

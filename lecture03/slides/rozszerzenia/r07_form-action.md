@@ -7,6 +7,7 @@ Powrót: [`slide_07_form-action.md`](../slide_07_form-action.md)
 Formularz może też mieć więcej niż jedną akcję. Przycisk z atrybutem `formAction` nadpisuje akcję całego formularza, więc „Submit” i „Save draft” mogą wywołać dwie różne funkcje z tymi samymi polami. Demo tego nie używa:
 
 ```jsx
+{/* Przykład spoza demo: dwa przyciski, dwie akcje */}
 <form action={submitIssue}>
   <input name="title" />
   <button type="submit">Submit</button>
@@ -26,6 +27,7 @@ Gdy oba przyciski robią to samo i różnią się jednym parametrem, wystarczy a
 Przykład spoza projektu zastępuje listę priorytetów dwoma przyciskami:
 
 ```jsx
+{/* Przykład spoza demo: dwa przyciski z różnym priority */}
 <form action={action}>
   <input name="title" />
   {/* para priority=medium albo priority=high, zależnie od klikniętego przycisku */}

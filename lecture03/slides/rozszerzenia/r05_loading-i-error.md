@@ -4,22 +4,21 @@ Powrót: [`slide_05_loading-i-error.md`](../slide_05_loading-i-error.md)
 
 ## Rozszerzenie: ekran ładowania na kształt strony
 
-Napis „Loading issue...” zajmuje jedną linię. Gotowa strona ma nagłówek i dwa akapity, więc w chwili podmiany treść pod linkiem powrotu nagle rośnie. Dokumentacja `loading.js` proponuje w miejsce napisu szkielet albo „mały, ale znaczący fragment przyszłego ekranu” (*„a small but meaningful part of future screens”*). **Szkielet** (*skeleton*) to ekran ładowania o kształcie docelowej strony, ale bez danych. Kształt ma znaczenie z powodu miary, którą Bugl omawia przy czasie ładowania. **Skumulowane przesunięcie układu** (*Cumulative Layout Shift*, CLS) mierzy stabilność wizualną aplikacji. Zgłasza przy tym nieoczekiwany ruch na stronie podczas ładowania (*„reporting unexpected movement on the page during loading”*).
+Napis „Loading issue...” zajmuje jedną linię. Gotowa strona ma nagłówek i akapit, więc w chwili podmiany treść pod linkiem powrotu nagle rośnie. Dokumentacja `loading.js` proponuje w miejsce napisu szkielet albo „mały, ale znaczący fragment przyszłego ekranu” (*„a small but meaningful part of future screens”*). **Szkielet** (*skeleton*) to ekran ładowania o kształcie docelowej strony, ale bez danych. Kształt ma znaczenie z powodu miary, którą Bugl omawia przy czasie ładowania. **Skumulowane przesunięcie układu** (*Cumulative Layout Shift*, CLS) mierzy stabilność wizualną aplikacji. Zgłasza przy tym nieoczekiwany ruch na stronie podczas ładowania (*„reporting unexpected movement on the page during loading”*).
 
 ```jsx
-// Przykład spoza demo: szkielet o tej samej strukturze co IssueDetailPage.
-export default function IssueLoading() {
+// Przykład spoza demo: szkielet o tej samej strukturze co IssuePage.
+export default function Loading() {
   return (
     <article>
       <h1>#… Loading issue...</h1>
       <p>Priority: …</p>
-      <p>Status: …</p>
     </article>
   );
 }
 ```
 
-Szkielet ma granicę wynikającą z API. Według dokumentacji komponenty z `loading.js` nie przyjmują żadnych parametrów. `IssueLoading` nie zna więc numeru z adresu i nie pokaże „#2” przed nadejściem danych. Odtworzyć da się tylko to, co wspólne dla wszystkich zgłoszeń.
+Szkielet ma granicę wynikającą z API. Według dokumentacji komponenty z `loading.js` nie przyjmują żadnych parametrów. `Loading` nie zna więc numeru z adresu i nie pokaże „#2” przed nadejściem danych. Odtworzyć da się tylko to, co wspólne dla wszystkich zgłoszeń.
 
 ## Rozszerzenie: granica dla fragmentu strony
 
@@ -42,11 +41,11 @@ export default async function Comments({ issueId }) {
   throw new Error(`Comments for #${issueId} failed`);
 }
 
-// app/issue/[id]/page.jsx, w <article> pod akapitem ze statusem:
+// app/issue/[id]/page.jsx: dodać importy obu komponentów, a w <article> pod akapitem z priorytetem:
 <CommentsBoundary>
   <Comments issueId={issue.id} />
 </CommentsBoundary>
-// → /issue/2: „#2 — Page loads slowly on mobile”, „Priority: medium”, „Status: open”, „Comments unavailable. Try again”
+// → /issue/2: „#2 Page loads slowly”, „Priority: medium”, „Comments unavailable. Try again”
 ```
 
-Granica jest komponentem klienckim, a `Comments` w środku zostaje komponentem serwerowym, tak jak `IssueDetailPage` wewnątrz granicy z `error.jsx`.
+Granica jest komponentem klienckim, a `Comments` w środku zostaje komponentem serwerowym, tak jak `IssuePage` wewnątrz granicy z `error.jsx`.

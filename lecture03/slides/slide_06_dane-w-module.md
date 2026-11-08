@@ -1,8 +1,8 @@
 # Dane, które przetrwają przejście między stronami
 
-## Po co osobny magazyn
+## Zgłoszenie, które nie ma gdzie zostać
 
-Trasy aplikacji są gotowe: lista, strona zgłoszenia, ekran ładowania i ekran błędu. Formularz nowego zgłoszenia będzie musiał gdzieś zapisać dane, a lista będzie musiała je potem odczytać. Tablica `initialIssues` się do tego nie nadaje, bo to stałe dane startowe. Prawdziwa aplikacja zapisałaby zgłoszenie w bazie danych przez serwer. Demo używa prostszego rozwiązania: **magazynu** (*store*) w zwykłym module JavaScriptu.
+Trasy aplikacji są gotowe: lista, strona zgłoszenia, ekran ładowania i ekran błędu. Lista czyta jednak stałą tablicę `initialIssues` i pokazuje zawsze te same trzy zgłoszenia. Formularz nowego zgłoszenia nie ma dokąd zapisać czwartego, i lista nie ma skąd go odczytać. Zapis do `initialIssues` odpada, bo to dane startowe, które mają zostać bez zmian. Prawdziwa aplikacja zapisałaby zgłoszenie w bazie danych przez serwer. Demo używa prostszego rozwiązania: **magazynu** (*store*) w zwykłym module JavaScriptu.
 
 Taki magazyn opiera się na dwóch regułach modułów ES: kiedy wykonuje się kod modułu i co dostaje plik, który coś z niego importuje.
 
@@ -16,7 +16,7 @@ Dokumentacja MDN formułuje pierwszą regułę tak:
 >
 > — MDN Web Docs, *JavaScript modules*
 
-Reguła dotyczy każdego importu, nie tylko znaczników `<script>`. Trzy małe pliki pokazują ją w Node.js:
+Reguła dotyczy każdego importu, także poza znacznikami `<script>`. Trzy małe pliki pokazują ją w Node.js:
 
 ```js
 // Przykład spoza demo: trzy pliki Node.js.
@@ -71,40 +71,37 @@ Z obu reguł wynika budowa magazynu. Zmienne leżą w module i nie są eksportow
 Magazyn dopisuje elementy rozwinięciem tablicy, które daje nową tablicę. Numery nadaje operatorem `++` w wersji przyrostkowej:
 
 ```js
-let nextId = 5;
-const id = nextId++;          // id = 5: najpierw odczyt, potem zwiększenie; nextId = 6
+// Przykład spoza demo: wersja przyrostkowa operatora ++
+let nextId = 4;
+const id = nextId++;          // id = 4: najpierw odczyt, potem zwiększenie; nextId = 5
 ```
 
-Zapis przyrostkowy `nextId++` zwraca wartość sprzed zwiększenia, więc pierwsze nowe zgłoszenie dostanie numer 5, a licznik przejdzie na 6. Zapis przedrostkowy `++nextId` zwróciłby od razu 6 i numer 5 nigdy by nie powstał.
+Zapis przyrostkowy `nextId++` zwraca wartość sprzed zwiększenia, więc pierwsze nowe zgłoszenie dostanie numer 4, a licznik przejdzie na 5. Zapis przedrostkowy `++nextId` zwróciłby od razu 5 i numer 4 nigdy by nie powstał.
 
 ## Magazyn `store.js`
 
 Nowy plik `app/lib/store.js` wygląda tak:
 
 ```js
-// app/lib/store.js: utworzyć plik
-// Magazyn tylko na potrzeby demo: zmienna tablica na poziomie modułu.
-// Przetrwa nawigację po stronie klienta (moduł zostaje w pamięci karty).
-// Znika po przeładowaniu strony albo restarcie serwera.
-// Prawdziwa trwałość: serwer + baza danych.
-import { initialIssues } from "../data/issues.js";
+// app/lib/store.js
+// Magazyn w module: jedna tablica na kartę przeglądarki, znika po przeładowaniu
+import { initialIssues } from "../data/issues";
 
-let _issues = [...initialIssues];          // kopia: initialIssues zostaje nietknięte
-let _nextId = initialIssues.length + 1;    // 5, bo zgłoszeń startowych jest cztery
+let issues = [...initialIssues]; // kopia: dane startowe zostają bez zmian
+let nextId = issues.length + 1; // 4, bo zgłoszenia startowe są trzy
 
-// Podkreślnik = umowa „prywatne dla modułu”; zmienne nie są eksportowane.
 export function getIssues() {
-  return _issues;                          // bieżąca tablica
+  return issues;
 }
 
 export function addIssue({ title, priority }) {
-  const issue = { id: _nextId++, title, priority, status: "open" }; // ++ po użyciu
-  _issues = [..._issues, issue];           // NOWA tablica zamiast push do starej
-  return issue;                            // formularz pokaże numer zgłoszenia
+  const issue = { id: nextId++, title, priority }; // numer i od razu zwiększenie licznika
+  issues = [...issues, issue]; // nowa tablica zamiast push
+  return issue;
 }
 ```
 
-Linijka `_issues = [..._issues, issue]` buduje nową tablicę i podmienia nią starą. Wywołanie `addIssue({ title: "New", priority: "high" })` zwraca `{ id: 5, title: "New", priority: "high", status: "open" }`. Tablica pobrana wcześniej przez `getIssues()` ma dalej cztery elementy, a nowe wywołanie zwraca pięć. Kto trzyma starą tablicę, zostaje ze stanem sprzed zmiany, jak przy stanie Reacta.
+Linijka `issues = [...issues, issue]` buduje nową tablicę i podmienia nią starą. Wywołanie `addIssue({ title: "New", priority: "high" })` zwraca `{ id: 4, title: "New", priority: "high" }`. Tablica pobrana wcześniej przez `getIssues()` ma dalej trzy elementy, a nowe wywołanie zwraca cztery. Kto trzyma starą tablicę, zostaje ze stanem sprzed zmiany, jak przy stanie Reacta. Zmienne `issues` i `nextId` nie są eksportowane, więc zmienić je mogą tylko dwie funkcje z tego pliku.
 
 Ten sam wzorzec pokazuje Schwarzmüller w przykładzie z listą zadań: zmienna `storedTodos` na poziomie modułu i przypisanie `storedTodos = [...storedTodos, newTodo]` w funkcji zapisu. Komentarz w jego kodzie nazywa tę funkcję atrapą, która symuluje wolny backend zarządzający zadaniami. Rola `store.js` jest taka sama. Moduł udaje serwer, żeby formularz miał gdzie zapisać dane, zanim aplikacja dostanie prawdziwy zapis. Kod formularza zmieni się wtedy tylko w jednym miejscu, przy wywołaniu `addIssue`.
 
@@ -113,67 +110,60 @@ Ten sam wzorzec pokazuje Schwarzmüller w przykładzie z listą zadań: zmienna 
 Zgłoszenie dodane w formularzu musi przeżyć co najmniej przejście na listę. Aplikacja React ma trzy miejsca na dane i każde żyje inaczej długo.
 
 1. **Stan komponentu** z `useState` żyje tak długo jak komponent, więc tablica zgłoszeń w stanie strony `/new` zniknęłaby po przejściu na `/`.
-2. **Zmienna w module** trwa do przeładowania karty, jak `_issues` w `store.js`.
+2. **Zmienna w module** trwa do przeładowania karty, jak `issues` w `store.js`.
 3. **Serwer z bazą danych** przechowuje dane niezależnie od przeglądarki. Przetrwają przeładowanie, zamknięcie karty i wejście z innego komputera.
 
 Demo wybiera drugie miejsce, bo jest najprostsze i wystarcza do pokazania formularza. Wspólny stan dwóch stron dałoby się też podnieść do layoutu, który przy nawigacji zostaje na miejscu. Layout nie przekazuje jednak stronom danych przez propsy, więc wymagałoby to kontekstu, czyli mechanizmu Reacta przekazującego wartość w głąb drzewa bez propsów. Moduł daje ten sam efekt bez żadnego kodu Reacta.
 
 ## Lista czyta z magazynu
 
-Strona główna przestaje czytać `initialIssues`. W `app/page.jsx` dochodzi dyrektywa, import z magazynu zastępuje import danych startowych, a lista mapuje tablicę z magazynu. Reszta JSX zostaje bez zmian:
+Strona główna przestaje czytać `initialIssues`. W `app/page.jsx` dochodzi dyrektywa, a import z magazynu zastępuje import danych startowych. Reszta JSX zostaje bez zmian:
 
 ```jsx
-// app/page.jsx: zastąpić całą zawartość
-// Lista zgłoszeń jako komponent kliencki, bo czyta zmienny magazyn z przeglądarki.
-// getIssues() wywołuje się przy każdym montowaniu; po nawigacji po stronie klienta
-// komponent montuje się od nowa i widzi nowo dodane zgłoszenia.
-"use client";
+// app/page.jsx
+"use client"; // lista czyta magazyn, który żyje w przeglądarce
 import Link from "next/link";
 import { getIssues } from "./lib/store";
 
 export default function HomePage() {
-  const issues = getIssues(); // odczyt tablicy z modułu przy każdym renderze
+  const issues = getIssues();
 
   return (
-    <div>
-      <h1>Issue Tracker</h1>
+    <main>
+      <h1>Issues</h1>
       <ul>
-        {issues.map((issue) => (                 // jeden <li> na zgłoszenie
-          <li key={issue.id}>                    {/* klucz z danych, stały między renderami */}
-            <Link href={`/issue/${issue.id}`}>   {/* adres budowany z danych */}
-              [{issue.priority}] {issue.title}
-            </Link>
-            {" — "}                              {/* status poza linkiem, jako zwykły tekst */}
-            {issue.status}
+        {issues.map((issue) => (
+          <li key={issue.id}>
+            <Link href={`/issue/${issue.id}`}>[{issue.priority}] {issue.title}</Link>
           </li>
         ))}
       </ul>
-    </div>
+    </main>
   );
 }
 ```
 
-Dyrektywa `"use client"` robi z `HomePage` komponent kliencki. Jest tu potrzebna, bo zapisy trafiają do kopii magazynu w przeglądarce. Komponent serwerowy wykonałby się na serwerze, gdzie `addIssue` nigdy nie zostanie wywołane, i zawsze pokazywałby cztery zgłoszenia startowe.
+Dyrektywa `"use client"` robi z `HomePage` komponent kliencki. Jest tu potrzebna, bo zapisy trafiają do kopii magazynu w przeglądarce. Komponent serwerowy wykonałby się na serwerze, gdzie `addIssue` nigdy nie zostanie wywołane, i zawsze pokazywałby trzy zgłoszenia startowe. Wywołanie `getIssues()` wykonuje się przy każdym renderze.
 
 ## Dlaczego lista widzi nowe zgłoszenie
 
-`HomePage` nie ma żadnego stanu, a mimo to po dodaniu zgłoszenia i powrocie na `/` pokazuje pięć pozycji. Mechanizm wynika z nawigacji. Przejście z `/` na `/new` odmontowuje `HomePage`, bo strona główna znika z drzewa. Powrót przez `<Link>` montuje ją od nowa. Nowe montowanie oznacza nowy render, a w nim nowe wywołanie `getIssues()`, które zwraca już tablicę z piątym zgłoszeniem.
+`HomePage` nie ma stanu, ale po dodaniu zgłoszenia i powrocie na `/` pokazuje cztery pozycje. Mechanizm wynika z nawigacji. Przejście z `/` na `/new` odmontowuje `HomePage`, bo strona główna znika z drzewa. Powrót przez `<Link>` montuje ją od nowa. Nowe montowanie oznacza nowy render, a w nim nowe wywołanie `getIssues()`, które zwraca już tablicę z czwartym zgłoszeniem.
 
-React nie wie natomiast nic o zmianie zmiennej `_issues`. Render uruchamia setter z `useState`, a przypisanie do zmiennej modułu nie uruchamia niczego. Gdyby lista i formularz stały na tej samej stronie, lista nie odświeżyłaby się po dodaniu zgłoszenia. Demo omija ten problem, bo formularz leży pod innym adresem. <u>Lista pokazuje nowe zgłoszenie tylko dlatego, że montuje się od nowa</u>. Wystarczy przenieść formularz do okna dialogowego nad listą, a nowe zgłoszenia przestaną się na niej pojawiać.
+React nie wie natomiast nic o zmianie zmiennej `issues`. Render uruchamia setter z `useState`, a przypisanie do zmiennej modułu nie uruchamia niczego. Gdyby lista i formularz stały na tej samej stronie, lista nie odświeżyłaby się po dodaniu zgłoszenia. Demo omija ten problem, bo formularz leży pod innym adresem. <u>Lista pokazuje nowe zgłoszenie tylko dlatego, że montuje się od nowa</u>. Wystarczy przenieść formularz do okna dialogowego nad listą, a nowe zgłoszenia przestaną się na niej pojawiać.
 
 ## Rysunek 3.12 — jedna tablica w module, dwie strony, które z niej korzystają
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
 flowchart LR
-    S["store.js<br/>_issues w module<br/>wykonany raz w karcie"]
+    S["store.js<br/>issues w module<br/>wykonany raz w karcie"]
     F["/new<br/>addIssue(...)"] -->|"nowa tablica"| S
-    S -->|"getIssues()<br/>przy montowaniu"| H["/ HomePage<br/>5 zgłoszeń"]
-    D["/issue/[id]<br/>czyta initialIssues"] -.->|"/issue/5"| X["404"]
+    S -->|"getIssues()<br/>przy montowaniu"| H["/ HomePage<br/>4 zgłoszenia"]
+    D["/issue/[id]<br/>czyta initialIssues"] -.->|"/issue/4"| X["404"]
     R["F5"] -.->|"moduł od nowa"| S
 ```
 
-Na Rysunku 3.12 środek zajmuje moduł `store.js`. Formularz z `/new` zapisuje do niego nową tablicę, a strona główna odczytuje ją przy każdym montowaniu. Dolne strzałki przerywane pokazują dwie granice rozwiązania. Przeładowanie strony wykonuje moduł od nowa i zgłoszenie znika. Strona szczegółów w ogóle nie korzysta z magazynu.
+Na Rysunku 3.12 środek zajmuje moduł `store.js`. Formularz z `/new` zapisuje do niego nową tablicę, a strona główna odczytuje ją przy każdym montowaniu. Dolne strzałki przerywane pokazują dwie granice rozwiązania. Przeładowanie strony wykonuje moduł od nowa i na liście znowu są trzy zgłoszenia. Strona szczegółów w ogóle nie korzysta z magazynu.
 
 ## Jak długo żyje moduł
 
@@ -197,15 +187,25 @@ Z tych granic wynika **kryterium wyboru miejsca na dane**:
 
 ## Dwie kopie modułu i dwa źródła danych
 
-Pierwsze wejście na `/` renderuje `HomePage` także na serwerze, bo komponent kliencki też dostaje pierwszy render po stronie serwera. Serwer ma własną kopię modułu `store.js` i ta kopia nigdy nie dostaje wywołania `addIssue`, bo formularz działa tylko w przeglądarce. Przy pierwszym wejściu obie kopie mają cztery zgłoszenia, więc HTML z serwera zgadza się z tym, co wyrenderuje przeglądarka, i hydratacja, czyli podpięcie Reacta pod gotowy HTML, przechodzi bez niezgodności. Kolejne wejścia na `/` przez `<Link>` renderują się już tylko w przeglądarce. Restart serwera czyści kopię serwerową, a kopię w przeglądarce czyści dopiero przeładowanie karty.
+Pierwsze wejście na `/` renderuje `HomePage` także na serwerze, bo komponent kliencki też dostaje pierwszy render po stronie serwera. Serwer ma własną kopię modułu `store.js` i ta kopia nigdy nie dostaje wywołania `addIssue`, bo formularz działa tylko w przeglądarce. Przy pierwszym wejściu obie kopie mają trzy zgłoszenia, więc HTML z serwera zgadza się z tym, co wyrenderuje przeglądarka, i hydratacja, czyli podpięcie Reacta pod gotowy HTML, przechodzi bez niezgodności. Kolejne wejścia na `/` przez `<Link>` renderują się już tylko w przeglądarce. Restart serwera czyści kopię serwerową, a kopię w przeglądarce czyści dopiero przeładowanie karty.
 
-Strona szczegółów `/issue/[id]` pozostała komponentem serwerowym i czyta `initialIssues`. Zgłoszenie nr 5 ma więc na liście link, a jego strona kończy się 404. Router działa przy tym poprawnie. Dwie części aplikacji czytają dane z dwóch różnych miejsc, a naprawą jest jedno źródło danych po stronie serwera.
+Strona szczegółów `/issue/[id]` pozostała komponentem serwerowym i czyta `initialIssues`. Zgłoszenie nr 4 ma więc na liście link, a jego strona kończy się 404. Router działa przy tym poprawnie. Dwie części aplikacji czytają dane z dwóch różnych miejsc, a naprawą jest jedno źródło danych po stronie serwera.
 
-![Rysunek 3.13 — lista z piątym zgłoszeniem i 404 pod jego adresem](../figures/out/rys_03_13.png)
+![Rysunek 3.13 — lista z czwartym zgłoszeniem i 404 pod jego adresem](../figures/out/rys_03_13.png)
 
-Rysunek 3.13 pokazuje to w jednej karcie: po dodaniu zgłoszenia lista ma pięć wierszy, a kliknięcie piątego kończy się komunikatem 404. Przejście odbyło się przez `<Link>`, bez przeładowania, więc magazyn w przeglądarce zachował nowe zgłoszenie.
+Rysunek 3.13 pokazuje to w jednej karcie. Po dodaniu zgłoszenia lista ma cztery wiersze, a kliknięcie czwartego kończy się komunikatem 404. Przejście odbyło się przez `<Link>`, bez przeładowania, więc magazyn w przeglądarce zachował nowe zgłoszenie.
 
-> 💡 **Zapamiętaj:** moduł wykonuje się raz na kartę, a import daje żywy widok jego zmiennych, więc formularz i lista pracują na jednej tablicy. React nie widzi zmian zmiennej w module: poprawny odczyt takiego magazynu daje `useSyncExternalStore`.
+## Zalety i koszty magazynu w module
+
+Magazyn w module jest najprostszym wspólnym miejscem na dane. Płaci się za to trwałością, widocznością dla serwera i odświeżaniem listy.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Formularz i lista pracują na jednej tablicy bez propsów i kontekstu | Dane znikają po F5: po dodaniu zgłoszenia nr 4 odświeżenie strony przywraca trzy | Dane mają przetrwać odświeżenie albo być widoczne dla wielu osób: `sessionStorage`, `localStorage` albo serwer z bazą |
+| Kilkanaście linii zamiast bazy i żądań HTTP | Strona zgłoszenia działa na serwerze i nie widzi nowego zgłoszenia: `/issue/4` kończy się 404 | Dane potrzebne serwerowi: magazyn po stronie serwera |
+| Magazyn zostaje w pamięci między stronami, więc przejście przez `<Link>` niczego nie gubi | React nie widzi zmian zmiennej w module, więc lista odświeża się tylko przez ponowne zamontowanie | Stan jednej strony: `useState`; stan widoczny od razu we wszystkich komponentach: `useSyncExternalStore` |
+
+> 💡 **Zapamiętaj:** moduł wykonuje się raz na kartę, a import daje żywy widok jego zmiennych, więc formularz i lista pracują na jednej tablicy. Po F5 na liście znowu są trzy zgłoszenia, a nowego nie zna strona zgłoszenia na serwerze. React nie widzi zmian zmiennej w module: poprawny odczyt takiego magazynu daje `useSyncExternalStore`.
 
 
 Materiał rozszerzony do tego slajdu: [`rozszerzenia/r06_dane-w-module.md`](rozszerzenia/r06_dane-w-module.md)

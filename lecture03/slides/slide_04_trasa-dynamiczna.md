@@ -1,13 +1,12 @@
 # Jedna strona dla każdego zgłoszenia
 
-## Najpierw sprawdzenie, czy trasa działa
+## Adres, który niesie numer zgłoszenia
 
-Linki z listy prowadzą pod `/issue/1`, `/issue/2` i dalej. Zamiast katalogu dla każdego zgłoszenia powstaje jeden segment dynamiczny, katalog `[id]`. Pierwsza wersja pliku `app/issue/[id]/page.jsx` tylko pokazuje przechwyconą wartość:
+Linki z listy prowadzą pod `/issue/1`, `/issue/2` i dalej. Katalog dla każdego zgłoszenia nie wchodzi w grę, bo lista rośnie z każdym nowym wpisem. Potrzebny jest jeden wzorzec, który przyjmie dowolny numer. Numer przychodzi jednak jako tekst z paska adresu, więc może też brzmieć `/issue/abc`. Zamiast katalogu dla każdego zgłoszenia powstaje jeden segment dynamiczny, katalog `[id]`. Pierwszą wersję pliku `app/issue/[id]/page.jsx` da się ograniczyć do pokazania przechwyconej wartości:
 
 ```jsx
-// app/issue/[id]/page.jsx: utworzyć plik
-// Trasa dynamiczna: tymczasowa strona, która potwierdza działanie routingu.
-export default async function IssueDetailPage({ params }) {
+// Przykład spoza demo: tymczasowa strona, która potwierdza działanie routingu
+export default async function IssuePage({ params }) {
   const { id } = await params; // Next.js 16: params to obiekt Promise, zawsze z await
   return <p>Issue ID: {id}</p>;
 }
@@ -23,37 +22,35 @@ Na `params` czeka się przez `await`, bo Next.js 16 przekazuje je jako obiekt Pr
 
 Prerendering to wyrenderowanie strony z góry, podczas budowania, zanim przyjdzie pierwsze żądanie. Część strony, która `params` nie odczytuje, może powstać wcześniej. Dlatego ta sama dokumentacja radzi w layoutach nie czekać na `params` na samej górze, tylko przekazać obiekt Promise w dół, do komponentu, który wartości naprawdę potrzebuje.
 
-W `issuetracker` model Cache Components jest wyłączony, a strona czyta `params` w pierwszej linii. Każda strona zgłoszenia renderuje się więc przy żądaniu, a wynik buildu oznacza wzorzec trasy symbolem `ƒ`. Przygotowanie stron z góry funkcją `generateStaticParams` zmieniłoby ten symbol, ale przy czterech zgłoszeniach w pliku nic by nie dało.
+W `issuetracker` model Cache Components jest wyłączony, a strona czyta `params` w pierwszej linii. Każda strona zgłoszenia renderuje się więc przy żądaniu, a wynik buildu oznacza wzorzec trasy symbolem `ƒ`. Przygotowanie stron z góry funkcją `generateStaticParams` zmieniłoby ten symbol, ale przy trzech zgłoszeniach w pliku nic by nie dało.
 
 Odczyt bez `await` daje `undefined`, a terminal serwera podpowiada w komunikacie drugą drogę: `React.use()`. To funkcja Reacta, która odczytuje wartość obiektu Promise w komponencie klienckim, bo komponent kliencki nie może być `async`.
 
 ## Strona, która szuka zgłoszenia
 
-Druga wersja `app/issue/[id]/page.jsx` odczytuje dane:
+Właściwa strona `app/issue/[id]/page.jsx` odczytuje dane:
 
 ```jsx
-// app/issue/[id]/page.jsx: zastąpić całą zawartość
-// Trasa dynamiczna /issue/[id]: komponent serwerowy.
+// app/issue/[id]/page.jsx
+// Komponent serwerowy: id przychodzi z adresu
 import { notFound } from "next/navigation";
 import { initialIssues } from "../../data/issues";
 
-export default async function IssueDetailPage({ params }) {
-  const { id } = await params; // Next.js 16: params to obiekt Promise, zawsze z await
-
-  const issue = initialIssues.find((i) => i.id === Number(id)); // napis z adresu zamieniony na liczbę
-  if (!issue) notFound(); // przerywa render i włącza granicę „nie znaleziono” z Next.js
+export default async function IssuePage({ params }) {
+  const { id } = await params; // params jest obiektem Promise
+  const issue = initialIssues.find((i) => i.id === Number(id)); // napis z adresu → liczba
+  if (!issue) notFound(); // widok „nie znaleziono”
 
   return (
     <article>
-      <h1>#{issue.id} — {issue.title}</h1>
+      <h1>#{issue.id} {issue.title}</h1>
       <p>Priority: {issue.priority}</p>
-      <p>Status: {issue.status}</p>
     </article>
   );
 }
 ```
 
-Adres `/issue/1` pokazuje nagłówek „#1 — Login button does not work on Safari” oraz wiersze „Priority: high” i „Status: open”. Adres `/issue/99` daje domyślną stronę Next.js „404 This page could not be found.”, bo projekt nie ma własnego pliku `not-found.jsx`. Metoda `find` zwraca pierwszy pasujący element albo `undefined`, a `notFound()` przerywa render wyjątkiem.
+Adres `/issue/1` pokazuje nagłówek „#1 Login button does not work” oraz wiersz „Priority: high”. Adres `/issue/99` daje domyślną stronę Next.js „404 This page could not be found.”, bo projekt nie ma własnego pliku `not-found.jsx`. To samo dostaje `/issue/abc`. Metoda `find` zwraca pierwszy pasujący element albo `undefined`, a `notFound()` przerywa render wyjątkiem.
 
 ![Rysunek 3.7 — strona zgłoszenia pod `/issue/1` i komunikat 404 pod `/issue/99`](../figures/out/rys_03_07.png)
 
@@ -82,11 +79,11 @@ flowchart LR
     U["adres /issue/2"] --> P["params: Promise"]
     P -->|"await params"| I["id = '2'<br/>napis"]
     I -->|"Number(id)"| F{"initialIssues<br/>.find(...)"}
-    F -->|"znaleziono"| R["IssueDetailPage<br/>zgłoszenie #2"]
+    F -->|"znaleziono"| R["IssuePage<br/>zgłoszenie #2"]
     F -->|"undefined"| N["notFound()<br/>strona 404"]
 ```
 
-Na Rysunku 3.8 strzałki biegną w kolejności wykonania kodu w `IssueDetailPage`. Do dolnej gałęzi prowadzi więcej adresów, niż widać. Trafia tam numer spoza danych, jak `99`, i każdy napis, z którego konwersja daje `NaN`, jak `abc`. Trafia tam też brakujący `await`, bo `Number(undefined)` daje `NaN`. Na rysunku te trzy przyczyny są nie do odróżnienia, bo każda kończy się tym samym `undefined` z `find`. Brakujący `await` zostawia jednak komunikat w terminalu serwera, dlatego <u>przy niespodziewanym 404 w trasie dynamicznej sprawdza się najpierw terminal</u>.
+Na Rysunku 3.8 strzałki biegną w kolejności wykonania kodu w `IssuePage`. Do dolnej gałęzi prowadzi więcej adresów, niż widać. Trafia tam numer spoza danych, jak `99`, i każdy napis, z którego konwersja daje `NaN`, jak `abc`. Trafia tam też brakujący `await`, bo `Number(undefined)` daje `NaN`. Na rysunku te trzy przyczyny są nie do odróżnienia, bo każda kończy się tym samym `undefined` z `find`. Brakujący `await` zostawia jednak komunikat w terminalu serwera, dlatego <u>przy niespodziewanym 404 w trasie dynamicznej sprawdza się najpierw terminal</u>.
 
 ## Segment ścieżki czy parametr zapytania
 
@@ -140,7 +137,7 @@ Trzecia możliwość to przekierowanie na **adres kanoniczny**, czyli jedyny uzn
 import { notFound, permanentRedirect } from "next/navigation";
 import { initialIssues } from "../../data/issues";
 
-export default async function IssueDetailPage({ params }) {
+export default async function IssuePage({ params }) {
   const { id } = await params;
   if (!/^\d+$/.test(id)) notFound();                       // "abc", "2.0", "+2", "0x2"
   const n = Number(id);
@@ -164,6 +161,16 @@ Dokumentacja `permanentRedirect` wskazuje granicę zastosowania:
 Z tego zdania wynika **kryterium wyboru**. <u>Zasób istnieje pod innym zapisem adresu: przekierowanie. Zasobu nie ma: `notFound()`</u>. Kod 308 oznacza, że zasób został na stałe przeniesiony pod adres z nagłówka `Location`. Słowo „na stałe” odróżnia go od kodu 307, który wysyła zwykłe `redirect`. Segment z plikiem `loading.jsx` wysyła odpowiedź strumieniowo, czyli w kawałkach, a kod HTTP wychodzi już z pierwszym z nich. Wtedy `permanentRedirect` wstawia do strony znacznik meta, a przekierowanie wykonuje dopiero przeglądarka, więc kodu 308 w odpowiedzi nie ma.
 
 Bugl opisuje lżejszą drogę dla adresów z opisem słownym, tak zwanym *slugiem*, jak `/posts/<id>/<tytuł>`. Strona pokazuje treść pod każdym zapisem. Element `<link rel="canonical">` wskazuje wtedy wyszukiwarkom adres właściwy, żeby nie indeksowały duplikatów (*„This would tell crawlers not to index duplicate pages when incorrect slugs are used”*). Przekierowanie kosztuje dodatkowe żądanie, ale potem pasek adresu pokazuje zapis kanoniczny. Znacznik kanoniczny nie wymaga żądania, ale użytkownik zostaje przy nietypowym adresie.
+
+## Zalety i koszty trasy dynamicznej
+
+Jeden plik obsługuje wszystkie zgłoszenia, a brakujący numer kończy się wspólnym widokiem „nie znaleziono”. Koszt leży w tym, że segment jest tekstem od użytkownika, który trzeba sprawdzić i zamienić na liczbę.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Jeden plik dla wszystkich zgłoszeń, także przyszłych | Segment to napis od użytkownika: `Number(id)` przyjmuje też `02`, `2.0` i `0x2`, więc jedno zgłoszenie ma kilka adresów | Zapisy nietypowe: sprawdzić format, a istniejący zasób przekierować na adres kanoniczny |
+| `notFound()` daje wspólny widok „nie znaleziono” (`/issue/99`, `/issue/abc`) | Widok 404 ma kod HTTP 200, gdy segment ma `loading.jsx` (pomiar), a bez niego 404 | Błąd oczekiwany i obsługiwany: wartość zwrócona zamiast wyjątku |
+| `params` przychodzi jako Promise, więc strona może powstać przed poznaniem wartości | Brak `await` zostawia `id` z wartością `undefined` i komunikat tylko w terminalu serwera | Filtrowanie i sortowanie listy: parametr zapytania (`searchParams`) zamiast segmentu |
 
 > 💡 **Zapamiętaj:** <u>segment dynamiczny to napis od użytkownika</u>. Przed porównaniem z liczbą w danych sprawdza się jego format i dopiero potem konwertuje. Nietypowy zapis istniejącego zasobu przekierowuje się na adres kanoniczny, a brak zasobu kończy się `notFound()`.
 

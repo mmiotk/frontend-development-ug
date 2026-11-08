@@ -1,31 +1,37 @@
 # Linki do zgłoszeń i trasy pobierane z wyprzedzeniem
 
+## Przejście, które przeładowuje całą stronę
+
+Lista zgłoszeń prowadzi do kolejnych adresów, więc trzeba wybrać element, który te przejścia obsłuży. Zwykły `<a href>` każe przeglądarce pobrać nowy dokument HTML i zbudować stronę od zera. Znika przy tym wszystko, co stało w pamięci karty: wpisany tekst, pozycja przewinięcia i stan komponentów.
+
+```jsx
+// Przykład spoza demo: zwykły link pobiera cały dokument
+<a href={`/issue/${issue.id}`}>[{issue.priority}] {issue.title}</a>
+```
+
+Różnicę pokazuje znacznik zapisany w obiekcie `window` przed kliknięciem. Po kliknięciu komponentu `Link` znacznik zostaje, a przeglądarka nie wysyła żadnego nowego żądania o dokument. Po kliknięciu zwykłego `<a>` znacznik znika i przeglądarka wysyła jedno takie żądanie. Next.js dostarcza więc komponent `Link`, który podmienia tylko zmienioną część strony.
+
 ## Każde zgłoszenie dostaje link
 
 Lista na stronie głównej pokazuje zgłoszenia, ale nie prowadzi do żadnego z nich. Plik `app/page.jsx` dostaje import `Link` i link w każdym wierszu:
 
 ```jsx
-// app/page.jsx: zastąpić całą zawartość
-// Lista zgłoszeń: komponent serwerowy (domyślny w App Routerze).
+// app/page.jsx
 import Link from "next/link";
 import { initialIssues } from "./data/issues";
 
 export default function HomePage() {
   return (
-    <div>
-      <h1>Issue Tracker</h1>
+    <main>
+      <h1>Issues</h1>
       <ul>
-        {initialIssues.map((issue) => (           // jeden <li> na zgłoszenie
-          <li key={issue.id}>                     {/* klucz z danych, stały między renderami */}
-            <Link href={`/issue/${issue.id}`}>    {/* adres budowany z danych */}
-              [{issue.priority}] {issue.title}
-            </Link>
-            {" — "}                               {/* status poza linkiem, jako zwykły tekst */}
-            {issue.status}
+        {initialIssues.map((issue) => (
+          <li key={issue.id}>
+            <Link href={`/issue/${issue.id}`}>[{issue.priority}] {issue.title}</Link>
           </li>
         ))}
       </ul>
-    </div>
+    </main>
   );
 }
 ```
@@ -38,7 +44,7 @@ const issue = { id: 3 };
 "/issue/" + issue.id;   // ten sam napis, zapisany przez sklejanie
 ```
 
-Klamry wokół szablonu są potrzebne, bo wartością propa jest wyrażenie JavaScriptu. Priorytet i tytuł każdego zgłoszenia stają się linkiem, a status stoi za nim. Kliknięcie prowadzi pod `/issue/1` i kończy się stroną 404, bo katalog `app/issue/` nie ma jeszcze strony. Link nie sprawdza, czy adres docelowy istnieje. Zgłasza to dopiero serwer.
+Klamry wokół szablonu są potrzebne, bo wartością propa jest wyrażenie JavaScriptu. Priorytet i tytuł każdego zgłoszenia stają się linkiem. Kliknięcie prowadzi pod `/issue/1` i kończy się stroną 404, bo katalog `app/issue/` nie ma jeszcze strony. Link nie sprawdza, czy adres docelowy istnieje. Zgłasza to dopiero serwer.
 
 Kliknięcie linku pobiera **RSC Payload**, czyli opis drzewa komponentów serwerowych, którym router podmienia zmienioną część strony bez przeładowania.
 
@@ -101,32 +107,6 @@ Pobieranie z wyprzedzeniem oznacza, że serwer renderuje trasę dla linku, któr
 
 Licznik odsłon wywołany w ciele komponentu serwerowego policzyłby każde wyświetlenie listy z linkiem, a nie każde wejście na stronę. To ten sam wymóg czystości, który dotyczy renderowania w Reakcie: render ma tylko obliczyć wynik. Dokumentacja radzi przenieść taki kod do efektu w komponencie klienckim albo do funkcji wykonywanej na serwerze na wywołanie z komponentu klienckiego, którą Next.js nazywa Server Action.
 
-## Ruch sieciowy w zamian za krótsze czekanie
-
-Pobieranie z wyprzedzeniem wymienia przesłane bajty na krótszy czas reakcji po kliknięciu. Liczby dotyczą gotowej aplikacji ze wszystkimi trasami. Lista zgłoszeń pod `next start` wysyła tam zaraz po wczytaniu 12–14 żądań z nagłówkiem `Next-Router-Prefetch` do siedmiu adresów: `/`, `/new`, `/new-rhf` i czterech zgłoszeń. Odpowiedzi mają razem od 13 766 do 15 589 bajtów, czyli 1,9–2,2 raza więcej niż sam dokument `/` (7160 bajtów). Użytkownik kliknie przy tym najwyżej jeden link. Każdy nowy widoczny link to kolejna trasa do pobrania, więc koszt rośnie z długością listy. W projekcie na obecnym etapie ta sama lista pobiera tylko trasę `/` (2 żądania, 4360 bajtów). Pozostałe linki prowadzą jeszcze do 404 i nic nie pobierają.
-
-![Rysunek 3.6 — koszt pobierania z wyprzedzeniem wobec dokumentu `/`](../figures/out/rys_03_06.png)
-
-Na Rysunku 3.6 szare słupki to dokument `/`, a pomarańczowe suma odpowiedzi pobranych z wyprzedzeniem w kolejnych próbach. W gotowej aplikacji pobieranie kosztuje więcej niż sama strona, na obecnym etapie mniej, bo obejmuje wyłącznie trasę `/`.
-
-Ten sam pomysł Alex Banks i Eve Porcello opisują wśród funkcji generatora stron Gatsby.
-
-> **„Cała treść potrzebna do wczytania następnej strony ładuje się w tle, zanim nastąpi kliknięcie w kolejny link.”**
->
-> *„All of the content needed to load the next page will load in the background before you click on the next link.”*
->
-> — Alex Banks, Eve Porcello, *Learning React*
-
-Tejas Kumar opisuje inny podział tej samej pracy we frameworku Qwik. Kod pobiera się tam przy pierwszym wczytaniu, ale analizuje i wykonuje dopiero wtedy, gdy jest potrzebny (*„everything is prefetched on initial load but only parsed and executed on demand”*).
-
-## Kiedy pobieranie z wyprzedzeniem nie pomaga
-
-Mechanizm ma granice opisane w tej samej dokumentacji. Na wolnym albo niestabilnym łączu pobieranie może nie skończyć się przed kliknięciem. Wtedy także ekran ładowania nie pojawia się od razu, bo nie zdążył dotrzeć do przeglądarki.
-
-Druga granica dotyczy pierwszej wizyty. `<Link>` jest komponentem klienckim i zaczyna pobierać trasy dopiero po hydratacji, czyli po dołączeniu obsługi zdarzeń do HTML z serwera. Duży pakiet JavaScriptu opóźnia hydratację, a razem z nią start pobierania. Zalecenie brzmi więc: przenosić logikę z klienta na serwer tam, gdzie to możliwe, i pilnować rozmiaru zależności.
-
-Prop **`prefetch`** pozwala wyłączyć mechanizm dla jednego linku. Wartość domyślna `"auto"` działa jak opisano wyżej, a `prefetch={false}` wyłącza pobieranie. Dokumentacja zaleca to przy długich listach linków, na przykład w tabeli z nieskończonym przewijaniem. Ceną jest wolniejsza nawigacja, bo trasa zostanie pobrana dopiero po kliknięciu.
-
 ## Nawigacja z kodu: `useRouter`
 
 Link wymaga kliknięcia. Czasem przejście ma nastąpić po zdarzeniu w kodzie, na przykład po zapisaniu formularza. Służy do tego hook `useRouter` z `next/navigation`, działający tylko w komponentach klienckich:
@@ -154,6 +134,31 @@ Link ma nad przyciskiem dwie przewagi. Daje pobieranie z wyprzedzeniem i prawdzi
 Obiekt z `useRouter()` ma sześć metod. **`push`** przechodzi pod adres i dopisuje wpis do historii przeglądarki. **`replace`** robi to samo bez nowego wpisu. **`back`** i **`forward`** odpowiadają przyciskom przeglądarki. **`prefetch`** pobiera trasę ręcznie, na przykład zanim link pojawi się na ekranie. **`refresh`** pobiera od serwera nowy wynik komponentów serwerowych bieżącej trasy i kasuje przy tym jej wpisy w pamięci klienta, a stanu komponentów klienckich nie rusza.
 
 Dokumentacja dodaje ostrzeżenie o bezpieczeństwie. Do `push` i `replace` nie wolno przekazywać niesprawdzonych adresów. Adres zaczynający się od `javascript:` wykona się w kontekście strony (*„`javascript:` URLs sent to `router.push` or `router.replace` will be executed in the context of your page”*). Adres zbudowany z danych od użytkownika sprawdza się więc przed nawigacją.
+
+## Zalety i koszty pobierania z wyprzedzeniem
+
+Pobieranie z wyprzedzeniem wymienia przesłane bajty na krótszy czas reakcji po kliknięciu. Liczby dotyczą gotowej aplikacji ze wszystkimi trasami. Lista zgłoszeń pod `next start` wysyła tam zaraz po wczytaniu 11–12 żądań z nagłówkiem `Next-Router-Prefetch` do sześciu adresów: `/`, `/new`, `/new-rhf` i trzech zgłoszeń. Odpowiedzi mają razem od 10 547 do 12 545 bajtów, czyli 1,9–2,2 raza więcej niż sam dokument `/` (5667 bajtów). Użytkownik kliknie przy tym najwyżej jeden link, a każdy nowy widoczny link to kolejna trasa do pobrania. W projekcie na obecnym etapie ta sama lista pobiera tylko trasę `/` (2 odpowiedzi, 3196 bajtów). Cztery pozostałe żądania, do `/new` i zgłoszeń, kończą się kodem 404 bez ciała, bo tych stron jeszcze nie ma.
+
+![Rysunek 3.6 — koszt pobierania z wyprzedzeniem wobec dokumentu `/`](../figures/out/rys_03_06.png)
+
+Na Rysunku 3.6 szare słupki to dokument `/`, a pomarańczowe suma odpowiedzi pobranych z wyprzedzeniem; kreskowana część słupka gotowej aplikacji to rozrzut między 6 próbami. W gotowej aplikacji pobieranie kosztuje więcej niż sama strona, na obecnym etapie mniej, bo obejmuje wyłącznie trasę `/`.
+
+Ten sam pomysł Alex Banks i Eve Porcello opisują wśród funkcji generatora stron Gatsby.
+
+> **„Cała treść potrzebna do wczytania następnej strony ładuje się w tle, zanim nastąpi kliknięcie w kolejny link.”**
+>
+> *„All of the content needed to load the next page will load in the background before you click on the next link.”*
+>
+> — Alex Banks, Eve Porcello, *Learning React*
+
+Mechanizm ma granice. Na wolnym albo niestabilnym łączu pobieranie może nie skończyć się przed kliknięciem, więc ekran ładowania nie pojawi się od razu. `<Link>` jest komponentem klienckim i zaczyna pobierać trasy dopiero po hydratacji, czyli po dołączeniu obsługi zdarzeń do HTML z serwera. Duży pakiet JavaScriptu opóźnia hydratację, a razem z nią start pobierania. Prop **`prefetch`** wyłącza mechanizm dla jednego linku: wartość domyślna `"auto"` działa jak opisano wyżej, a `prefetch={false}` wyłącza pobieranie, co dokumentacja zaleca przy długich listach linków.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Przejście bez przeładowania: po kliknięciu `Link` znacznik w `window` zostaje, a po zwykłym `<a>` znika | Link nie sprawdza adresu docelowego, więc zgłasza 404 dopiero serwer | Adres spoza aplikacji: zwykły `<a>` |
+| Pamięć klienta podaje layouty i stany ładowania bez żądania do serwera | Pamięć znika przy przeładowaniu karty, a trasy dynamiczne nie trafiają do niej domyślnie | Dłuższa ważność wpisów: opcja `staleTimes` |
+| Pobieranie z wyprzedzeniem skraca czekanie po kliknięciu | Ruch sieciowy za linki, w które nikt nie kliknie: 11–12 żądań i 10 547–12 545 bajtów przy 5667 bajtach dokumentu | Wiele rzadko używanych linków: `prefetch={false}` |
+| Trasa jest gotowa, zanim użytkownik ją odwiedzi | Kod trasy wykonuje się już przy pobraniu, a działa tylko po `next build` i `next start`, nie pod `next dev` | Licznik odsłon: efekt w komponencie klienckim albo Server Action. Wolne łącze: ekran ładowania z `loading.jsx` |
 
 > 💡 **Zapamiętaj:** <u>pobieranie z wyprzedzeniem działa tylko po buildzie i wypełnia pamięć klienta trasami widocznych linków</u>. Płaci się za to ruchem sieciowym, a kod trasy wykonuje się już przy tym pobraniu. `useRouter`, `usePathname` i `useSearchParams` działają w komponentach klienckich, a `useSearchParams` na stronie statycznej wymaga granicy `Suspense`.
 

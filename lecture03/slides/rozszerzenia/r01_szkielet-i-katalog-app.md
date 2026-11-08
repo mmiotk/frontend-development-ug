@@ -21,7 +21,7 @@ app/components/page.jsx    → /components  → 200
 app/%5Fnotes/page.jsx      → /_notes      → 200
 ```
 
-Katalog `app/components/` z `issuetracker` trzyma tylko `SubmitButton.jsx`, ale pierwszy `page.jsx` dałby w nim adres. Ostatni wiersz to sposób na adres z podkreślnikiem: `%5F` jest zakodowanym znakiem `_`.
+Katalog `app/lib/` z `issuetracker` trzyma magazyn danych, ale `page.jsx` dałby w nim adres. Ostatni wiersz to sposób na adres z podkreślnikiem: `%5F` jest zakodowanym znakiem `_`.
 
 ## Rozszerzenie: grupy tras `(nazwa)`
 

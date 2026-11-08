@@ -1,19 +1,16 @@
-// Magazyn tylko na potrzeby demo: zmienna tablica na poziomie modułu.
-// Przetrwa nawigację po stronie klienta (moduł zostaje w pamięci karty).
-// Znika po przeładowaniu strony albo restarcie serwera.
-// Prawdziwa trwałość: serwer + baza danych.
-import { initialIssues } from "../data/issues.js";
+// app/lib/store.js
+// Magazyn w module: jedna tablica na kartę przeglądarki, znika po przeładowaniu
+import { initialIssues } from "../data/issues";
 
-let _issues = [...initialIssues];          // kopia: initialIssues zostaje nietknięte
-let _nextId = initialIssues.length + 1;    // 5, bo zgłoszeń startowych jest cztery
+let issues = [...initialIssues]; // kopia: dane startowe zostają bez zmian
+let nextId = issues.length + 1; // 4, bo zgłoszenia startowe są trzy
 
-// Podkreślnik = umowa „prywatne dla modułu”; zmienne nie są eksportowane.
 export function getIssues() {
-  return _issues;                          // bieżąca tablica
+  return issues;
 }
 
 export function addIssue({ title, priority }) {
-  const issue = { id: _nextId++, title, priority, status: "open" }; // ++ po użyciu
-  _issues = [..._issues, issue];           // NOWA tablica zamiast push do starej
-  return issue;                            // formularz pokaże numer zgłoszenia
+  const issue = { id: nextId++, title, priority }; // numer i od razu zwiększenie licznika
+  issues = [...issues, issue]; // nowa tablica zamiast push
+  return issue;
 }

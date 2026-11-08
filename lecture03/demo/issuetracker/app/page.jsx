@@ -1,27 +1,21 @@
-// Lista zgłoszeń jako komponent kliencki, bo czyta zmienny magazyn z przeglądarki.
-// getIssues() wywołuje się przy każdym montowaniu; po nawigacji po stronie klienta
-// komponent montuje się od nowa i widzi nowo dodane zgłoszenia.
-"use client";
+// app/page.jsx
+"use client"; // lista czyta magazyn, który żyje w przeglądarce
 import Link from "next/link";
 import { getIssues } from "./lib/store";
 
 export default function HomePage() {
-  const issues = getIssues(); // odczyt tablicy z modułu przy każdym renderze
+  const issues = getIssues();
 
   return (
-    <div>
-      <h1>Issue Tracker</h1>
+    <main>
+      <h1>Issues</h1>
       <ul>
-        {issues.map((issue) => (                 // jeden <li> na zgłoszenie
-          <li key={issue.id}>                    {/* klucz z danych, stały między renderami */}
-            <Link href={`/issue/${issue.id}`}>   {/* adres budowany z danych */}
-              [{issue.priority}] {issue.title}
-            </Link>
-            {" — "}                              {/* status poza linkiem, jako zwykły tekst */}
-            {issue.status}
+        {issues.map((issue) => (
+          <li key={issue.id}>
+            <Link href={`/issue/${issue.id}`}>[{issue.priority}] {issue.title}</Link>
           </li>
         ))}
       </ul>
-    </div>
+    </main>
   );
 }

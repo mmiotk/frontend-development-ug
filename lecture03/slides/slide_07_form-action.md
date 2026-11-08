@@ -1,13 +1,17 @@
 # Formularz, który przekazuje dane funkcji
 
+## Formularz, który po wysłaniu przeładowuje stronę
+
+Magazyn z poprzedniego kroku czeka na zgłoszenia, a przycisk „Add issue” ma je tam przekazać. Domyślnie przeglądarka po jego kliknięciu wysyła żądanie HTTP i wczytuje nowy dokument. Wczytanie nowego dokumentu uruchamia wszystkie moduły od nowa, więc magazyn znika razem z dopiero co dodanym zgłoszeniem. Aby zostać w aplikacji, programista przed React 19 pisał procedurę `onSubmit`, w niej `e.preventDefault()` i ręczny odczyt każdego pola. Pokazuje to dalsza część slajdu. Wersja z `action` robi te czynności za niego: blokuje przeładowanie, zbiera pola i oddaje je funkcji.
+
 ## Formularz, który działa bez Reacta
 
 Formularz HTML umie wysłać dane bez jednej linii JavaScriptu. Przeglądarka przy wysłaniu zbiera wartości wszystkich pól, które mają atrybut `name`, w pary „nazwa → wartość”. Atrybut **`action`** elementu `<form>` to adres URL, który te dane przetworzy. Atrybut **`method`** wybiera metodę HTTP. Domyślne `get` dopisuje pary do adresu po znaku `?`, a `post` wysyła je w treści żądania. Format tej treści wybiera atrybut `enctype`, a pliki wymagają wartości `multipart/form-data`. Po odpowiedzi serwera przeglądarka wczytuje nowy dokument.
 
-Wyszukiwarka zgłoszeń w czystym HTML-u (przykład spoza projektu):
+Wyszukiwarka zgłoszeń w czystym HTML-u (przykład spoza demo):
 
 ```jsx
-{/* Pole q i metoda GET: dane trafią do adresu /search?q=... */}
+{/* Przykład spoza demo: pole q i metoda GET, dane trafią do adresu /search?q=... */}
 <form action="/search" method="get">
   <input name="q" />
   <button type="submit">Search</button>
@@ -21,6 +25,7 @@ Wpisanie „safari login” i Enter przenosi przeglądarkę pod adres `/search?q
 Te same pary przeglądarka udostępnia skryptom jako obiekt **`FormData`**. Schwarzmüller podkreśla, że to interfejs przeglądarki, którego nie importuje się z Reacta ani z żadnej biblioteki. Obiekt da się zbudować i odczytać także ręcznie:
 
 ```js
+// Przykład spoza demo: FormData zbudowane ręcznie
 const fd = new FormData();
 fd.append("title", "Login bug");
 fd.append("tag", "ui");
@@ -42,6 +47,7 @@ Metoda `get()` wymaga nazwy pola. MDN zaznacza, że przy kilku parach o tej same
 Przeglądarka buduje taki obiekt sama, gdy konstruktor dostaje element formularza. Tak samo postępuje React przy wysłaniu. Formularz z pięcioma polami:
 
 ```html
+<!-- Przykład spoza demo: formularz z pięcioma polami -->
 <form>
   <input name="title" value="Bug" />
   <input name="urgent" type="checkbox" checked />   <!-- zaznaczone, bez value -->
@@ -57,6 +63,7 @@ Przeglądarka buduje taki obiekt sama, gdy konstruktor dostaje element formularz
 daje taki obiekt:
 
 ```js
+// Przykład spoza demo: FormData zbudowane z elementu formularza
 const fd = new FormData(document.querySelector("form"));
 [...fd.entries()];  // → [["title","Bug"], ["urgent","on"], ["priority","high"]]
 ```
@@ -70,7 +77,7 @@ O kluczu w `FormData` decyduje `name`, a `id` służy wyłącznie połączeniu z
 React 19 pozwala przekazać do `action` funkcję zamiast adresu. Przy wysłaniu React blokuje przeładowanie strony, sam buduje `FormData` z pól formularza i wywołuje funkcję z tym obiektem:
 
 ```jsx
-// Minimalna akcja: React wywoła ją z FormData wysłanego formularza.
+// Przykład spoza demo: minimalna akcja, React wywoła ją z FormData wysłanego formularza.
 <form action={(formData) => console.log(formData.get("q"))}>
   <input name="q" />
   <button type="submit">Search</button>
@@ -83,13 +90,10 @@ Akcja z funkcją działająca w przeglądarce nie wysyła żadnego żądania HTT
 
 ## Pierwszy formularz zgłoszenia
 
-Formularz zgłoszenia ma dwa pola niekontrolowane, czyli bez atrybutu `value`. Tytuł i priorytet są potrzebne dopiero po kliknięciu „Submit”, więc komponent nie śledzi ich litera po literze. Nowy plik `app/new/page.jsx` wygląda tak:
+Formularz zgłoszenia ma dwa pola niekontrolowane, czyli bez atrybutu `value`. Tytuł i priorytet są potrzebne dopiero po kliknięciu „Add issue”, więc komponent nie śledzi ich litera po literze. Nowy plik `app/new/page.jsx` wygląda tak:
 
 ```jsx
-// app/new/page.jsx: utworzyć plik
-// Formularz nowego zgłoszenia: podstawowa akcja formularza.
-// "use client": useRouter działa tylko w komponencie klienckim,
-// a addIssue zapisuje do kopii magazynu w przeglądarce.
+// app/new/page.jsx
 "use client";
 import { useRouter } from "next/navigation";
 import { addIssue } from "../lib/store";
@@ -97,41 +101,33 @@ import { addIssue } from "../lib/store";
 export default function NewIssuePage() {
   const router = useRouter();
 
-  // action(formData): React 19 wywołuje ją przy wysłaniu formularza.
-  // FormData powstaje automatycznie ze wszystkich pól z atrybutem name.
+  // React wywołuje akcję z FormData zebranym z pól, które mają atrybut name
   function action(formData) {
-    const title = formData.get("title");
-    const priority = formData.get("priority");
-    console.log("FormData:", { title, priority }); // podgląd danych w konsoli
-    addIssue({ title, priority });
+    addIssue({ title: formData.get("title"), priority: formData.get("priority") });
     router.push("/"); // powrót na listę
   }
 
   return (
-    <div>
-      <h1>New Issue</h1>
+    <main>
+      <h1>New issue</h1>
       <form action={action}>
-        <div>
-          {/* htmlFor łączy etykietę z polem o id="title" */}
-          <label htmlFor="title">Title</label>
-          <input id="title" name="title" type="text" />
-        </div>
-        <div>
-          <label htmlFor="priority">Priority</label>
-          <select id="priority" name="priority">
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
+        <p>Title: <input name="title" /></p>
+        <p>
+          Priority:{" "}
+          <select name="priority" defaultValue="medium">
+            <option value="low">low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
           </select>
-        </div>
-        <button type="submit">Submit</button>
+        </p>
+        <button>Add issue</button>
       </form>
-    </div>
+    </main>
   );
 }
 ```
 
-`router.push("/")` przechodzi na listę tak jak kliknięcie linku, tyle że z kodu. Atrybut `htmlFor` to w JSX odpowiednik HTML-owego `for`, bo `for` jest w JavaScripcie słowem zastrzeżonym. Po wpisaniu „New test issue”, wybraniu „High” i wysłaniu konsola wypisuje obiekt z polami `title` i `priority`. Lista na `/` ma wtedy piąty wiersz „[high] New test issue — open”. Gdyby pole tytułu nie miało atrybutu `name`, `formData.get("title")` zwróciłoby `null`, a piąty wiersz miałby postać „[high] — open”, bez tytułu.
+Dyrektywa `"use client"` jest tu potrzebna, bo `useRouter` działa tylko w komponencie klienckim, a `addIssue` zapisuje do kopii magazynu w przeglądarce. `router.push("/")` przechodzi na listę tak jak kliknięcie linku, tyle że z kodu. Atrybut `defaultValue` ustawia wartość początkową listy bez przejmowania nad nią kontroli. Pomiar po wysłaniu formularza pokazał dwie rzeczy. Tytuł „Dark mode” z priorytetem „high” trafia na koniec listy jako „[high] Dark mode”. Pusty tytuł też przechodzi: aplikacja wraca na `/`, a ostatni wiersz listy to samo „[medium]”, bez tytułu. Tak samo dzieje się, gdy pole tytułu nie ma atrybutu `name`: `formData.get("title")` zwraca wtedy `null`, a wiersz ma postać „[high]”, bo tytułu nie da się odczytać. Formularz nie ma jeszcze sposobu, żeby odpowiedzieć użytkownikowi.
 
 ## Akcja jako przejście
 
@@ -158,7 +154,7 @@ Przejście asynchroniczne obejmuje cały czas działania funkcji, także każdy 
 Kumar opisuje ten sam związek przy nawigacji. Gdy w przejściu coś się zawiesza, React wiąże `isPending` z pobraniem danych i ich renderem (*„React will tie the `isPending` state to the data fetch”*). Z tego wynika zachowanie, które Schwarzmüller nazywa nieoczekiwanym. <u>Zmiany stanu wywołane wewnątrz akcji React stosuje dopiero po zakończeniu całej akcji</u>. Pokazuje to mały formularz spoza projektu:
 
 ```jsx
-// Setter na początku akcji: napis „Saving...” nigdy nie pojawi się na ekranie.
+// Przykład spoza demo: setter na początku akcji, napis „Saving...” nigdy nie pojawi się na ekranie.
 const [msg, setMsg] = useState("-");
 async function action() {
   setMsg("Saving...");
@@ -175,7 +171,7 @@ Przez cały czas trwania akcji akapit pokazuje „-”, a po jej zakończeniu od
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
 flowchart LR
-    U["klik Submit"] --> R["React<br/>blokuje przeładowanie"]
+    U["klik Add issue"] --> R["React<br/>blokuje przeładowanie"]
     R --> F["FormData<br/>pola z atrybutem name"]
     F --> A["action(formData)<br/>w Transition"]
     A --> S["addIssue,<br/>router.push('/')"]
@@ -189,7 +185,7 @@ Na Rysunku 3.14 strzałki idą w kolejności zdarzeń. Trzy pierwsze kroki dawni
 Dla porównania stary wzorzec obsługi tego samego formularza wygląda tak:
 
 ```jsx
-{/* Starszy wzorzec: onSubmit z ręcznym preventDefault. */}
+{/* Przykład spoza demo: starszy wzorzec, onSubmit z ręcznym preventDefault. */}
 <form onSubmit={(e) => {
   e.preventDefault();                // bez tego: pełne przeładowanie strony
   const title = e.target.title.value; // element formularza → pole o nazwie title
@@ -218,9 +214,9 @@ Trzy sposoby wysłania formularza różnią się tym, co zostaje w HTML-u wysła
 - **Formularz z `onSubmit`** ma procedurę obsługi tylko w JavaScripcie. W HTML-u z serwera nie ma po niej śladu.
 - **Formularz z funkcją w `action`** dostaje w HTML-u z serwera atrybut `action="javascript:throw new Error('React form unexpectedly submitted.')"`. Po załadowaniu skryptów wysłanie przejmuje React i ten adres się nie wykonuje.
 
-Strona `/new` po zbudowaniu, otwarta z wyłączonym JavaScriptem, po kliknięciu „Submit” nie wysyła żadnego żądania i zostaje pod adresem `/new` z wpisanym tytułem. Akcja wykonywana w przeglądarce nie spełnia więc zasady progresywnego wzbogacania. Spełnia ją dopiero funkcja wykonywana na serwerze, którą przeglądarka może wywołać zwykłym żądaniem HTTP.
+Strona `/new` po zbudowaniu, otwarta z wyłączonym JavaScriptem, po kliknięciu „Add issue” nie wysyła żadnego żądania i zostaje pod adresem `/new` z wpisanym tytułem. Akcja wykonywana w przeglądarce nie spełnia więc zasady progresywnego wzbogacania. Spełnia ją dopiero funkcja wykonywana na serwerze, którą przeglądarka może wywołać zwykłym żądaniem HTTP.
 
-![Rysunek 3.15 — formularz `/new` bez JavaScriptu po kliknięciu „Submit”](../figures/out/rys_03_15.png)
+![Rysunek 3.15 — formularz `/new` bez JavaScriptu po kliknięciu „Add issue”](../figures/out/rys_03_15.png)
 
 Na Rysunku 3.15 po kliknięciu adres to nadal `/new`, a w polu stoi wpisany tytuł. Strona się nie przeładowała, bo `action` zawiera funkcję, którą wykonuje dopiero JavaScript.
 
@@ -236,11 +232,20 @@ Dokumentacja elementu `form` opisuje krok, który kończy każdą udaną akcję:
 
 W tym formularzu reset nie jest widoczny, bo `router.push("/")` i tak opuszcza stronę. Ma jednak trzy cechy, które łatwo pomylić ze zwykłym wyczyszczeniem pól:
 
-- **Powrót do wartości domyślnej.** Skutek jest taki sam jak metody `reset()` elementu formularza, którą MDN opisuje jako przywrócenie wartości domyślnych (*„restores a form element's default values”*). Pole tekstowe bez `defaultValue` staje się puste. Lista `<select>` bez `defaultValue` wraca do pierwszej opcji, czyli „Low”, a z atrybutem `defaultValue="medium"` do „Medium”.
+- **Powrót do wartości domyślnej.** Skutek jest taki sam jak metody `reset()` elementu formularza, którą MDN opisuje jako przywrócenie wartości domyślnych (*„restores a form element's default values”*). Pole tekstowe bez `defaultValue` staje się puste. Lista `<select>` bez `defaultValue` wraca do pierwszej opcji, czyli „low”, a z atrybutem `defaultValue="medium"`, jak w demo, do „medium”.
 - **Sukces znaczy brak wyjątku.** Akcja, która zwraca obiekt z komunikatem błędu, też kończy się dla Reacta sukcesem. Pola czyszczą się więc także wtedy, gdy użytkownik ma poprawić dane. Zachowanie wpisu po takim błędzie wymaga zwrócenia wartości pól w wyniku akcji i podania ich jako `defaultValue`.
 - **Tylko pola niekontrolowane.** Pola z `value` ze stanu React nie rusza, bo jego wartość wyznacza stan komponentu. Taki stan trzeba wyczyścić samemu.
 
-> 💡 **Zapamiętaj:** <u>`<form action={fn}>` wywołuje `fn(formData)` w ramach przejścia</u>. React sam zbiera wartości pól, ale tylko tych, które mają atrybut `name`. Po akcji, która nie rzuciła wyjątku, pola niekontrolowane wracają do wartości domyślnych.
+## Zalety i koszty akcji formularza
+
+Akcja zastępuje procedurę `onSubmit`, ale oddaje funkcji tylko to, co formularz wysłał.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| `FormData` zbiera pola z atrybutem `name`, więc nie trzeba `preventDefault` ani stanu na każde pole; pola niekontrolowane wracają do wartości domyślnych po akcji | Pole bez `name` jest niewidoczne: `formData.get("title")` daje `null` | Potrzebny obiekt wartości albo pola kontrolowane (podgląd na żywo, podpowiedzi): `onSubmit` |
+| Funkcja w `action` działa w przejściu, więc React zna status wysyłki | Formularz nie odpowiada użytkownikowi: pusty tytuł dodaje wiersz „[medium]”, a akcja z przeglądarki nie działa bez JavaScriptu | Wynik i błędy do pokazania: akcja ze stanem, czyli temat następnego kroku. Działanie bez skryptów: funkcja na serwerze albo adres w `action` |
+
+> 💡 **Zapamiętaj:** <u>`<form action={fn}>` wywołuje `fn(formData)` w ramach przejścia</u>. React sam zbiera wartości pól, ale tylko tych, które mają atrybut `name`. Po akcji, która nie rzuciła wyjątku, pola niekontrolowane wracają do wartości domyślnych, a pusty tytuł nadal trafia na listę.
 
 
 Materiał rozszerzony do tego slajdu: [`rozszerzenia/r07_form-action.md`](rozszerzenia/r07_form-action.md)

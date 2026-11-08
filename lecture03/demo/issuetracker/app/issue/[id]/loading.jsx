@@ -1,4 +1,4 @@
-// Next.js pokazuje ten komponent sam, dopóki IssueDetailPage czeka (await).
-export default function IssueLoading() {
+// app/issue/[id]/loading.jsx
+export default function Loading() {
   return <p>Loading issue...</p>;
 }

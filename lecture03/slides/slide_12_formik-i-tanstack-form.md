@@ -1,10 +1,10 @@
 # Formik i TanStack Form: dwie biblioteki z polami kontrolowanymi
 
-## Dwie biblioteki spoza projektu
+## Zespół ma już Formika albo schemat Yup
 
-Projekt `issuetracker` ma dwa warianty formularza: akcje React 19 na `/new` i React Hook Form na `/new-rhf`. Oba zostawiają wartość pola w DOM i sięgają po nią same, gdy jest potrzebna. Biblioteki z drugiej rodziny robią odwrotnie i trzymają każdą literę we własnym stanie, czyli robią z każdego pola pole kontrolowane. Demo ich nie używa, bo przy dwóch polach nic nie wnoszą, ale bez nich porównanie byłoby niepełne. **Formik** spotyka się głównie w istniejącym kodzie, a **TanStack Form** to najmłodsza z omawianych bibliotek formularzy.
+Projekt `issuetracker` ma dwa warianty formularza: akcje React 19 na `/new` i React Hook Form na `/new-rhf`. Oba zostawiają wartość pola w DOM i sięgają po nią same, gdy jest potrzebna. Zespół, który dołącza do istniejącego projektu, często zastaje jednak inną bibliotekę. Najczęściej jest to **Formik**, zbudowany wokół schematów Yup, i dlatego schemat Zod nie wchodzi do niego wprost. Nowy projekt może za to sięgnąć po **TanStack Form**, najmłodszą z omawianych bibliotek formularzy. Obie robią odwrotnie niż akcje i React Hook Form: trzymają każdą literę we własnym stanie, czyli robią z każdego pola pole kontrolowane.
 
-Przykłady poniżej to kod spoza projektu. Używają jednak pól i schematu `issueSchema` z `app/lib/schema.js`, żeby dało się je położyć obok dwóch wariantów z demo. Każdy przykład przyjmuje prop `onCreate`, czyli funkcję zapisu przekazaną z zewnątrz, na przykład `addIssue`. Przykłady są napisane dla wersji React 19.3.0, Formik 2.4.9, `@tanstack/react-form` 1.33.5 i Zod 3.25.76.
+Demo ich nie używa, bo przy dwóch polach nic nie wnoszą, ale bez nich porównanie byłoby niepełne. Przykłady poniżej to kod spoza demo. Używają jednak pól `title` i `priority` oraz schematu `issueSchema` z `app/lib/schema.js`, żeby dało się je położyć obok dwóch wariantów z demo. Każdy przykład przyjmuje prop `onCreate`, czyli funkcję zapisu przekazaną z zewnątrz, na przykład `addIssue`. Przykłady są napisane dla wersji React 19.3.0, Formik 2.4.9, `@tanstack/react-form` 1.33.5 i Zod 3.25.76. Uruchomiono je w kopii projektu z dopisanymi paczkami.
 
 ## Formik: hasło i stan projektu
 
@@ -54,15 +54,23 @@ export default function NewIssueFormik({ onCreate }) {
 
   return (
     <form onSubmit={formik.handleSubmit}>
-      <label>
-        Title
+      <p>
+        Title:{" "}
         {/* value + onChange: pole kontrolowane, każda litera trafia do stanu Formika */}
         <input name="title" value={formik.values.title}
           onChange={formik.handleChange} onBlur={formik.handleBlur} />
-      </label>
-      {/* touched: komunikat dopiero po opuszczeniu pola */}
-      {formik.touched.title && formik.errors.title && <p>{formik.errors.title}</p>}
-      <button type="submit" disabled={formik.isSubmitting}>Create</button>
+        {/* touched: komunikat dopiero po opuszczeniu pola */}
+        {formik.touched.title && formik.errors.title}
+      </p>
+      <p>
+        Priority:{" "}
+        <select name="priority" value={formik.values.priority} onChange={formik.handleChange}>
+          <option value="low">low</option>
+          <option value="medium">medium</option>
+          <option value="high">high</option>
+        </select>
+      </p>
+      <button type="submit" disabled={formik.isSubmitting}>Add issue</button>
     </form>
   );
 }
@@ -70,13 +78,9 @@ export default function NewIssueFormik({ onCreate }) {
 
 Zapis `?.[0]` to ten sam operator `?.`, który chroni przed odczytem z `undefined`, tym razem przy indeksie tablicy. Pole poprawne nie ma klucza w `fieldErrors`, więc bez niego odczyt `[0]` rzuciłby wyjątek.
 
-Trzy pola obiektu `formik` robią większość pracy. `values` trzyma wartości, `errors` wynik walidacji, a `touched` zapamiętuje, które pole użytkownik już opuścił. `handleChange` odczytuje atrybut `name` pola, z którego przyszło zdarzenie, i pod tym kluczem zapisuje nową wartość w `values`. Walidacja i jej pokazanie to dwie osobne rzeczy. Po wpisaniu „ab” `formik.errors.title` zawiera już „Title must be at least 3 characters.”, ale `touched.title` ma wartość `false` i akapit z błędem się nie pojawia. Komunikat wychodzi dopiero po opuszczeniu pola. Po wysłaniu „abc” `onCreate` dostaje `{ title: "abc", priority: "medium" }`, a `resetForm` czyści pole.
+Trzy pola obiektu `formik` robią większość pracy. `values` trzyma wartości, `errors` wynik walidacji, a `touched` zapamiętuje, które pole użytkownik już opuścił. `handleChange` odczytuje atrybut `name` pola, z którego przyszło zdarzenie, i pod tym kluczem zapisuje nową wartość w `values`, więc ta sama funkcja obsługuje pole tytułu i listę priorytetu. Walidacja i jej pokazanie to dwie osobne rzeczy. Po wpisaniu „ab” `formik.errors.title` zawiera już „Title must be at least 3 characters.”, ale `touched.title` ma wartość `false` i komunikat się nie pojawia. Wychodzi dopiero po opuszczeniu pola. Po wysłaniu „abc” `onCreate` dostaje `{ title: "abc", priority: "medium" }`, a `resetForm` czyści pole.
 
 Ta sama strona dokumentacji opisuje momenty walidacji: po zdarzeniach zmiany, po opuszczeniu pola i przy próbie wysłania. Flagi `validateOnChange` i `validateOnBlur` wyłączają dwa pierwsze. Formik oznacza wszystkie pola jako odwiedzone dopiero przy próbie wysłania, więc pole bez `onBlur` pokaże swój błąd dopiero po kliknięciu przycisku.
-
-## Koszt jednego stanu na cały formularz
-
-Stan Formika jest jeden dla całego formularza i mieszka w komponencie, który wywołuje `useFormik`. Każda zmiana `values` albo `errors` renderuje więc ten komponent razem ze wszystkimi polami. Licznik w ciele `NewIssueFormik` rośnie o dwa przy każdej wpisanej literze, także wtedy, gdy wynik walidacji się nie zmienia. Przy dwóch polach to bez znaczenia. Dla bardzo dużych formularzy dokumentacja Formika przewiduje komponent `<FastField />`, opisany jako zoptymalizowana wersja `<Field />` dla formularzy z około trzydziestoma i więcej polami. Zastępuje on `<Field />` w polu niezależnym od innych pól.
 
 ## Biblioteka bez interfejsu
 
@@ -91,6 +95,7 @@ TanStack Form pochodzi od autorów TanStack Query, biblioteki do pobierania dany
 Słowo **headless** oznacza bibliotekę bez warstwy wyglądu. TanStack Form nie dostarcza żadnego pola ani przycisku. Dostarcza stan i funkcje, a cały wygląd formularza zostaje po stronie aplikacji. Do przekazania stanu do wyglądu służy wzorzec **render-prop**: komponent biblioteki nie zwraca własnego JSX, tylko wywołuje funkcję podaną w `children` i zwraca jej wynik.
 
 ```jsx
+// Przykład spoza demo: najmniejszy komponent z render-prop.
 function Counter({ children }) {
   const [n, setN] = useState(0);
   return children(n, () => setN(n + 1)); // stan i funkcja oddane do funkcji z children
@@ -133,21 +138,32 @@ export default function NewIssueTanStack({ onCreate }) {
       <form.Field
         name="title"
         children={(field) => (
-          <label>
-            Title
+          <p>
+            Title:{" "}
             <input
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
             />
             {/* przy schemacie każdy błąd jest obiektem z polem message */}
-            {field.state.meta.errors.map((issue) => (
-              <p key={issue.message}>{issue.message}</p>
-            ))}
-          </label>
+            {field.state.meta.errors.map((issue) => issue.message)}
+          </p>
         )}
       />
-      <button type="submit">Create</button>
+      <form.Field
+        name="priority"
+        children={(field) => (
+          <p>
+            Priority:{" "}
+            <select value={field.state.value} onChange={(e) => field.handleChange(e.target.value)}>
+              <option value="low">low</option>
+              <option value="medium">medium</option>
+              <option value="high">high</option>
+            </select>
+          </p>
+        )}
+      />
+      <button type="submit">Add issue</button>
     </form>
   );
 }
@@ -155,7 +171,7 @@ export default function NewIssueTanStack({ onCreate }) {
 
 Obiekt `field` ma bieżącą wartość w `field.state.value`, funkcje `handleChange` i `handleBlur` oraz metadane w `field.state.meta`, w tym listę błędów. Wysłanie przechodzi przez `form.handleSubmit()`, a `onSubmit` dostaje gotowe wartości w polu `value`.
 
-Przy walidatorze w `onChange` komunikat pojawia się od pierwszej litery: po wpisaniu „ab” pod polem stoi „Title must be at least 3 characters.”. Kod `{field.state.meta.errors.join(", ")}` wyświetliłby w tym miejscu „[object Object]”, bo elementy listy są obiektami, a nie napisami.
+Przy walidatorze w `onChange` komunikat pojawia się od pierwszej litery: po wpisaniu „ab” obok pola stoi „Title must be at least 3 characters.”. Kod `{field.state.meta.errors.join(", ")}` wyświetliłby w tym miejscu „[object Object]”, bo elementy listy są obiektami, a nie napisami.
 
 ## Schemat wprost, bez adaptera
 
@@ -173,7 +189,7 @@ TanStack Form przyjmuje ten interfejs wprost, React Hook Form potrzebuje do nieg
 
 ## Render tylko tam, gdzie zmienił się stan
 
-Za `form.Field` stoi zasada całej biblioteki, zapisana w przewodniku *Reactivity*: „TanStack Form nie powoduje renderów przy interakcji z formularzem” (*„Tanstack Form doesn't cause re-renders when interacting with the form”*). Pole subskrybuje własną wartość i tylko ono renderuje się po zmianie. Liczniki w ciele `NewIssueTanStack` i w funkcji `children` pokazują po dwóch literach zero renderów komponentu formularza i dwa rendery pola. Odczyt `form.state.values.title` w treści komponentu pokazałby więc wartość sprzed zmiany.
+Za `form.Field` stoi zasada całej biblioteki, zapisana w przewodniku *Reactivity*: „TanStack Form nie powoduje renderów przy interakcji z formularzem” (*„Tanstack Form doesn't cause re-renders when interacting with the form”*). Pole subskrybuje własną wartość i tylko ono renderuje się po zmianie. Liczniki w ciele `NewIssueTanStack` i w funkcji `children` pola tytułu pokazują po dwóch literach zero renderów komponentu formularza i dwa rendery pola. Odczyt `form.state.values.title` w treści komponentu pokazałby więc wartość sprzed zmiany.
 
 ![Rysunek 3.23 — rendery komponentu formularza po wpisaniu dwóch liter](../figures/out/rys_03_23.png)
 
@@ -182,18 +198,19 @@ Na Rysunku 3.23 słupek to liczba renderów komponentu formularza po dwóch lite
 Stan wysyłki też leży w `form.state`. Do jego odczytu biblioteka ma komponent `form.Subscribe`, którego cel strona *Basic Concepts* opisuje jako optymalizację renderów: aktualizowanie komponentów „tylko wtedy, gdy to konieczne” (*„only updating components when necessary”*).
 
 ```jsx
+// Przykład spoza demo: przycisk w form.Subscribe zamiast zwykłego button.
 <form.Subscribe
   selector={(state) => [state.canSubmit, state.isSubmitting]} // wybór dwóch wartości ze stanu
   children={([canSubmit, isSubmitting]) => (
     // render tylko wtedy, gdy któraś z dwóch wartości się zmieni
     <button type="submit" disabled={!canSubmit}>
-      {isSubmitting ? "Creating..." : "Create"}
+      {isSubmitting ? "Adding..." : "Add issue"}
     </button>
   )}
 />
 ```
 
-Po wpisaniu „ab” przycisk jest zablokowany, bo `canSubmit` ma wartość `false`.
+Po wpisaniu „ab” przycisk jest zablokowany, bo `canSubmit` ma wartość `false`, a po dopisaniu „c” znów działa.
 
 ## Render-prop obok hooków
 
@@ -206,8 +223,6 @@ Kumar w *Fluent React* nazywa komponent z render-prop bezinterfejsowym, bo „ni
 > — Tejas Kumar, *Fluent React*
 
 TanStack Form używa obu narzędzi, każdego do czego innego. Hook `useForm` tworzy stan całego formularza i nie zwraca JSX. Render-prop w `form.Field` i `form.Subscribe` wyznacza **granicę renderu**. Funkcja z `children` należy do osobnego komponentu, więc zmiana stanu pola renderuje tylko ten komponent, a komponent z `useForm` zostaje bez renderu. Tę granicę widać w pomiarze: zero renderów formularza i dwa rendery pola. Sam hook takiej granicy nie wyznaczy, bo stan odczytany przez hook należy do komponentu, który go wywołał, i to ten komponent się renderuje.
-
-Brak interfejsu ma też koszt. TanStack Form zostawia aplikacji pełną kontrolę nad znacznikami i stylami, ale także całą pracę przy każdym polu: `value`, `onChange` i `onBlur` podpina się ręcznie w każdym `form.Field`. W przykładzie zgłoszenia samo pole tytułu, od `<form.Field` do zamykającego `/>`, zajmuje 17 linii.
 
 ## Rysunek 3.24 — trzy miejsca na wartość pola
 
@@ -229,6 +244,7 @@ Na Rysunku 3.24 jedno naciśnięcie klawisza prowadzi w trzy miejsca, zależnie 
 Obie biblioteki przechwytują wysłanie w JavaScripcie i przekazują dalej zwykły obiekt wartości, tak samo jak React Hook Form. <u>Akcja w stylu `submitIssue(prevState, formData)` oczekuje `FormData`</u>. Między biblioteką a taką akcją potrzebna jest więc funkcja, która zbuduje jedno z drugiego.
 
 ```js
+// Przykład spoza demo: obiekt wartości zamieniony na FormData.
 function toFormData(values) {
   const formData = new FormData();
   for (const [key, value] of Object.entries(values)) formData.set(key, value); // para klucz–wartość
@@ -240,6 +256,16 @@ Object.fromEntries(toFormData({ title: "abc", priority: "low" })); // z powrotem
 ```
 
 `Object.entries` zamienia obiekt na tablicę par `[klucz, wartość]`, czyli robi odwrotność `Object.fromEntries`. Konwersja jest tania. Do połączenia z Server Action TanStack Form ma osobny pakiet `@tanstack/react-form-nextjs`. Przewodnik po renderowaniu na serwerze (*SSR*) przypomina w komentarzu przy kodzie, że pola muszą wtedy mieć jawny atrybut `name` (*„must explicitly set the name attribute for the POST request”*). Formik takiego połączenia w dokumentacji nie opisuje.
+
+## Zalety i koszty bibliotek z polami kontrolowanymi
+
+Biblioteka z polami kontrolowanymi trzyma wartość w stanie, który sama pilnuje. Formik zbiera całą logikę w jednym obiekcie i rozumie Yup. TanStack Form przyjmuje dowolny schemat Standard Schema i renderuje tylko pola. W obu przypadkach płaci się kodem połączenia pola ze stanem. Przy dwóch polach demo ten koszt nie przynosi zysku. Dla bardzo dużych formularzy dokumentacja Formika przewiduje komponent `<FastField />`, zoptymalizowaną wersję `<Field />` dla formularzy z około trzydziestoma i więcej polami, który zastępuje `<Field />` w polu niezależnym od innych pól.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Formik: jeden stan formularza i Yup wprost w `validationSchema`; w istniejącym kodzie nie trzeba nic przepisywać | Render całego formularza przy każdej literze (pomiar: dwa rendery komponentu na literę); schemat Zod wymaga ręcznej funkcji `validate`, a każde nowe pole dopisuje wiersz w tej funkcji | Nowy projekt ze schematem Zod: React Hook Form albo akcja |
+| TanStack Form: render tylko pola (pomiar: zero renderów formularza po dwóch literach); Zod przez Standard Schema, bez adaptera | Render-prop i więcej kodu na pole (pole tytułu zajmuje 15 linii); `value`, `onChange` i `onBlur` podpina się ręcznie | Prosty formularz bez zależności między polami i bez walidacji asynchronicznej: React Hook Form |
+| Obie: walidacja przy pisaniu i pełna kontrola nad stanem pola | Obiekt wartości zamiast `FormData`, więc potrzebna konwersja do akcji; bez JavaScriptu formularz niczego nie zapisze | Formularz mający działać przed załadowaniem JavaScriptu albo wołać Server Action: akcja |
 
 > 💡 **Zapamiętaj:** Formik i TanStack Form trzymają wartości pól we własnym stanie. Formik renderuje cały formularz przy każdej literze i rozumie wprost tylko schematy Yup, a TanStack Form renderuje samo pole i przyjmuje schemat Zod przez Standard Schema. Wszystkie trzy biblioteki oddają do funkcji wysyłki obiekt wartości, a akcja oczekuje `FormData`.
 

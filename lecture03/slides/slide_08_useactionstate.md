@@ -1,8 +1,8 @@
 # Akcja, która oddaje wynik: `useActionState`
 
-## Czego brakuje pierwszemu formularzowi
+## Pusty tytuł na liście i przycisk, który nic nie mówi
 
-Formularz z akcją działa, ale nie umie odpowiedzieć użytkownikowi. Pusty tytuł jest przyjmowany bez sprzeciwu i użytkownik nie dostaje informacji o błędzie. Nie ma stanu oczekiwania, więc przycisk „Submit” można kliknąć wiele razy. Nawigacja na listę następuje natychmiast, bez potwierdzenia, że coś zapisano.
+Formularz z poprzedniego kroku działa, ale nie umie odpowiedzieć użytkownikowi. Pomiar na tej wersji: pusty tytuł jest przyjmowany bez sprzeciwu i trafia na koniec listy jako wiersz „[medium]”. Przycisk „Add issue” nie ma stanu oczekiwania, więc przy wolnym zapisie można go kliknąć wiele razy. Nawigacja na listę następuje natychmiast, bez potwierdzenia, że coś zapisano.
 
 Te braki mają wspólną przyczynę. Funkcja `action` wykonuje pracę i znika, a jej wynik nigdzie nie trafia. Komponent nie wie, czy zgłoszenie dodano, ani czy tytuł był pusty. Brakuje drogi od akcji z powrotem do komponentu. Zwykły `useState` mógłby ją zapewnić, ale wymagałby ręcznego wywoływania settera w kilku miejscach akcji, a setter wywołany w akcji i tak zadziała dopiero po jej końcu.
 
@@ -22,10 +22,10 @@ Hook ma krótką historię nazwy. Bugl w *Modern Full-Stack React Projects*, pis
 
 ## Najmniejszy formularz z `useActionState`
 
-Reducer liczący próby wystarczy, żeby zobaczyć wszystkie trzy wartości zwracane przez hook (przykład spoza projektu):
+Reducer liczący próby wystarczy, żeby zobaczyć wszystkie trzy wartości zwracane przez hook:
 
 ```jsx
-// Akcja w postaci reducera: dostaje poprzedni stan i FormData.
+// Przykład spoza demo: akcja w postaci reducera, dostaje poprzedni stan i FormData.
 async function countAttempts(prevState, formData) {
   await new Promise((r) => setTimeout(r, 100)); // symulacja wolnej operacji
   return { attempts: prevState.attempts + 1 };  // nowy stan
@@ -61,83 +61,53 @@ Z kolejki wynika też, skąd bierze się stan. Hook nie daje settera, który mó
 
 ## Formularz zgłoszenia z wynikiem i stanem oczekiwania
 
-Strona `app/new/page.jsx` przechodzi na `useActionState`. Importy tracą `useRouter`, a zyskują hook i komponent linku. Stan początkowy i akcja leżą poza komponentem. W komponencie dochodzą wywołanie hooka, dwa komunikaty nad formularzem i przycisk sterowany flagą:
+Strona `app/new/page.jsx` przechodzi na `useActionState`. Akcja leży poza komponentem i ma sygnaturę reducera. W komponencie dochodzą wywołanie hooka, komunikat o sukcesie i błąd przy polu. Przycisk dostaje flagę `isPending`:
 
 ```jsx
-// app/new/page.jsx: zastąpić całą zawartość
-// Formularz nowego zgłoszenia: wynik akcji przechowuje useActionState.
-// "use client": hook i akcja działają w przeglądarce,
-// a addIssue zapisuje do kopii magazynu w przeglądarce.
+// app/new/page.jsx
 "use client";
-import { useActionState } from "react"; // React 19
-import Link from "next/link";
+import { useActionState } from "react";
 import { addIssue } from "../lib/store";
 
-const INITIAL_STATE = { success: false, error: null, issue: null };
-
-// Sygnatura: (prevState, formData), prevState wstawia useActionState.
-// prevState = wynik poprzedniego wywołania (albo INITIAL_STATE przy pierwszym).
+// akcja dostaje poprzedni stan i dane formularza, a zwraca nowy stan
 async function submitIssue(prevState, formData) {
-  // Symulacja operacji asynchronicznej (np. wywołania API).
-  await new Promise((r) => setTimeout(r, 600));
+  await new Promise((r) => setTimeout(r, 600)); // udajemy zapis na serwerze: 0,6 s
+  const title = formData.get("title").trim();
+  if (title === "") return { errors: { title: "Title must not be empty." } };
 
-  // FormData powstaje automatycznie ze wszystkich pól z atrybutem name.
-  const title = formData.get("title");
-  const priority = formData.get("priority");
-
-  // Ręczna walidacja: tytuł nie może być pusty.
-  if (!title || title.trim() === "") {
-    return { success: false, error: "Title must not be empty.", issue: null };
-  }
-
-  const issue = addIssue({ title: title.trim(), priority: priority || "medium" });
-  return { success: true, error: null, issue };
+  const issue = addIssue({ title, priority: formData.get("priority") });
+  return { issue };
 }
 
 export default function NewIssuePage() {
-  // useActionState zwraca [state, formAction, isPending]
-  const [state, formAction, isPending] = useActionState(submitIssue, INITIAL_STATE);
+  const [state, formAction, isPending] = useActionState(submitIssue, null);
 
   return (
-    <div>
-      <h1>New Issue</h1>
-
-      {state.success && (
-        <p>
-          Issue #{state.issue.id} added!{" "}
-          <Link href="/">View all issues</Link>
-        </p>
-      )}
-      {state.error && <p>Error: {state.error}</p>}
-
+    <main>
+      <h1>New issue</h1>
+      {state?.issue && <p>Issue #{state.issue.id} added.</p>}
       <form action={formAction}>
-        <div>
-          {/* htmlFor łączy etykietę z polem o id="title" */}
-          <label htmlFor="title">Title</label>
-          <input id="title" name="title" type="text" />
-        </div>
-        <div>
-          <label htmlFor="priority">Priority</label>
-          <select id="priority" name="priority">
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
+        <p>Title: <input name="title" /> {state?.errors?.title}</p>
+        <p>
+          Priority:{" "}
+          <select name="priority" defaultValue="medium">
+            <option value="low">low</option>
+            <option value="medium">medium</option>
+            <option value="high">high</option>
           </select>
-        </div>
-        <button type="submit" disabled={isPending}>
-          {isPending ? "Submitting..." : "Submit"}
-        </button>
+        </p>
+        <button disabled={isPending}>Add issue</button>
       </form>
-    </div>
+    </main>
   );
 }
 ```
 
-Na czas trwania akcji, w demo 0,6 s, przycisk jest wyłączony i ma napis „Submitting...”. Pusty tytuł kończy się komunikatem „Error: Title must not be empty.”. Poprawny daje „Issue #5 added! View all issues”. `!title` łapie `null` z pola bez nazwy, a `trim()` odrzuca tytuł złożony z samych spacji. `INITIAL_STATE` i `submitIssue` leżą poza komponentem, bo nie zależą od żadnego renderu. `router.push("/")` zniknęło, więc po sukcesie formularz zostaje na ekranie, a na listę prowadzi link.
+Pomiar: po kliknięciu „Add issue” przycisk jest wyłączony już po 0,2 s, a akcja trwa 0,6 s. Tytuł złożony z samych spacji kończy się komunikatem „Title must not be empty.” obok pola, bo `trim()` ucina spacje przed porównaniem. Poprawny tytuł, na przykład „ab”, daje „Issue #4 added.”, a na liście pojawia się wiersz „[medium] ab”. Stan początkowy to `null`, dlatego JSX czyta stan przez `state?.`: przed pierwszym wysłaniem nie ma jeszcze ani wyniku, ani błędu. `router.push("/")` zniknęło, więc po sukcesie formularz zostaje na ekranie, a pole tytułu jest puste. Lista priorytetów wraca do „medium”, bo takie jest jej `defaultValue`.
 
-![Rysunek 3.16 — formularz z błędem przy pustym tytule i z potwierdzeniem po sukcesie](../figures/out/rys_03_16.png)
+![Rysunek 3.16 — błąd przy pustym tytule i potwierdzenie po sukcesie](../figures/out/rys_03_16.png)
 
-Rysunek 3.16 zestawia dwa wyniki tej samej akcji. W obu stanach formularz zostaje na ekranie, a po sukcesie pole tytułu jest puste.
+Rysunek 3.16 zestawia dwa wyniki tej samej akcji: komunikat „Title must not be empty.” przy pustym polu i „Issue #4 added.” po sukcesie. W obu stanach formularz zostaje na ekranie.
 
 ## Opakowana akcja zamiast akcji programisty
 
@@ -149,32 +119,32 @@ Formularz dostaje `formAction`, a nie `submitIssue`. Schwarzmüller wyjaśnia, p
 >
 > — Maximilian Schwarzmüller, *React Key Concepts*
 
-Gdyby formularz dostał `submitIssue` bezpośrednio, React wywołałby funkcję i zignorował jej wynik. Opakowanie przejmuje wynik i zapisuje go jako stan. Dokumentacja nazywa tę funkcję `dispatchAction`, a demo przypisuje ją do zmiennej `formAction`. Z atrybutem przycisku o tej samej nazwie, który kieruje wysłanie do innej akcji, łączy ją tylko nazwa. Działa bez dodatkowej pracy w atrybucie `action` formularza, bo React uruchamia ją wtedy w przejściu. Wywołana z kodu, na przykład z `onClick`, wymaga owinięcia w `startTransition`, czyli funkcję Reacta, która uruchamia aktualizację jako przejście. Wywołanie poza przejściem w trybie deweloperskim zapisuje błąd w konsoli.
+Gdyby formularz dostał `submitIssue` bezpośrednio, React wywołałby funkcję i zignorował jej wynik. Opakowanie przejmuje wynik i zapisuje go jako stan. Dokumentacja nazywa tę funkcję `dispatchAction`, a demo przypisuje ją do zmiennej `formAction`. Z atrybutem `formAction` przycisku, który kieruje wysłanie do innej akcji, łączy ją tylko nazwa. W atrybucie `action` formularza działa bez dodatkowej pracy, bo React uruchamia ją wtedy w przejściu. Wywołana z kodu, na przykład z `onClick`, wymaga owinięcia w `startTransition`, czyli funkcję Reacta, która uruchamia aktualizację jako przejście. Wywołanie poza przejściem w trybie deweloperskim zapisuje błąd w konsoli.
 
 ## Dlaczego akcja dostaje `prevState`
 
 Opakowana akcja wywołuje funkcję programisty z dwoma argumentami. Dokumentacja opisuje pierwszy z nich: `previousState` to ostatni stan, na początku równy `initialState`, a po pierwszym wywołaniu równy ostatniej zwróconej wartości. Drugi argument to dane przekazane do `dispatchAction`, czyli przy formularzu obiekt `FormData`.
 
-Kolejność argumentów jest sztywna. Akcja ze starą sygnaturą `submitIssue(formData)` dostanie w parametrze `formData` poprzedni stan, czyli obiekt `INITIAL_STATE`. Ten obiekt nie ma metody `get`, więc wywołanie `formData.get("title")` rzuca `TypeError` z komunikatem `formData.get is not a function`. Dane formularza w ogóle do funkcji nie trafiają, a zamiast formularza pojawia się domyślny ekran Next.js „This page couldn’t load”. Demo z `prevState` nie korzysta, ale musi go przyjąć. Licznik nieudanych prób albo lista zgłoszeń dodanych w tej sesji wymagałyby już poprzedniej wartości.
+Kolejność argumentów jest sztywna. Akcja ze starą sygnaturą `submitIssue(formData)` dostanie w parametrze `formData` poprzedni stan, czyli przy pierwszym wysłaniu `null`. Wywołanie `formData.get("title")` rzuca wtedy `TypeError` z komunikatem „Cannot read properties of null (reading 'get')”. Dane formularza do funkcji nie trafiają, więc zamiast formularza pojawia się domyślny ekran Next.js „This page couldn’t load”. Demo z `prevState` nie korzysta, ale musi go przyjąć. Licznik nieudanych prób albo lista zgłoszeń dodanych w tej sesji wymagałyby już poprzedniej wartości.
 
 ## Rysunek 3.17 — poprzedni stan i dane formularza dają nowy stan
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
 flowchart LR
-    S0["INITIAL_STATE<br/>albo ostatni wynik"] --> F["submitIssue<br/>(prevState, formData)"]
+    S0["null<br/>albo ostatni wynik"] --> F["submitIssue<br/>(prevState, formData)"]
     D["FormData<br/>title, priority"] --> F
-    F -->|"pusty tytuł"| S1["success: false<br/>error"]
-    F -->|"dane poprawne"| S2["success: true<br/>issue"]
+    F -->|"pusty tytuł"| S1["{ errors }"]
+    F -->|"dane poprawne"| S2["{ issue }"]
     S1 --> R["render<br/>NewIssuePage"]
     S2 --> R
 ```
 
-Na Rysunku 3.17 do funkcji `submitIssue` wchodzą dwie strzałki. Pierwsza niesie poprzedni stan, przy pierwszym wysłaniu równy `INITIAL_STATE`. Druga niesie dane formularza. Wychodzą dwie drogi zależnie od wyniku walidacji i obie kończą się renderem strony. Przy następnym wysłaniu wynik tego renderu wraca do lewego górnego prostokąta jako `prevState`.
+Na Rysunku 3.17 do funkcji `submitIssue` wchodzą dwie strzałki. Pierwsza niesie poprzedni stan, przy pierwszym wysłaniu równy `null`. Druga niesie dane formularza. Wychodzą dwie drogi zależnie od wyniku sprawdzenia tytułu i obie kończą się renderem strony. Przy następnym wysłaniu wynik tego renderu wraca do lewego górnego prostokąta jako `prevState`.
 
-## Stały kształt stanu
+## Kształt stanu
 
-Akcja zwraca zawsze obiekt `{ success, error, issue }`. Gdyby przy błędzie zwracała napis, a przy sukcesie obiekt, każdy render musiałby najpierw sprawdzać typ stanu. Przy stałym kształcie JSX czyta pola wprost: `state.success && …` i `state.error && …`. Komunikat błędu jest więc zwykłą wartością zwróconą z akcji. Wyjątek działa inaczej, bo akcja wykonuje się w przejściu, a błąd przejścia React kieruje do najbliższej granicy błędów. Dokumentacja `useActionState` opisuje to wprost:
+Akcja zwraca albo `{ errors }`, albo `{ issue }`, a przed pierwszym wysłaniem stanem jest `null`. Każdy z trzech przypadków ma inne pola, więc JSX sprawdza je przez `state?.issue` i `state?.errors?.title`. Pilnowanie tego kształtu spada na programistę: literówka w nazwie pola nie rzuca błędu i po cichu nic nie pokazuje. Komunikat błędu jest więc zwykłą wartością zwróconą z akcji. Wyjątek działa inaczej, bo akcja wykonuje się w przejściu, a błąd przejścia React kieruje do najbliższej granicy błędów. Dokumentacja `useActionState` opisuje to wprost:
 
 > **„Jeśli `dispatchAction` zgłosi wyjątek, React anuluje wszystkie oczekujące akcje i pokaże najbliższą granicę błędów.”**
 >
@@ -186,13 +156,14 @@ W Next.js najbliższą granicą jest plik `error.jsx`. Strona `/new` i korzeń `
 
 ## Akcja synchroniczna i asynchroniczna
 
-Akcja w tej wersji ma słowo `async`, ale nie musi go mieć. Schwarzmüller zwraca uwagę, że akcje formularzy mogą być synchroniczne albo asynchroniczne. Przykładem akcji synchronicznej jest u niego zapis do `localStorage`, bo to API przeglądarki działa synchronicznie. Akcja asynchroniczna zwraca obiekt Promise, na przykład po wysłaniu żądania `fetch` do serwera. `useActionState` przyjmuje oba rodzaje. Przy akcji asynchronicznej stanem staje się wartość, do której spełni się Promise. Funkcja `addIssue` w demo działa synchronicznie. Słowo `async` i opóźnienie są tu po to, żeby akcja zachowywała się jak prawdziwy zapis na serwerze i żeby stan oczekiwania był widoczny.
+Akcja w tej wersji ma słowo `async`, ale nie musi go mieć. Schwarzmüller zwraca uwagę, że akcje formularzy mogą być synchroniczne albo asynchroniczne. Przykładem akcji synchronicznej jest u niego zapis do `localStorage`, bo to API przeglądarki działa synchronicznie. Akcja asynchroniczna zwraca obiekt Promise, na przykład po wysłaniu żądania `fetch` do serwera. `useActionState` przyjmuje oba rodzaje. Przy akcji asynchronicznej stanem staje się wartość, do której spełni się Promise. Funkcja `addIssue` w demo działa synchronicznie. Słowo `async` i opóźnienie 0,6 s są tu po to, żeby akcja zachowywała się jak prawdziwy zapis na serwerze i żeby stan oczekiwania był widoczny.
 
 ## Stan akcji żyje tak długo jak komponent
 
 Stan z `useActionState` należy do komponentu, który wywołał hook, tak samo jak stan z `useState`. Minimalny licznik wysłań pokazuje, co to znaczy dla wyniku akcji:
 
 ```jsx
+// Przykład spoza demo: licznik wysłań
 import { useActionState } from "react";
 
 function Counter() {
@@ -205,9 +176,19 @@ function Counter() {
 
 Po dwóch wysłaniach przycisk pokazuje „Sent 2”. Gdy rodzic ukryje komponent i pokaże go ponownie, przycisk wraca do „Sent 0”, bo nowy egzemplarz zaczyna od stanu początkowego. Ten sam skutek daje zmiana atrybutu `key`, która każe Reactowi potraktować komponent jak nowy. Dwa wywołania hooka w różnych komponentach mają osobne stany: wysłanie jednego formularza nie zmienia licznika drugiego.
 
-W `issuetracker` ma to praktyczny skutek. Komunikat „Issue #5 added!” znika po przejściu na listę i powrocie na `/new`, bo strona formularza montuje się od nowa. Stan akcji przechowuje więc wynik ostatniego wysłania. Dane, które mają przetrwać nawigację, leżą w magazynie `store.js`, poza komponentem.
+W `issuetracker` ma to praktyczny skutek. Komunikat „Issue #4 added.” znika po przejściu na listę i powrocie na `/new`, bo strona formularza montuje się od nowa. Stan akcji przechowuje więc wynik ostatniego wysłania. Dane, które mają przetrwać nawigację, leżą w magazynie `store.js`, poza komponentem.
 
-> 💡 **Zapamiętaj:** `useActionState(akcja, stanPoczątkowy)` zwraca `[state, formAction, isPending]`. Akcja to reducer `(prevState, formData)`: to, co zwróci, staje się nowym stanem, a kolejne wywołania czekają w kolejce. Błędy do poprawienia zwraca się jako stan.
+## Zalety i koszty `useActionState`
+
+Hook oddaje wynik akcji komponentowi, ale narzuca akcji kształt reducera.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Wynik akcji jest stanem: błąd przy polu i „Issue #4 added.” bez ręcznego settera | Akcja ma sygnaturę `(prevState, formData)`; pomyłka w kolejności kończy się `TypeError` i ekranem „This page couldn’t load” | Formularz bez komunikatu i bez błędów: sama funkcja w `action` |
+| `isPending` blokuje przycisk już po 0,2 s od kliknięcia, bez własnej flagi | Kształt stanu (`null`, `{ errors }`, `{ issue }`) pilnuje programista, a wywołania czekają w kolejce | Akcje, które mają działać równolegle: `useState` i `useTransition` |
+| Błąd do poprawienia wraca jako dane, a wyjątek zostaje dla awarii | Stan znika razem z komponentem: komunikat „Issue #4 added.” nie przetrwa przejścia na listę | Wynik, który ma przeżyć nawigację: magazyn poza komponentem |
+
+> 💡 **Zapamiętaj:** `useActionState(akcja, stanPoczątkowy)` zwraca `[state, formAction, isPending]`. Akcja to reducer `(prevState, formData)`: to, co zwróci, staje się nowym stanem, a kolejne wywołania czekają w kolejce. Błędy do poprawienia zwraca się jako stan, a `isPending` wyłącza przycisk na czas zapisu.
 
 
 Materiał rozszerzony do tego slajdu: [`rozszerzenia/r08_useactionstate.md`](rozszerzenia/r08_useactionstate.md)

@@ -18,7 +18,7 @@ export default function NavLinks() {
     <nav>
       <Link href="/" className={pathname === "/" ? "active" : ""}>Issues</Link>
       {" | "}
-      <Link href="/new" className={pathname === "/new" ? "active" : ""}>+ New Issue</Link>
+      <Link href="/new" className={pathname === "/new" ? "active" : ""}>New</Link>
     </nav>
   );
 }
@@ -33,7 +33,7 @@ Hook `useSearchParams` zwraca obiekt `URLSearchParams` tylko do odczytu. Ten sam
 ```js
 const sp = new URLSearchParams("?priority=high");
 sp.get("priority");  // → "high"
-sp.get("status");    // → null: parametru nie ma w adresie
+sp.get("sort");      // → null: parametru nie ma w adresie
 ```
 
 Pod adresem `/?priority=high` wywołanie `searchParams.get("priority")` w komponencie da `"high"`, a pod `/` wartość `null`. Przy buildzie obowiązuje jednak warunek, którego serwer deweloperski nie sprawdza.
@@ -78,7 +78,7 @@ import Link, { useLinkStatus } from "next/link";
 
 function PendingHint() {
   const { pending } = useLinkStatus();         // stan przejścia najbliższego <Link> powyżej
-  return pending ? " (opening...)" : null;    // → [medium] Page loads slowly on mobile (opening...)
+  return pending ? " (opening...)" : null;    // → [medium] Page loads slowly (opening...)
 }
 
 export default function IssueLink({ issue }) {
@@ -91,4 +91,4 @@ export default function IssueLink({ issue }) {
 }
 ```
 
-Przy opóźnieniu sieci 500 ms dopisek stoi przy linku ok. 1 s, aż pojawi się ekran z `loading.jsx`.
+Bez opóźnienia sieci dopisek pojawia się po 0,06–0,08 s, `loading.jsx` po 0,08–0,12 s, a zgłoszenie po 0,88–0,92 s. Przy opóźnieniu sieci 500 ms dopisek pojawia się po ok. 0,06 s i stoi do ok. 1,07 s, czyli do chwili, gdy na ekranie jest zgłoszenie.

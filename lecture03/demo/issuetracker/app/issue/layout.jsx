@@ -1,13 +1,11 @@
-// Layout zagnieżdżony: renderuje się WEWNĄTRZ RootLayout i otacza każdą trasę /issue/*.
-// Pokazuje składanie layoutów: RootLayout > IssueLayout > strona.
+// app/issue/layout.jsx
+// Layout zagnieżdżony: obejmuje każdą trasę /issue/..., wewnątrz layoutu głównego
 import Link from "next/link";
 
 export default function IssueLayout({ children }) {
   return (
     <section>
-      <p>
-        <Link href="/">← Back to issues</Link>
-      </p>
+      <Link href="/">← Back to issues</Link>
       {children}
     </section>
   );
