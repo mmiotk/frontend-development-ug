@@ -8,7 +8,7 @@ Akcja `createArticle` przepuszcza do magazynu tylko dane zgodne ze schematem `ar
 2. **To samo żądanie `POST /new` wysłane bez formularza**, na przykład z terminala, razem z polami ukrytymi formularza.
 3. **Route Handler `POST /api/articles`**, który woła `addArticle` bezpośrednio.
 
-Pierwsza droga sprawdza dane schematem. Druga przechodzi przez tę samą akcję, więc też je sprawdza: tytuł „ab” wraca z komunikatem „Title: at least 3 characters”. Trzecia nie sprawdza niczego. Route Handler z pliku `app/api/articles/route.js` przekazuje ciało żądania do `addArticle` bez zmian. Treść `{"title":"","author":"","body":""}` daje odpowiedź 201 i artykuł z trzema pustymi polami. Treść `{"title":5}` daje 201 i rekord z tytułem będącym liczbą 5, bez autora i bez treści. Oba trafiają do magazynu, a lista pod `/` pokaże je dopiero po wygaśnięciu wpisu (`revalidate: 60`), bo Route Handler nie wywołuje `revalidatePath`. <u>Walidacja w jednym wejściu nie chroni pozostałych.</u>
+Pierwsza droga sprawdza dane schematem. Druga przechodzi przez tę samą akcję, więc też je sprawdza: tytuł „ab” wraca z komunikatem „Title: at least 3 characters”. Trzecia nie sprawdza niczego. Route Handler z pliku `app/api/articles/route.js` przekazuje ciało żądania do `addArticle` bez zmian. Treść `{"title":"","body":""}` daje odpowiedź 201 i artykuł z dwoma pustymi polami. Treść `{"title":5}` daje 201 i `{"id":4,"title":5}`: rekord z tytułem będącym liczbą 5 i bez pola `body`. Oba trafiają do magazynu, a lista pod `/` pokaże je dopiero po wygaśnięciu wpisu (`revalidate: 60`), bo Route Handler nie wywołuje `revalidatePath`. <u>Walidacja w jednym wejściu nie chroni pozostałych.</u>
 
 ## Dane od klienta są niezaufane
 
@@ -28,7 +28,7 @@ Server Action wygląda w kodzie jak zwykła funkcja importowana przez komponent,
 >
 > — dokumentacja Next.js, *Mutating Data*
 
-Identyfikator akcji nie wiąże jej też z jedną stroną. Akcję używaną na jednej stronie da się wykonać żądaniem `POST` pod dowolną inną ścieżkę aplikacji, na przykład `/swr-demo`, jeśli nagłówek `Next-Action` niesie jej identyfikator. Przewodnik *Data Security* zapewnia, że funkcje serwerowe niewykorzystane w aplikacji znikają z paczki klienta i nie mają publicznego punktu końcowego. W Next.js 16.4.0 funkcja eksportowana z pliku `"use server"`, ale nigdzie nieimportowana, rzeczywiście nie dostaje identyfikatora w manifeście budowania. Akcja używana przez aplikację pozostaje jednak osiągalna spod każdej ścieżki i dlatego sama kontroluje dane.
+Przewodnik *Data Security* zapewnia, że funkcje serwerowe niewykorzystane w aplikacji znikają z paczki klienta i nie mają publicznego punktu końcowego. W Next.js 16.4.0 funkcja eksportowana z pliku `"use server"`, ale nigdzie nieimportowana, rzeczywiście nie dostaje identyfikatora w manifeście budowania. Akcja używana przez aplikację pozostaje jednak osiągalna spod każdej ścieżki i dlatego sama kontroluje dane.
 
 ## Walidacja i zabezpieczenie
 
@@ -44,7 +44,6 @@ Najprostsza naprawa używa tego samego schematu w Route Handlerze. Schemat leży
 
 ```js
 // app/api/articles/route.js, wariant spoza demo: POST sprawdzany tym samym schematem
-import { NextResponse } from "next/server";
 import { addArticle } from "@/lib/store";
 import { articleSchema } from "@/lib/validate";
 
@@ -53,26 +52,26 @@ export async function POST(request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); // ciało nie jest JSON-em
+    return Response.json({ error: "Invalid JSON" }, { status: 400 }); // ciało nie jest JSON-em
   }
 
   const result = articleSchema.safeParse(body);
   if (!result.success) {
     // 400: przyczyna leży w wysłanych danych; kształt błędów jak w formularzu
-    return NextResponse.json({ error: result.error.flatten().fieldErrors }, { status: 400 });
+    return Response.json({ error: result.error.flatten().fieldErrors }, { status: 400 });
   }
   const article = addArticle(result.data);
-  return NextResponse.json(article, { status: 201 });
+  return Response.json(article, { status: 201 });
 }
 ```
 
-Ciało, którego nie da się odczytać jako JSON, dostaje teraz odpowiedź 400 zamiast 500, a treść `{"title":5}` odpowiedź 400 z trzema komunikatami zamiast miejsca na liście.
+Ciało, którego nie da się odczytać jako JSON, dostaje teraz odpowiedź 400 zamiast 500, a treść `{"title":5}` odpowiedź 400 z dwoma komunikatami zamiast miejsca w magazynie.
 
 ```text
-{"error":{"title":["Expected string, received number"],"author":["Required"],"body":["Required"]}}
+{"error":{"title":["Expected string, received number"],"body":["Required"]}}
 ```
 
-Kod 400 (*Bad Request*) mówi klientowi, że przyczyna leży w wysłanych danych. Treść odpowiedzi ma ten sam kształt co błędy w formularzu, więc klient API dostaje komunikaty tego samego rodzaju co użytkownik strony `/new`. Dwa ostatnie komunikaty są domyślnymi tekstami Zod 3, bo schemat definiuje własne komunikaty tylko dla zbyt krótkich napisów.
+Kod 400 (*Bad Request*) mówi klientowi, że przyczyna leży w wysłanych danych. Treść odpowiedzi ma ten sam kształt co błędy w formularzu, więc klient API dostaje komunikaty tego samego rodzaju co użytkownik strony `/new`. Oba komunikaty są domyślnymi tekstami Zod 3, bo schemat definiuje własne komunikaty tylko dla zbyt krótkich napisów.
 
 ## Warstwa dostępu do danych
 
@@ -130,6 +129,16 @@ Sesja idzie pierwsza, bo walidacja danych od nieznanej osoby jest zbędną prac�
 > — dokumentacja Next.js, *Server Actions and Mutations*
 
 Sprawdzenie na poziomie strony nie wystarcza. Przewodnik *Data Security* pisze, że kontrola uwierzytelnienia na stronie nie obejmuje akcji zdefiniowanych w tej stronie (*„A page-level authentication check does not extend to the Server Actions defined within it.”*). Strona może przekierować niezalogowanego, a akcja i tak przyjmie jego żądanie `POST`, jeśli sama nie sprawdzi sesji.
+
+## Zalety i koszty walidacji w każdym wejściu
+
+Do `addArticle` prowadzą trzy drogi, więc każda musi mieć własną kontrolę albo wspólną, ustawioną za nimi.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Ochrona wszystkich dróg do `addArticle`: odpowiedź 400 z komunikatami zamiast rekordu bez pól (bez walidacji `{"title":5}` daje 201 i `{"id":4,"title":5}`) | Ta sama reguła w kilku plikach, dopóki nie trafi do `addArticle` | Wiele wejść do jednej funkcji: jedna kontrola w warstwie dostępu do danych (`addArticle`) zamiast kopii w każdym wejściu |
+| `server-only` zamienia przypadkowy import magazynu w przeglądarce w przerwany build | Sesję i właściciela zasobu sprawdza się samemu, bo schemat nie wyłapie IDOR | Aplikacja bez kont, jak ta: wystarczy schemat, bo nie ma sesji ani właściciela do sprawdzenia |
+| Kształt błędów jak w formularzu, więc klient API dostaje komunikaty tego samego rodzaju | Kontrola na poziomie strony nie obejmuje akcji, więc sprawdzenie trzeba powtórzyć w każdej akcji | Ochrony frameworka, takie jak kontrola `Origin`, nie zastępują sprawdzenia danych |
 
 > 💡 **Zapamiętaj:** każde wejście, które zapisuje dane, samo sprawdza ich kształt, bo Server Action i Route Handler to publiczne punkty końcowe. Ochrony frameworka, takie jak kontrola `Origin`, tego sprawdzenia nie zastępują.
 

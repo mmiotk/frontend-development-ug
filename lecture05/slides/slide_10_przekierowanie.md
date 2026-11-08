@@ -1,32 +1,35 @@
 # Przekierowanie po zapisie
 
-## Zamiast komunikatu: powrót na listę
+## Po zapisie formularz stoi w miejscu
 
-Akcja `createArticle` po udanym zapisie zwraca `{ success: true }`, a formularz pokazuje komunikat. Częstszy wzorzec w aplikacjach to przeniesienie użytkownika na stronę, na której widać efekt zapisu. W `lib/actions.js` dochodzi import, a w miejsce `return { success: true }` trafia wywołanie `redirect`:
+Akcja `createArticle` po udanym zapisie zwraca `{ success: true }`, a formularz pokazuje „Article saved.” i zostaje na `/new` z pustymi polami. Efekt zapisu użytkownik musi sam sprawdzić na liście. Częstszy wzorzec w aplikacjach to przeniesienie go na stronę, na której efekt widać. W `lib/actions.js` dochodzi import `redirect`, a `return { success: true }` zastępuje wywołanie `redirect("/")`. Oto plik w wersji końcowej:
 
 ```js
-// lib/actions.js (nowe linie i ich otoczenie)
+// lib/actions.js
+"use server"; // każdy eksport tego pliku wykonuje się na serwerze
+
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { addArticle } from "./store";
+import { articleSchema } from "./validate";
 
 export async function createArticle(prevState, formData) {
-  // ... obiekt raw z polami FormData bez zmian ...
+  // walidacja na serwerze: danym z przeglądarki się nie ufa
+  const result = articleSchema.safeParse({
+    title: formData.get("title"),
+    body: formData.get("body"),
+  });
+  if (!result.success) return { error: result.error.flatten().fieldErrors };
 
-  const result = articleSchema.safeParse(raw);
-  if (!result.success) {
-    return { error: result.error.flatten().fieldErrors };
-  }
-
-  // Zapis w magazynie w pamięci
   addArticle(result.data);
-
-  // Unieważnienie pamięci strony z listą, żeby nowy artykuł był widoczny od razu
-  revalidatePath("/");
-
-  redirect("/"); // rzuca wyjątek wewnętrznie: kod po tej linii się nie wykona
+  revalidatePath("/"); // lista na / pokaże nowy artykuł od razu
+  redirect("/"); // rzuca wyjątek sterujący: kod niżej się nie wykona
 }
 ```
 
 `redirect` pochodzi z modułu `next/navigation`, tego samego co `notFound`. Po udanym zapisie użytkownik trafia na listę, a nowy artykuł jest na niej od razu dzięki wcześniejszemu `revalidatePath`. Gałąź z błędem walidacji nadal zwraca `{ error }`. Za krótki tytuł zostawia więc użytkownika na `/new` z komunikatem „Title: at least 3 characters” pod polem, a przekierowanie dotyczy tylko sukcesu.
+
+Ta sama zmiana usuwa komunikat. Linia `{state?.success && <p>Article saved.</p>}` w `app/new/page.jsx` nie ma już czego pokazywać: akcja po sukcesie nie zwraca żadnej wartości, więc `state.success` nigdy nie będzie prawdą. Formularz w wersji końcowej zaczyna się od `<h1>New article</h1>` i od razu przechodzi do `<form action={action}>`.
 
 Schwarzmüller w *React Key Concepts* opisuje ten układ jako typowy.
 
@@ -36,7 +39,7 @@ Schwarzmüller w *React Key Concepts* opisuje ten układ jako typowy.
 >
 > — Maximilian Schwarzmüller, *React Key Concepts*
 
-Bugl w *Modern Full-Stack React Projects* stosuje go przy tworzeniu wpisu na blogu: po zapisie akcja przekierowuje na stronę nowego posta. Tutaj celem jest lista, bo akcja nie używa obiektu zwracanego przez `addArticle`. Wariant z przekierowaniem na `/articles/4` wymagałby odczytania z tego obiektu pola `id`.
+Bugl w *Modern Full-Stack React Projects* stosuje go przy tworzeniu wpisu na blogu: po zapisie akcja przekierowuje na stronę nowego posta. Tutaj celem jest lista, bo akcja nie używa obiektu zwracanego przez `addArticle`. Wariant z przekierowaniem na `/articles/3` wymagałby odczytania z tego obiektu pola `id`.
 
 ## Dlaczego przekierowanie: problem ponownego wysłania
 
@@ -126,11 +129,15 @@ redirect("/"); // poza try: wyjątek NEXT_REDIRECT dociera do Next.js
 
 Awaria zapisu kończy się wtedy zwróceniem `{ success: false }`, a wyjątek `NEXT_REDIRECT` nie trafia do żadnego `catch`.
 
-## Cena przekierowania
+## Zalety i koszty przekierowania po zapisie
 
-Komunikat „Article added successfully!” przestaje być widoczny, bo formularz na `/new` znika razem ze stanem `useActionState`. Kod tego komunikatu jednak zostaje. Gałąź `{state?.success && <p>Article added successfully!</p>}` w `app/new/page.jsx` jest teraz martwym kodem: akcja po sukcesie nie zwraca już żadnej wartości, więc `state.success` nigdy nie będzie prawdą. W kodzie przeznaczonym do wdrożenia usuwa się ją razem ze zmianą akcji.
+Przekierowanie zamienia komunikat sukcesu na widok, w którym efekt zapisu jest od razu widoczny. Użytkownik dostaje nową listę, a odświeżenie strony nie powtarza zapisu. Cena to utrata komunikatu: wersja z „Article saved.” wymaga zwracania wartości z akcji, wersja z przekierowaniem nie ma czego zwracać, więc kod komunikatu usuwa się razem ze zmianą akcji.
 
-Użytkownik widzi tylko efekt: nowy artykuł na końcu listy, pod trzema istniejącymi. Przy długiej liście łatwo go przeoczyć.
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| F5 po zapisie nie wysyła formularza drugi raz (Post/Redirect/Get): przeglądarka powtarza tylko `GET` | Komunikat „Article saved.” znika, a linię `{state?.success && …}` trzeba usunąć razem ze zmianą akcji | Formularz, po którym użytkownik zostaje na stronie (kolejne wpisy pod rząd): zwrócony komunikat, jak w poprzedniej wersji |
+| Widok listy przychodzi w tej samej odpowiedzi: w `next dev` samo `POST /new 200`, bez osobnego `GET /`; bez JavaScriptu serwer odpowiada 303 z `Location: /` | Kolejność ma znaczenie: `redirect` rzuca wyjątek, więc stoi po `revalidatePath` i poza blokiem `try` | Przekierowanie po `POST` w Route Handlerze: `redirect` daje tam 307, więc potrzebny jest jawny kod 303 (rozszerzenie) |
+| Efekt zapisu leży tam, gdzie użytkownik go szuka: na liście | Nowy artykuł stoi na końcu listy, pod dwoma istniejącymi, i przy długiej liście łatwo go przeoczyć | Komunikat na stronie docelowej: parametr w adresie albo ciasteczko jednorazowe (rozszerzenie) |
 
 > 💡 **Zapamiętaj:** `redirect` w akcji rzuca wyjątek `NEXT_REDIRECT`, który framework zamienia na nawigację w tej samej odpowiedzi albo na kod 303. Dlatego stoi po `revalidatePath` i poza blokiem `try`. Poza akcją `redirect` daje 307, więc przekierowanie po `POST` w Route Handlerze wymaga jawnego 303.
 

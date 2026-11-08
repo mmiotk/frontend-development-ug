@@ -1,20 +1,30 @@
 # Projekt, który ma własne dane
 
-## Dane na serwerze, ekran w przeglądarce
+## Mapa klas problemów danych serwera
 
-Przeglądarka artykułów `articleviewer` pokazuje listę tekstów technicznych, stronę jednego artykułu i formularz dodawania nowego. Artykuły leżą w pamięci serwera, a lista wyświetla się w przeglądarce użytkownika, więc każdy ekran musi je skądś pobrać. Formularz dopisuje artykuł na serwerze, a lista wyświetlona minutę wcześniej nic o tym nie wie.
+Przeglądarka artykułów `articleviewer` pokazuje listę tekstów technicznych, stronę jednego artykułu i formularz dodawania nowego. Artykuły leżą w pamięci serwera, a lista wyświetla się w przeglądarce użytkownika, więc każdy ekran musi je skądś pobrać. Dla każdego ekranu trzeba ustalić trzy rzeczy. Pierwsza to **miejsce, w którym ekran powstaje**: na serwerze albo w przeglądarce. Druga to **czas, przez jaki wolno pokazywać zapamiętaną odpowiedź**, czyli dane z pamięci podręcznej (*cache*). Trzecia to **odpowiedzialność za odświeżenie po zapisie**: kto i kiedy powie ekranowi, że dane się zmieniły.
 
-Dla każdego ekranu trzeba więc ustalić trzy rzeczy. Pierwsza to **miejsce, w którym ekran powstaje**: na serwerze albo w przeglądarce. Druga to **czas, przez jaki wolno pokazywać zapamiętaną odpowiedź**, czyli dane z pamięci podręcznej (*cache*). Trzecia to **odpowiedzialność za odświeżenie po zapisie**: kto i kiedy powie ekranowi, że dane się zmieniły. Przykład: autor, który dodał artykuł formularzem, ma go zobaczyć na liście od razu. Ten sam autor z listą otwartą w drugiej karcie zobaczy tam nowy artykuł dopiero wtedy, gdy strona w tej karcie ponownie poprosi serwer o dane.
+Z tych pytań wynika siedem klas problemów. Każda ma w aplikacji miejsce, w którym bez odpowiedniego narzędzia coś działa źle, i każda dostaje własne narzędzie.
 
-Aplikacja dostaje po drodze własne API, czyli pliki `route.js` w katalogu `app/api`, które Next.js nazywa Route Handlerami. Dochodzą do tego lista pobierana na serwerze, formularz z funkcją zapisu wykonywaną na serwerze i strona pobierająca dane w przeglądarce. Wszystkie dane siedzą w tym samym projekcie, więc całość działa bez internetu i bez zewnętrznej usługi.
+| Klasa problemu | Co psuje się w przeglądarce artykułów | Narzędzie | Temat |
+|---|---|---|---|
+| Dane potrzebne odbiorcy spoza procesu serwera | skrypt w terminalu ani inna aplikacja nie zaimportuje `lib/store.js` | Route Handler | własne API |
+| Ekran potrzebuje danych, zanim powstanie, a źródło bywa wolne albo niedostępne | lista czeka sekundę na odpowiedź API, a przy awarii wyjątek nie ma gdzie się zatrzymać | komponent `async`, `loading.jsx`, `error.jsx`, odczyt z modułu | komponent, który czeka na dane; czekanie, awaria i strona artykułu |
+| Część strony mogłaby się pokazać przed danymi | cała strona stoi pod napisem „Loading...”, choć nagłówek jest gotowy | Promise przekazany w dół i `use` | Promise z serwera |
+| To samo źródło pytane przy każdym wejściu | każde odświeżenie czeka sekundę na tę samą listę | pamięć `fetch` | pamięć `fetch` |
+| Zapis z formularza ma wykonać się na serwerze i przyjąć tylko poprawne dane | zapis wymaga ręcznego `POST`, a do magazynu trafia rekord z liczbą w tytule | Server Action i walidacja w każdym wejściu | formularz i bezpieczeństwo zapisu |
+| Po zapisie lista pokazuje stare dane, a F5 wysyła formularz drugi raz | autor nie widzi swojego artykułu, a odświeżenie strony dopisuje drugi | `revalidatePath` i `redirect` | rewalidacja i przekierowanie |
+| Dane zmieniają się w trakcie oglądania | lista nie pokazuje cudzych zapisów bez odświeżenia karty | pobieranie w przeglądarce | SWR i TanStack Query |
+
+Pod wszystkimi wierszami leży jeszcze jeden kłopot: strony, Server Actions i Route Handlery muszą czytać i zapisywać jedną tablicę artykułów. Wszystkie dane siedzą w tym samym projekcie, więc całość działa bez internetu i bez zewnętrznej usługi.
 
 ## Projekt i szablon
 
-Projekt powstaje kreatorem `create-next-app` w wersji 16.4.0: JavaScript, App Router, alias importu `@/*`, bez Tailwinda, ESLinta, katalogu `src/` i dwóch opcji, których wykład nie używa. Kreator wpisuje do `package.json` dokładne wersje: `next` 16.4.0 oraz `react` i `react-dom` 19.3.0. Biblioteki SWR (2.5.1) i Zod (3.25.76) też mają w projekcie dokładne numery.
+Projekt powstaje kreatorem `create-next-app` w wersji 16.4.0: JavaScript, App Router, alias importu `@/*`, bez Tailwinda, ESLinta, katalogu `src/` i dwóch opcji, których wykład nie używa. Kreator wpisuje do `package.json` dokładne wersje: `next` 16.4.0 oraz `react` i `react-dom` 19.3.0. Biblioteka Zod (3.25.76) też ma w projekcie dokładny numer. SWR z końcowych tematów wykładu jest przykładem spoza demo, więc w `package.json` go nie ma.
 
 **Bundler** to narzędzie, które składa moduły aplikacji w pliki wykonywane na serwerze i w przeglądarce. Wynikiem jego pracy są **paczki** (*bundles*): pliki JavaScriptu, w których zebrany jest kod wszystkich modułów potrzebnych w danym miejscu aplikacji. Tabela zmian w dokumentacji Turbopacka przy wersji 16.0.0 zapisuje: „Turbopack staje się domyślnym bundlerem Next.js” (*„Turbopack becomes the default bundler for Next.js”*).
 
-Szablonowa strona startowa ma logo, linki i style, więc zostaje z niej jeden akapit „Articles Viewer”. Szablonowy layout pobiera fonty Geist z modułu `next/font/google`, który przy pierwszym uruchomieniu łączy się z serwerami Google, a bez sieci kończy się błędem. Nowy layout zwraca tylko `<html lang="en">` i `<body>` z `children`. Komponenty bez dyrektywy `"use client"` są komponentami serwerowymi, więc obie strony aplikacji zaczynają od serwera.
+Szablonowa strona startowa ma logo, linki i style, więc zostaje z niej `<main>` z nagłówkiem „Articles”, a plik `globals.css` znika. Szablonowy layout pobiera fonty Geist z modułu `next/font/google`, który przy pierwszym uruchomieniu łączy się z serwerami Google, a bez sieci kończy się błędem. Nowy layout zwraca tylko `<html lang="en">` i `<body>` z `children`. Komponenty bez dyrektywy `"use client"` są komponentami serwerowymi, więc obie strony aplikacji zaczynają od serwera.
 
 ## Magazyn jako jedyne wejście do danych
 
@@ -44,23 +54,17 @@ s1.items.push("x");
 s1 === s2; // → true, a s2.items.length to 1
 ```
 
-Górna część `lib/store.js` używa dokładnie tego zapisu.
+Górna część `lib/store.js` używa dokładnie tego zapisu. Magazyn jest gotowy przed wykładem, a prowadzący go tylko objaśnia.
 
 ```js
 // lib/store.js (górna część pliku)
 // Dane leżą na globalThis, bo moduł ładuje się w kilku paczkach serwera,
 // a wszystkie mają widzieć jedną tablicę.
 const store = (globalThis.articleStore ??= {
-  nextId: 4, // numery 1–3 są zajęte przez artykuły startowe
+  nextId: 3, // numery 1 i 2 są zajęte przez artykuły startowe
   articles: [
-    {
-      id: 1,
-      title: "Intro to Server Components",
-      author: "Alice",
-      body: "Server Components run only on the server. They can fetch data directly without useEffect.",
-      createdAt: "2025-01-01",
-    },
-    // ...dwa kolejne artykuły (Bob, Carol) w tym samym kształcie
+    { id: 1, title: "Server Components", body: "They run only on the server." },
+    { id: 2, title: "Server Actions", body: "They save data on the server." },
   ],
 });
 ```
@@ -80,14 +84,8 @@ export function getArticle(id) {
   return store.articles.find((a) => a.id === Number(id)) ?? null;
 }
 
-export function addArticle({ title, author, body }) {
-  const article = {
-    id: store.nextId++, // nadaje numer i od razu zwiększa licznik
-    title,
-    author,
-    body,
-    createdAt: new Date().toISOString().slice(0, 10), // RRRR-MM-DD
-  };
+export function addArticle({ title, body }) {
+  const article = { id: store.nextId++, title, body }; // numer i od razu zwiększenie licznika
   store.articles.push(article);
   return article;
 }
@@ -107,7 +105,7 @@ Pierwsza dotyczy odbiorców. Wszyscy użytkownicy, którzy wchodzą na stronę, 
 
 Najprostszy magazyn to zmienna modułu: `let articles = [...]`. Moduł wykonuje się raz na paczkę, więc w obrębie jednej paczki każdy import dostaje tę samą tablicę. Dokumentacja Turbopacka mówi ogólnie, że „Next.js obsługuje wiele środowisk wyjściowych, na przykład klienta i serwer” (*„Next.js supports multiple output environments (e.g., client and server)”*). Po stronie serwera podział idzie jednak dalej. W Next.js 16.4.0 strony i Server Actions dzielą jedną kopię `lib/store.js`, a Route Handlery z `app/api/` mają drugą. Każda kopia ma własny rejestr załadowanych modułów, a więc miałaby własną tablicę. Reguła „moduł wykonuje się raz” obowiązuje więc w obrębie jednej paczki, a nie całego procesu.
 
-Z magazynem w zwykłej zmiennej strona, która dopisuje artykuł przez `addArticle`, widzi po pierwszym wejściu 4 artykuły, a po drugim 5. Odpowiedź `/api/articles` cały czas zawiera 3. Z magazynem na `globalThis` obie liczby rosną razem: 4 i 4, potem 5 i 5. <u>Kod, który polega na jednej kopii modułu, działa przypadkiem i przestaje działać po zmianie narzędzia.</u>
+Pomiar na końcowej wersji demo, z magazynem w zwykłej zmiennej (`const store = { … }` bez `globalThis`), wygląda tak. Po zapisie formularzem przeglądarka wraca na `/` i pokazuje „Articles (2)”. Adres `/api/articles` zwraca 2 pozycje, a `/articles/3` pokazuje nowy artykuł. Akcja i strona artykułu widzą jedną kopię modułu, Route Handler drugą, a lista na `/` pochodzi właśnie z niego. Z magazynem na `globalThis` lista po tym samym zapisie ma „Articles (3)”. <u>Kod, który polega na jednej kopii modułu, działa przypadkiem i przestaje działać po zmianie narzędzia.</u>
 
 ## Rysunek 5.1 — jeden magazyn dla dwóch kopii modułu
 
@@ -124,9 +122,9 @@ Na Rysunku 5.1 po lewej stoją dwie paczki serwera, które Turbopack buduje osob
 
 ## Przeładowanie modułu nie czyści magazynu
 
-Przy zapisie pliku serwer deweloperski podmienia zmieniony moduł bez restartu procesu. Zmienna modułu wróciłaby wtedy do trzech artykułów. Obiekt na `globalThis` przeżywa podmianę, więc artykuły dodane w trakcie pracy zostają do restartu serwera.
+Przy zapisie pliku serwer deweloperski podmienia zmieniony moduł bez restartu procesu. Zmienna modułu wróciłaby wtedy do dwóch artykułów. Obiekt na `globalThis` przeżywa podmianę, więc artykuły dodane w trakcie pracy zostają do restartu serwera.
 
-Ten sam mechanizm działa w drugą stronę. Zmiana autora pierwszego artykułu w `lib/store.js` z „Alice” na „Alicja” nie trafia do odpowiedzi `/api/articles/1` po zapisie pliku. Nowa wersja modułu się wykonuje, ale `??=` zastaje gotowy obiekt i nie oblicza prawej strony z nowymi danymi. <u>Zmiana danych startowych w `lib/store.js` wymaga restartu serwera.</u>
+Ten sam mechanizm działa w drugą stronę. Zmiana tytułu pierwszego artykułu w `lib/store.js` na „Server Components 2” nie trafia do odpowiedzi `/api/articles` po zapisie pliku. Nowa wersja modułu się wykonuje, ale `??=` zastaje gotowy obiekt i nie oblicza prawej strony z nowymi danymi. <u>Zmiana danych startowych w `lib/store.js` wymaga restartu serwera.</u>
 
 ## Wiele żądań naraz, jeden ciąg kodu naraz
 
@@ -149,7 +147,17 @@ await Promise.all([1, 2, 3].map(async () => addSync())); // → [1, 2, 3]
 
 Wersja z `await` między odczytem a zapisem, czyli `const id = nextId; await null; nextId = id + 1; return id;`, daje po trzech równoległych wywołaniach `[1, 1, 1]`. Każde wywołanie odczytuje `nextId` przed pierwszym zapisem i oddaje ten sam numer.
 
-`addArticle` nie ma w środku `await`, więc odczyt `nextId`, zwiększenie licznika i `push` wykonują się jednym ciągiem: 20 równoległych żądań `POST` daje 20 artykułów o różnych numerach. Wersja z bazą danych, która najpierw odczytuje największy numer, czeka na wynik, a potem zapisuje rekord, zachowuje się jak `addWithAwait`. Dlatego numer nadaje sama baza, na przykład kolumną z automatycznym licznikiem.
+`addArticle` nie ma w środku `await`, więc odczyt `nextId`, zwiększenie licznika i `push` wykonują się jednym ciągiem: 20 równoległych żądań `POST` dopisuje 20 artykułów, a wszystkie 22 numery na liście są różne. Wersja z bazą danych, która najpierw odczytuje największy numer, czeka na wynik, a potem zapisuje rekord, zachowuje się jak `addWithAwait`. Dlatego numer nadaje sama baza, na przykład kolumną z automatycznym licznikiem.
+
+## Zalety i koszty magazynu w pamięci procesu
+
+Magazyn w pamięci daje dane bez bazy i bez sieci, a funkcje z `lib/store.js` odgradzają resztę aplikacji od sposobu przechowywania. Koszt widać przy restarcie i przy drugim procesie serwera.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Jedna tablica dla stron, akcji i Route Handlerów dzięki `globalThis` (zwykła zmienna: „Articles (2)” na liście przy artykule 3) | Dane znikają po restarcie serwera, a każdy proces ma własny magazyn (rozszerzenie: dwa procesy `next start`) | Dane trwałe albo na kilku serwerach: baza za tymi samymi funkcjami (Prisma, SQL) |
+| Dane bez bazy i bez sieci, więc demo działa lokalnie | Zmiana danych startowych wymaga restartu, bo `??=` nie oblicza prawej strony drugi raz | Prototyp, demo, test: wystarcza. Produkcja: baza |
+| Jedno miejsce dostępu do danych: nazwy funkcji zostają po przejściu na bazę | Kopia z `getArticles()` jest płytka, więc zmiana pola w zwróconym obiekcie zmienia magazyn | Zmiana obiektów: tylko wewnątrz warstwy dostępu, w funkcji jak `addArticle` |
 
 > 💡 **Zapamiętaj:** <u>stan wspólny dla Route Handlerów i stron trzyma się poza zmienną modułu</u>, bo pod Turbopackiem moduł ładuje się w kilku paczkach. Magazyn na `globalThis` przeżywa przeładowanie pliku, ale jest osobny w każdym procesie serwera.
 

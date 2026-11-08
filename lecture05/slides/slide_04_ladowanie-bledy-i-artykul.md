@@ -1,32 +1,37 @@
 # Czekanie, awaria i strona jednego artykułu
 
+## Sekunda czekania i źródło, które nie odpowiada
+
+`GET /api/articles` odpowiada po sekundzie, więc przez ten czas `HomePage` nie ma czego zwrócić, a użytkownik widzi pustą kartę. Gdy API w ogóle nie działa, `fetch` rzuca wyjątek, który z komponentu nie ma gdzie się zatrzymać. Oba kłopoty rozwiązują dwa pliki o zastrzeżonych nazwach.
+
 ## Dwa pliki obok strony głównej
 
-Strona główna czeka na dane przez `await`, a `fetchArticles` rzuca wyjątek przy złym statusie. Ekran na czas czekania i ekran po wyjątku dają dwa pliki o zastrzeżonych nazwach. Oba leżą w korzeniu `app/`.
+Strona główna czeka na dane przez `await` i rzuca wyjątek przy złym statusie. Ekran na czas czekania i ekran po wyjątku dają dwa pliki, oba w korzeniu `app/`.
 
 ```jsx
-// app/loading.jsx: treść zastępcza na czas, gdy strona czeka na dane
+// app/loading.jsx
 export default function Loading() {
-  return <p>Loading articles...</p>;
+  return <p>Loading...</p>;
 }
 ```
 
 ```jsx
-// app/error.jsx: granica błędów działa w przeglądarce, stąd dyrektywa
-"use client";
+// app/error.jsx
+"use client"; // granica błędów działa w przeglądarce
 
 export default function Error({ error, retry }) {
   return (
     <div>
       <p>Error: {error.message}</p>
-      {/* retry() pobiera segment od nowa (Next.js 16.3+) */}
       <button onClick={() => retry()}>Try again</button>
     </div>
   );
 }
 ```
 
-Next.js owija stronę granicą Suspense z `Loading` i granicą błędów z `Error`, tak jak przy każdym segmencie. Pliki leżą w korzeniu `app/`, więc obejmują każdą stronę aplikacji, która nie ma własnych. Layout główny `articleviewer` danych nie pobiera, więc granica z `loading.jsx`, która stoi wewnątrz layoutu, obejmuje całą treść strony, a pasek nawigacji jest widoczny od razu. Nazwa `Error` przesłania w tym pliku wbudowaną klasę `Error`, co nie przeszkadza, bo plik nie tworzy nowych wyjątków.
+Pomiar: po odświeżeniu `/` pod paskiem nawigacji stoi „Loading...” (po 0,3 s), a lista pojawia się po ok. 1,2 s. Gdy serwer deweloperski startuje z `BASE_URL=http://localhost:3999`, na którym nic nie działa, pod paskiem pojawia się „Error: fetch failed” i przycisk „Try again”. Kod strony się nie zmienia.
+
+Next.js owija stronę granicą Suspense z `Loading` i granicą błędów z `Error`, tak jak przy każdym segmencie. Pliki leżą w korzeniu `app/`, więc obejmują każdą stronę aplikacji, która nie ma własnych. Wywołanie `retry()` pobiera segment od nowa (Next.js 16.3+). Layout główny `articleviewer` danych nie pobiera, więc granica z `loading.jsx`, która stoi wewnątrz layoutu, obejmuje całą treść strony, a pasek nawigacji jest widoczny od razu. Nazwa `Error` przesłania w tym pliku wbudowaną klasę `Error`, co nie przeszkadza, bo plik nie tworzy nowych wyjątków.
 
 ## Dlaczego granice zamiast flag w stanie
 
@@ -67,13 +72,13 @@ const { articles, error } = await loadArticles();
 if (error) return <p>{error}</p>; // nawigacja i reszta layoutu działają dalej
 ```
 
-Granica między grupami zależy od tego, co strona może zrobić z wynikiem. Status 404 dla jednego artykułu jest oczekiwany: użytkownik wpisał zły numer albo artykuł usunięto, a strona ma na to gotowy widok. Status 400 z API to też błąd oczekiwany, bo klient wie, co poprawić. Status 500 albo zerwane połączenie oznaczają, że strona nie dostała danych, bez których nie ma czego pokazać. Strona główna bez listy nie ma czego pokazać, więc `fetchArticles` zostawia niedostępną listę jako wyjątek. Sekcja poboczna, na przykład lista polecanych, powinna je obsłużyć sama, żeby awaria dodatku nie zabierała całej strony.
+Granica między grupami zależy od tego, co strona może zrobić z wynikiem. Status 404 dla jednego artykułu jest oczekiwany: użytkownik wpisał zły numer albo artykuł usunięto, a strona ma na to gotowy widok. Status 400 z API to też błąd oczekiwany, bo klient wie, co poprawić. Status 500 albo zerwane połączenie oznaczają, że strona nie dostała danych, bez których nie ma czego pokazać. Strona główna bez listy nie ma czego pokazać, więc `HomePage` zostawia niedostępną listę jako wyjątek. Sekcja poboczna, na przykład lista polecanych, powinna je obsłużyć sama, żeby awaria dodatku nie zabierała całej strony.
 
-Różnica dotyczy miejsca, w którym kończy się problem. Wyjątek z `fetchArticles` zastępuje całą treść strony ekranem z `error.jsx`. Wartość z `loadArticles` zostaje w komponencie, który może pokazać komunikat obok działającej części strony albo w miejscu jednej sekcji. Granica błędów o takiej wartości w ogóle się nie dowiaduje. Komponent sam wybiera więc treść komunikatu i sam decyduje, czy dać użytkownikowi przycisk ponowienia, a reszta drzewa renderuje się bez zmian. <u>Wyjątek zostawia się na sytuacje, w których strona nie ma czego pokazać.</u>
+Różnica dotyczy miejsca, w którym kończy się problem. Wyjątek z `HomePage` zastępuje całą treść strony ekranem z `error.jsx`. Wartość z `loadArticles` zostaje w komponencie, który może pokazać komunikat obok działającej części strony albo w miejscu jednej sekcji. Granica błędów o takiej wartości w ogóle się nie dowiaduje. Komponent sam wybiera więc treść komunikatu i sam decyduje, czy dać użytkownikowi przycisk ponowienia, a reszta drzewa renderuje się bez zmian. <u>Wyjątek zostawia się na sytuacje, w których strona nie ma czego pokazać.</u>
 
 ## Komunikat błędu w trybie produkcyjnym
 
-Druga różnica dotyczy trybu produkcyjnego, czyli aplikacji zbudowanej przez `next build`. W trybie deweloperskim granica dostaje pełną treść wyjątku, więc ekran pokazuje „Error: Failed to fetch articles: 500” i łatwo uznać ten napis za tekst dla użytkownika. W trybie produkcyjnym wyjątek z komponentu serwerowego nie przekazuje swojej treści do przeglądarki. Pole `error.message` ma wtedy ogólny tekst „Minified React error #441; visit https://react.dev/errors/441 for the full message…”, a oryginalny komunikat trafia do logu serwera razem z identyfikatorem `digest`. Ten sam `digest` dostaje granica w przeglądarce, więc pozwala znaleźć wpis w logu, ale użytkownikowi nic nie mówi. Tekst, który użytkownik ma przeczytać, niesie więc wartość zwracana, a wyjątek służy diagnozie.
+Druga różnica dotyczy trybu produkcyjnego, czyli aplikacji zbudowanej przez `next build`. W trybie deweloperskim granica dostaje pełną treść wyjątku, więc ekran pokazuje „Error: fetch failed” i łatwo uznać ten napis za tekst dla użytkownika. W trybie produkcyjnym wyjątek z komponentu serwerowego nie przekazuje swojej treści do przeglądarki. Pole `error.message` ma wtedy ogólny tekst „Minified React error #441; visit https://react.dev/errors/441 for the full message…”, a oryginalny komunikat trafia do logu serwera razem z identyfikatorem `digest`. Ten sam `digest` dostaje granica w przeglądarce, więc pozwala znaleźć wpis w logu, ale użytkownikowi nic nie mówi. Tekst, który użytkownik ma przeczytać, niesie więc wartość zwracana, a wyjątek służy diagnozie.
 
 ## Strona artykułu z magazynu
 
@@ -82,40 +87,26 @@ Każdy tytuł na liście prowadzi pod adres `/articles/1`, `/articles/2` i kolej
 ```jsx
 // app/articles/[id]/page.jsx
 // Komponent serwerowy: dane prosto z magazynu, bez żądania HTTP
-import { getArticle } from "@/lib/store";
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import { getArticle } from "@/lib/store";
 
 export default async function ArticlePage({ params }) {
-  const { id } = await params; // params jest obiektem Promise
+  const { id } = await params;
   const article = getArticle(id);
-  if (!article) notFound(); // przerywa render i pokazuje widok „nie znaleziono”
+  if (!article) notFound(); // widok „nie znaleziono”
 
   return (
-    <article>
-      <Link href="/">← List</Link>
+    <main>
       <h1>{article.title}</h1>
-      <p>
-        Author: {article.author} | Date: {article.createdAt}
-      </p>
       <p>{article.body}</p>
-    </article>
+    </main>
   );
 }
 ```
 
-Obok leży osobny plik ładowania dla tego segmentu.
-
-```jsx
-// app/articles/[id]/loading.jsx: bliższy stronie niż app/loading.jsx, więc wygrywa
-export default function Loading() {
-  return <p>Loading article...</p>;
-}
-```
+Adres `/articles/1` pokazuje „Server Components / They run only on the server.”, a `/articles/99` widok „404 / This page could not be found.”. Strona nie ma linku powrotnego, bo wystarcza nawigacja z layoutu, ani własnego pliku ładowania, bo obejmuje ją `app/loading.jsx`.
 
 Brak artykułu to przypadek oczekiwany, więc strona woła `notFound()`, wyjątek sterujący, który Next.js zamienia na widok „nie znaleziono”. Nowe jest to, czego w pliku nie ma: wywołania `fetch`, adresu i formatu JSON. Strona mogłaby zamiast `notFound()` zwrócić własny akapit „Brak artykułu”. Odpowiedź wyglądałaby wtedy dla przeglądarki i robotów jak zwykła udana strona, bez znacznika `noindex` i bez wspólnego widoku „nie znaleziono”.
-
-Przy przejściu z listy obowiązuje plik ładowania leżący najbliżej strony. Router pokazuje go od razu po kliknięciu, jeśli strona jeszcze nie przyszła z serwera. `getArticle` odpowiada jednak bez czekania, więc gotowa strona zwykle wyprzedza napis „Loading article...”, który mignie tylko przy wolniejszej odpowiedzi serwera.
 
 ## Dwie drogi do tych samych danych
 
@@ -124,14 +115,14 @@ Aplikacja ma teraz dwa komponenty serwerowe, które czytają artykuły na dwa sp
 Na serwerze pierwsza droga jest okrężna. Żądanie wychodzi z procesu Next.js i wraca do tego samego procesu, kod musi znać pełny adres serwera, a dane dwa razy zmieniają format. JSON zna tylko proste typy, więc część wartości po drodze się zmienia:
 
 ```js
-const article = { title: "A", createdAt: new Date("2025-01-01T00:00:00Z") };
+const article = { title: "A", published: new Date("2025-01-01T00:00:00Z") };
 const back = JSON.parse(JSON.stringify(article)); // droga przez HTTP w skrócie
 
-typeof back.createdAt; // → "string": obiekt Date stał się napisem
-back.createdAt;        // → "2025-01-01T00:00:00.000Z"
+typeof back.published; // → "string": obiekt Date stał się napisem
+back.published;        // → "2025-01-01T00:00:00.000Z"
 ```
 
-W tej aplikacji różnicy nie widać, bo `createdAt` od początku jest napisem `"2025-01-01"`. Druga droga omija te koszty. Kod z dostępem do danych i tak zostaje poza plikami przeglądarki, bo importuje go tylko komponent serwerowy.
+W tej aplikacji różnicy nie widać, bo artykuł ma tylko `id`, `title` i `body`, czyli liczbę i napisy. Druga droga omija te koszty. Kod z dostępem do danych i tak zostaje poza plikami przeglądarki, bo importuje go tylko komponent serwerowy.
 
 Bugl w *Modern Full-Stack React Projects* wymienia trzy podejścia do danych w komponentach serwerowych: API HTTP, osobny moduł z funkcjami dostępu do danych i zapytania wprost w komponencie. `ArticlePage` korzysta z drugiego. Bugl zaleca trzymać się jednego: „lepiej wybrać jedno i się go trzymać” (*„it’s better to pick one and stick to it”*). Ta aplikacja celowo łamie tę radę, żeby obie drogi dało się porównać obok siebie. <u>Komponent serwerowy, którego API nie ma innych odbiorców, czyta dane bezpośrednio z modułu.</u>
 
@@ -163,6 +154,15 @@ Serwer produkcyjny mówi to także nagłówkiem. Odpowiedź dla `/articles/1` ma
 ## Kod 200 przy widoku „nie znaleziono”
 
 Adres `/articles/99` pokazuje widok „nie znaleziono”, ale odpowiedź HTTP ma kod 200 i znacznik `noindex`. Strumień, który otwiera każdy plik `loading.jsx` nad stroną, także `app/loading.jsx`, wysyła nagłówki z kodem 200, zanim `notFound()` się wykona. Adres bez żadnej trasy, na przykład `/artykuly`, dostaje 404, bo Next.js wie o braku trasy jeszcze przed renderem. Różnica dzieli więc przypadki „nie ma takiej trasy” i „trasa jest, ale zasobu brak”.
+
+## Zalety i koszty ekranów ładowania i błędu
+
+Dwa pliki zastępują flagi stanu, ale granice obejmują całą treść segmentu.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Ekrany ładowania i błędu bez flag; nawigacja widoczna w czasie czekania i po awarii („Error: fetch failed” pod paskiem) | `loading.jsx` zasłania całą treść strony, także nagłówek, a wyjątek zabiera całą stronę | Jedna część strony ma czekać: własna `<Suspense>` (Promise z serwera) |
+| Odczyt z modułu bez HTTP, JSON i `BASE_URL` | W trybie produkcyjnym komunikat jest ogólny, z `digest`, a widok „nie znaleziono” pod `loading.jsx` ma kod 200 | Błąd oczekiwany (brak zasobu, 400): `notFound()` albo zwrócona wartość; sekcja poboczna: własna obsługa |
 
 > 💡 **Zapamiętaj:** komponent serwerowy czyta dane przez zwykłe wywołanie funkcji z `lib/store.js`, bez żądania HTTP do własnego API. <u>Błąd oczekiwany zwraca się jako wartość, a wyjątek zostawia granicy z `error.jsx`</u>, bo po zbudowaniu jego treść i tak nie dociera do użytkownika.
 

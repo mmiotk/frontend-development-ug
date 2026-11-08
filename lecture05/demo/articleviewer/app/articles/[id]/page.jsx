@@ -1,22 +1,17 @@
 // app/articles/[id]/page.jsx
-// Server Component — direct data access (no HTTP round-trip)
-import { getArticle } from "@/lib/store";
+// Komponent serwerowy: dane prosto z magazynu, bez żądania HTTP
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import { getArticle } from "@/lib/store";
 
 export default async function ArticlePage({ params }) {
   const { id } = await params;
   const article = getArticle(id);
-  if (!article) notFound();
+  if (!article) notFound(); // widok „nie znaleziono”
 
   return (
-    <article>
-      <Link href="/">← List</Link>
+    <main>
       <h1>{article.title}</h1>
-      <p>
-        Author: {article.author} | Date: {article.createdAt}
-      </p>
       <p>{article.body}</p>
-    </article>
+    </main>
   );
 }

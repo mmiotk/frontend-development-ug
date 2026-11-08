@@ -1,53 +1,20 @@
 // app/new/page.jsx
 "use client";
-
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 import { createArticle } from "@/lib/actions";
 
-// SubmitButton must be a separate component — useFormStatus reads from the parent <form>
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button type="submit" disabled={pending}>
-      {pending ? "Saving..." : "Add article"}
-    </button>
-  );
-}
-
 export default function NewArticlePage() {
-  const [state, action] = useActionState(createArticle, null);
+  // pending: true, dopóki akcja trwa na serwerze
+  const [state, action, pending] = useActionState(createArticle, null);
 
   return (
-    <div>
+    <main>
       <h1>New article</h1>
-
-      {state?.success && <p>Article added successfully!</p>}
-
       <form action={action}>
-        <div>
-          <label>
-            Title: <input name="title" />
-          </label>
-          {state?.error?.title && <p>{state.error.title[0]}</p>}
-        </div>
-
-        <div>
-          <label>
-            Author: <input name="author" />
-          </label>
-          {state?.error?.author && <p>{state.error.author[0]}</p>}
-        </div>
-
-        <div>
-          <label>
-            Body: <textarea name="body" rows={4} />
-          </label>
-          {state?.error?.body && <p>{state.error.body[0]}</p>}
-        </div>
-
-        <SubmitButton />
+        <p>Title: <input name="title" /> {state?.error?.title}</p>
+        <p>Body: <textarea name="body" /> {state?.error?.body}</p>
+        <button disabled={pending}>Add article</button>
       </form>
-    </div>
+    </main>
   );
 }

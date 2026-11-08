@@ -1,30 +1,20 @@
 // lib/actions.js
-"use server"; // this file exports only Server Actions
+"use server"; // każdy eksport tego pliku wykonuje się na serwerze
 
-import { addArticle } from "./store";
-import { articleSchema } from "./validate";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { addArticle } from "./store";
+import { articleSchema } from "./validate";
 
 export async function createArticle(prevState, formData) {
-  // Read raw values from FormData
-  const raw = {
+  // walidacja na serwerze: danym z przeglądarki się nie ufa
+  const result = articleSchema.safeParse({
     title: formData.get("title"),
-    author: formData.get("author"),
     body: formData.get("body"),
-  };
+  });
+  if (!result.success) return { error: result.error.flatten().fieldErrors };
 
-  // Server-side Zod validation — never trust the client
-  const result = articleSchema.safeParse(raw);
-  if (!result.success) {
-    return { error: result.error.flatten().fieldErrors };
-  }
-
-  // Save to in-memory store
   addArticle(result.data);
-
-  // Invalidate the list page cache so the new article appears immediately
-  revalidatePath("/");
-
-  redirect("/"); // throws internally: code after this line does not run
+  revalidatePath("/"); // lista na / pokaże nowy artykuł od razu
+  redirect("/"); // rzuca wyjątek sterujący: kod niżej się nie wykona
 }

@@ -2,7 +2,7 @@
 
 ## Lista, która pyta źródło przy każdym wejściu
 
-Strona główna pobiera artykuły z opcją `cache: "no-store"`, więc każde wejście na `/` wysyła nowe żądanie do `/api/articles`. Przy prawdziwej bazie danych to koszt: każde odświeżenie strony oznacza zapytanie. Next.js pozwala zapamiętać odpowiedź po stronie serwera. Wywołanie `fetch` w komponencie serwerowym przyjmuje trzy jawne ustawienia, a czwartym sposobem jest wywołanie bez opcji.
+Strona główna pobiera artykuły z opcją `cache: "no-store"`, więc każde wejście na `/` wysyła nowe żądanie do `/api/articles`. W pomiarze trzy kolejne wejścia dały za każdym razem „Loading...” po 0,3 s i listę dopiero po ok. 1,2 s, a w terminalu przy każdym stało `GET /api/articles`. Przy prawdziwej bazie danych to koszt: każde odświeżenie strony oznacza zapytanie, choć lista zmienia się rzadko. Next.js pozwala zapamiętać odpowiedź po stronie serwera. Wywołanie `fetch` w komponencie serwerowym przyjmuje trzy jawne ustawienia, a czwartym sposobem jest wywołanie bez opcji.
 
 ## Trzy jawne ustawienia
 
@@ -37,16 +37,16 @@ Wartość `0` blokuje zapis, a `false` oznacza pamięć bez limitu. Tryb z liczb
 
 ## Lista, która nie chce się odświeżyć
 
-Z pamięcią trwałą w `fetchArticles` lista na stronie głównej przestaje nadążać za magazynem:
+Z pamięcią trwałą w miejsce `no-store` lista na stronie głównej przestaje nadążać za magazynem:
 
 ```js
-// app/page.jsx: fetchArticles z pamięcią trwałą (wariant spoza demo; BASE_URL jak w pliku)
+// app/page.jsx (wariant spoza demo; BASE_URL jak w pliku): pamięć trwała zamiast no-store
 const res = await fetch(`${BASE_URL}/api/articles`, {
   cache: "force-cache",
 });
 ```
 
-Odpowiedź `/api/articles` trafia do pamięci serwera przy pierwszym wejściu na stronę główną. Nowy artykuł wysłany żądaniem `POST /api/articles` prosto do Route Handlera ląduje w magazynie, a API od razu zwraca go razem z pozostałymi. Licznik w nagłówku „Articles (3)” na `/` się nie zmienia. Nic nie jest zepsute. Serwer Next.js podaje odpowiedź z własnej pamięci podręcznej, bo tak go poproszono.
+Odpowiedź `/api/articles` trafia do pamięci serwera przy pierwszym wejściu na stronę główną. Nowy artykuł wysłany żądaniem `POST /api/articles` prosto do Route Handlera ląduje w magazynie, a API od razu zwraca trzy pozycje. Licznik w nagłówku „Articles (2)” na `/` się nie zmienia. Nic nie jest zepsute. Serwer Next.js podaje odpowiedź z własnej pamięci podręcznej, bo tak go poproszono.
 
 ## `fetch` z dodatkową pamięcią
 
@@ -87,7 +87,7 @@ export default async function AutoHeaders() {
 }
 ```
 
-Po dopisaniu czwartego artykułu zbudowana pierwsza strona pokazuje nadal „auto: 3”, czyli liczbę z chwili budowania, a druga „autoheaders: 4”. <u>Brak opcji nie oznacza świeżych danych: o tym, kiedy wykona się `fetch`, decyduje wtedy reszta trasy</u>.
+Po dopisaniu trzeciego artykułu zbudowana pierwsza strona pokazuje nadal „auto: 2”, czyli liczbę z chwili budowania, a druga „autoheaders: 3”. <u>Brak opcji nie oznacza świeżych danych: o tym, kiedy wykona się `fetch`, decyduje wtedy reszta trasy</u>.
 
 Książka Bugla, pisana dla Next.js 14, opisuje stan odwrotny: „żądania przez fetch domyślnie trafiają do pamięci podręcznej” (*„requests with fetch are cached by default”*). To zachowanie zmieniło się w Next.js 15. Przykład skopiowany z takiego poradnika da w Next.js 16 dane świeże w `next dev`, a zamrożone w buildzie, jeśli trasa jest statyczna.
 
@@ -123,15 +123,11 @@ flowchart LR
 
 Na Rysunku 5.6 każda gałąź to jedno ustawienie. Gałąź „brak” jest jedyną, której zachowanie zależy od reszty trasy. Pozostałe trzy wybiera się jawnie. Linie przerywane prowadzą do unieważniania: dane w pamięci trwałej i czasowej można wyrzucić wcześniej, na żądanie. Gałąź `no-store` takiej linii nie ma, bo nie ma czego unieważniać.
 
-## Pamięć trwała tylko dla danych wspólnych
-
-Dokumentacja `fetch` dodaje szczegół o metodach. Opcja `force-cache` zapamięta każde żądanie, także `POST` oraz żądania z nagłówkami `authorization` albo `cookie`. Odpowiedź z danymi jednego zalogowanego użytkownika zapisana we wspólnej pamięci mogłaby trafić do innego. Kumar w *Fluent React* opisuje to ryzyko ogólnie: serwer obsługuje żądania wielu klientów, więc wrażliwe dane jednego nie mogą przypadkiem wyciec do drugiego. Pamięć trwałą stosuje się więc do danych wspólnych dla wszystkich, takich jak lista artykułów.
-
 ## Która pamięć jest która
 
 Odpowiedź z danymi może zostać zapamiętana w czterech miejscach o różnym zasięgu. Każde ma tu jedną nazwę:
 
-- **Pamięć `fetch`** leży na serwerze i trwa między żądaniami, w `.next/cache/fetch-cache`. Sterują nią opcje `cache`, `revalidate` i `tags`.
+- **Pamięć `fetch`** leży na serwerze i trwa między żądaniami, w `.next/cache/fetch-cache` (w `next dev` w `.next/dev/cache/fetch-cache`). Sterują nią opcje `cache`, `revalidate` i `tags`.
 - **Deduplikacja żądań** leży na serwerze i trwa jeden przebieg renderu: ten sam `fetch` wywołany w kilku komponentach wykonuje się wtedy raz.
 - **Pamięć klienta** leży w przeglądarce i trzyma wynik komponentów serwerowych (RSC Payload) odwiedzonych tras na czas przejść linkami.
 - **Pamięć HTTP** leży w przeglądarce i na serwerach pośrednich. Steruje nią nagłówek `Cache-Control` odpowiedzi.
@@ -140,29 +136,50 @@ Opcje opisane wyżej dotyczą tylko pierwszej pozycji. Biblioteki, które pobier
 
 ## Pamięć a budowanie aplikacji
 
-Przy `force-cache` albo `revalidate: 30` strona `/` staje się statyczna, więc `next build` pobiera dane w czasie budowania. Serwer aplikacji wtedy jeszcze nie działa, więc build przerywa się komunikatem „Error occurred prerendering page "/"” z przyczyną `TypeError: fetch failed` i `connect ECONNREFUSED` dla adresu `127.0.0.1` z portem aplikacji. <u>Strony, która pyta własne API, nie da się prerenderować bez działającego serwera.</u> Pamięć `fetch` nie wymaga jednak strony statycznej. Wpis z `revalidate` działa tak samo na stronie renderowanej przy każdym żądaniu, bo dotyczy odpowiedzi, a nie całej strony. Demo łączy więc pamięć czasową z wywołaniem `await connection()` z `next/server`, które przenosi render na chwilę żądania:
+Przy `force-cache` albo `revalidate: 30` strona `/` staje się statyczna, więc `next build` pobiera dane w czasie budowania. Serwer aplikacji wtedy jeszcze nie działa, więc build przerywa się komunikatem „Error occurred prerendering page "/"” z przyczyną `TypeError: fetch failed` i `connect ECONNREFUSED` dla adresu `127.0.0.1` z portem aplikacji. <u>Strony, która pyta własne API, nie da się prerenderować bez działającego serwera.</u> Pamięć `fetch` nie wymaga jednak strony statycznej. Wpis z `revalidate` działa tak samo na stronie renderowanej przy każdym żądaniu, bo dotyczy odpowiedzi, a nie całej strony. Demo łączy więc pamięć czasową z wywołaniem `await connection()` z `next/server`, które przenosi render na chwilę żądania. Tak wygląda plik `app/page.jsx` po zmianie `no-store` na `revalidate`:
 
 ```jsx
-// app/page.jsx: nowe linie wersji końcowej
+// app/page.jsx
+// Komponent serwerowy: bez "use client" wykonuje się tylko na serwerze
+import Link from "next/link";
 import { connection } from "next/server";
 
-async function fetchArticles() {
-  const res = await fetch(`${BASE_URL}/api/articles`, {
-    next: { revalidate: 60 }, // odpowiedź API zapamiętana na 60 sekund
-  });
-  if (!res.ok) throw new Error(`Failed to fetch articles: ${res.status}`);
-  return res.json();
-}
+const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 
 export default async function HomePage() {
-  // ...log jak wcześniej
   await connection(); // render przy żądaniu, nigdy w next build
-  const articles = await fetchArticles();
-  // ...JSX jak wcześniej
+  const res = await fetch(`${BASE_URL}/api/articles`, {
+    next: { revalidate: 60 }, // odpowiedź API zapamiętana na 60 s
+  });
+  if (!res.ok) throw new Error(`Failed to fetch articles: ${res.status}`);
+  const articles = await res.json();
+
+  return (
+    <main>
+      <h1>Articles ({articles.length})</h1>
+      <ul>
+        {articles.map((a) => (
+          <li key={a.id}>
+            <Link href={`/articles/${a.id}`}>{a.title}</Link>
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
 }
 ```
 
-Build oznacza teraz `/` symbolem `ƒ` i nie potrzebuje działającego API. Każde wejście renderuje stronę od nowa, ale lista przez minutę pochodzi z pamięci `fetch`. O tym, kiedy renderuje się strona, decyduje `connection()`, a o tym, jak długo żyje odpowiedź API, opcja `revalidate`.
+Build oznacza teraz `/` symbolem `ƒ` i nie potrzebuje działającego API. Każde wejście renderuje stronę od nowa, ale lista przez minutę pochodzi z pamięci `fetch`. O tym, kiedy renderuje się strona, decyduje `connection()`, a o tym, jak długo żyje odpowiedź API, opcja `revalidate`. W pomiarze pierwsze wejście pokazało „Loading...”, a drugie od razu gotową listę, z wpisem `GET / 200 in 41ms` w terminalu i bez `GET /api/articles`. Po `POST` przez `curl` API zwróciło o jedną pozycję więcej, a `/` dalej pokazywało liczbę z pamięci.
+
+## Zalety i koszty pamięci `fetch`
+
+Pamięć zamienia koszt pytania źródła na koszt nieświeżych danych. Opłaca się przy danych wspólnych dla wszystkich i rzadko zmienianych, takich jak lista artykułów. Kumar w *Fluent React* zwraca uwagę, że serwer obsługuje żądania wielu klientów, więc dane jednego nie mogą przypadkiem trafić do drugiego.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Drugie wejście bez czekania: w pomiarze `GET / 200 in 41ms` i brak `GET /api/articles` zamiast ok. 1,2 s; mniej zapytań do źródła | Dane nieświeże do 60 s: po `POST` `/` dalej pokazuje starą liczbę, a po upływie czasu pierwsze żądanie dostaje jeszcze stare dane | Dane, które muszą być aktualne przy każdym wejściu: `no-store` albo odświeżanie w przeglądarce |
+| Strona nadal renderuje się przy każdym żądaniu, a pamięć dotyczy tylko odpowiedzi API | Pamięć przeżywa restart serwera, także w `next dev`, więc po restarcie lista może pokazać dane, których magazyn już nie ma | Zmiana danych, którą lista ma pokazać od razu: unieważnienie po zapisie zamiast czekania na koniec czasu |
+| Czas życia wpisu ustawia się jedną opcją przy `fetch` | `force-cache` zapamięta też `POST` i żądania z `authorization` albo `cookie`; trasa statyczna pyta API przy `next build` i bez działającego serwera build się przerywa | Dane jednego użytkownika: `no-store`; render przy żądaniu: `connection()` |
 
 > 💡 **Zapamiętaj:** w Next.js 16 `fetch` na serwerze domyślnie nie zapamiętuje odpowiedzi, ale na trasie statycznej i tak wykonuje się raz, w czasie budowania. Pamięć włącza się jawnie przez `force-cache` albo `next: { revalidate: N }`, a po upływie czasu pierwsze żądanie dostaje jeszcze dane stare.
 

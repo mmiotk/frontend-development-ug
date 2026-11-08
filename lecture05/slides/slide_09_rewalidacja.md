@@ -2,18 +2,23 @@
 
 ## Artykuł dodany, lista stara
 
-Formularz `/new` zapisuje już tylko poprawne dane. Zapis to jednak połowa drogi, bo lista na stronie głównej musi się o nim dowiedzieć. W akcji `createArticle` odpowiada za to jedna linia przed `return`:
+Formularz `/new` zapisuje już tylko poprawne dane. Zapis to jednak połowa drogi, bo lista na stronie głównej musi się o nim dowiedzieć. Pierwsza wersja akcji `createArticle` kończy się na `return { success: true }`. Po zapisie formularz pokazuje „Article saved.”, ale przejście na listę przez link „Articles” albo F5 nadal daje „Articles (2)”, choć magazyn ma już trzy artykuły. Artykuł jest dostępny pod `/articles/3`, tylko lista o nim nie wie.
+
+Przyczyną jest pamięć `fetch`. Lista na stronie głównej trzyma odpowiedź `/api/articles` przez 60 sekund (`next: { revalidate: 60 }`), a wywołanie `await connection()` sprawia tylko, że sama strona renderuje się przy każdym żądaniu. Żeby pamięć była wypełniona, zanim pojawi się zapis, w demo `/` odświeża się F5, po około 3 sekundach drugi raz F5, i dopiero wtedy wysyła się formularz. Poprawka to jedna linia przed `return`:
 
 ```js
-// lib/actions.js (fragment)
-addArticle(result.data);
-revalidatePath("/"); // unieważnia zapamiętane dane strony głównej
-return { success: true };
+// lib/actions.js (dochodzi import i jedna linia)
+import { revalidatePath } from "next/cache";
+import { addArticle } from "./store";
+// ...
+  addArticle(result.data);
+  revalidatePath("/"); // lista na / pokaże nowy artykuł od razu
+  return { success: true };
 ```
 
-Lista na stronie głównej trzyma odpowiedź `/api/articles` w pamięci `fetch` przez 60 sekund (`next: { revalidate: 60 }`). Wywołanie `await connection()` sprawia tylko, że sama strona renderuje się przy każdym żądaniu. Bez linii z `revalidatePath` akcja zapisuje artykuł, ale licznik „Articles (…)” stoi w miejscu, także po F5. Nowa liczba pojawia się dopiero po wygaśnięciu wpisu: po 61 sekundach pierwsze wejście pokazuje jeszcze 3, a drugie 4, bo pamięć czasowa działa według wzorca *stale-while-revalidate*.
+Z linią `revalidatePath("/")` ten sam zapis kończy się napisem „Articles (3)” na liście, z nowym tytułem na końcu. Bez niej nowa liczba pojawia się dopiero po wygaśnięciu wpisu, według wzorca *stale-while-revalidate*. Pomiar po zapisie przez `POST /api/articles`, który też nie unieważnia pamięci: 62 sekundy po pierwszym pobraniu pierwsze wejście na `/` pokazało jeszcze „Articles (2)”. Drugie tuż po nim również, bo pobranie w tle trwa 1 s, tyle ile odpowiada API. Po kolejnych trzech sekundach lista miała „Articles (3)”.
 
-Z punktu widzenia serwera wszystko działa. `addArticle` dopisała artykuł do magazynu, a strona główna uczciwie podaje odpowiedź zapamiętaną zgodnie z opcją `revalidate`. Z punktu widzenia osoby, która przed chwilą kliknęła „Add article”, aplikacja zgubiła jej dane. Z linią `revalidatePath("/")` ta sama lista pokazuje nowy artykuł od razu po powrocie na stronę główną.
+Z punktu widzenia serwera wszystko działa. `addArticle` dopisała artykuł do magazynu, a strona główna uczciwie podaje odpowiedź zapamiętaną zgodnie z opcją `revalidate`. Z punktu widzenia osoby, która przed chwilą kliknęła „Add article”, aplikacja zgubiła jej dane.
 
 ## Odczyt własnego zapisu
 
@@ -77,19 +82,17 @@ Każda z tych pamięci ma własne wywołanie, które ją czyści. W zestawieniu 
 
 Dwa wiersze z „bez zmian” w obu kolumnach nie są pomyłką: `refresh()` i `router.refresh()` dają tylko nowy render bieżącej trasy, który czyta tę samą pamięć `fetch`.
 
-## Unieważnienie zamiast krótkiego czasu
+## Zalety i koszty unieważnienia po zapisie
 
-Brak rewalidacji dałoby się też obejść inaczej: ustawić `revalidate: 1` zamiast 60. Lista byłaby nieaktualna najwyżej przez sekundę. To rozwiązanie ma dwie wady. Serwer odświeżałby listę co sekundę także wtedy, gdy nikt nic nie dodaje, a autor nadal mógłby trafić na starą wersję, jeśli wróci na listę szybciej.
+Unieważnienie po zapisie zamienia krótką pamięć na długą, czyszczoną dokładnie wtedy, gdy dane się zmieniają. Alternatywą jest skrócenie czasu: `revalidate: 1` zamiast 60 daje listę nieaktualną najwyżej przez sekundę, ale serwer odświeżałby ją co sekundę także wtedy, gdy nikt nic nie dodaje. Autor nadal mógłby trafić na starą wersję, jeśli wróci na listę szybciej. Unieważnienie odwraca ten rachunek: pamięć może trwać długo, nawet bez limitu przy `force-cache`, bo każdy zapis ją czyści. Limit czasu zostaje jako zabezpieczenie dla zmian, o których aplikacja się nie dowie, na przykład wprowadzonych bezpośrednio w bazie.
 
-Unieważnienie po zapisie odwraca ten rachunek. Pamięć może trwać długo, nawet bez limitu przy `force-cache`, bo każdy zapis ją czyści. Limit czasu zostaje jako zabezpieczenie dla zmian, o których aplikacja się nie dowie, na przykład wprowadzonych bezpośrednio w bazie.
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Autor widzi swój zapis od razu: „Articles (3)” z unieważnieniem, „Articles (2)” bez niego | Wywołanie musi stać w każdym wejściu, które zmienia dane: `POST /api/articles` go nie ma, więc nowy artykuł pojawia się po wygaśnięciu wpisu (wywołanie w `addArticle` objęłoby wszystkie wejścia) | Lista bez pamięci (`no-store`): nie ma czego unieważniać, wywołanie zostaje na przyszłość |
+| Pamięć trwa długo, bo zapis ją czyści; zapis, unieważnienie i nowy widok kończą się w jednej odpowiedzi serwera | Pominięte wywołanie nie daje błędu i zostawia stare dane, czasem po wielu minutach; zasięg trzeba wybrać: ścieżka, wzorzec albo layout | `revalidate: 1` zamiast unieważnienia: odświeżanie co sekundę bez zmian i nadal możliwa stara wersja |
+| Odświeżenie obejmuje pamięć `fetch` na serwerze i pamięć klienta w przeglądarce | Pamięć SWR w przeglądarce zostaje bez zmian (tabela wyżej), więc dane pobierane w komponencie klienckim odświeża się osobno | Zmiany spoza aplikacji, na przykład bezpośrednio w bazie: limit czasu `revalidate` zostaje zabezpieczeniem |
 
-## Druga droga zapisu bez rewalidacji
-
-Aplikacja ma jeszcze jedno wejście do magazynu: `POST /api/articles`. Ten Route Handler dopisuje artykuł, ale nie wywołuje `revalidatePath`. Przy `revalidate: 60` na stronie głównej artykuł dodany przez to wejście pojawia się na liście dopiero po wygaśnięciu wpisu. Przy `force-cache` czekałby na unieważnienie, bo pamięć `fetch` przeżywa nawet restart serwera. Rewalidację wywołuje każde miejsce, które zmienia dane, a nie tylko formularz.
-
-Pominięcie jednego wywołania nie daje żadnego błędu w konsoli. Objawia się dopiero starymi danymi na ekranie, czasem po wielu minutach, gdy nikt już nie łączy ich z ostatnią zmianą w kodzie. Wywołanie umieszczone w samej `addArticle` objęłoby wszystkie wejścia naraz.
-
-> 💡 **Zapamiętaj:** po zapisie akcja unieważnia pamięć danych, które się zmieniły, w tej aplikacji przez `revalidatePath("/")`. Wywołanie należy do każdego wejścia, które zmienia dane, nawet gdy obecna wersja listy pamięci nie używa.
+> 💡 **Zapamiętaj:** po zapisie akcja unieważnia pamięć danych, które się zmieniły, w tej aplikacji przez `revalidatePath("/")` przed `return`. Wywołanie należy do każdego wejścia, które zmienia dane, także do `POST /api/articles`. Pominięte wywołanie nie zgłasza błędu, a lista zostaje ze starą liczbą.
 
 
 Materiał rozszerzony do tego slajdu: [`rozszerzenia/r09_rewalidacja.md`](rozszerzenia/r09_rewalidacja.md)

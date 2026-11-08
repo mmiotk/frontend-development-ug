@@ -21,14 +21,14 @@ POST /api/articles HTTP/1.1
 Host: localhost:3000
 Content-Type: application/json
 
-{"title":"New","author":"Ann","body":"Article body"}
+{"title":"New","body":"Article body"}
 ```
 
 ```http
 HTTP/1.1 201 Created
 Content-Type: application/json
 
-{"id":4,"title":"New","author":"Ann","body":"Article body","createdAt":"2026-10-18"}
+{"id":3,"title":"New","body":"Article body"}
 ```
 
 Adres wskazuje **zasób** (*resource*), na przykład kolekcję artykułów. **Metoda** mówi, co z nim zrobić: `GET` odczytuje, `POST` tworzy nowy element kolekcji, `PUT` i `PATCH` zmieniają istniejący element, a `DELETE` go usuwa. Banks i Porcello w *Learning React* streszczają to tak:
@@ -58,7 +58,7 @@ const req = new Request("http://x/", { method: "POST", body: '{"title":"A"}' });
 await req.json(); // → { title: "A" }
 ```
 
-Metoda `json()` odrzuca Promise wyjątkiem `SyntaxError`, gdy ciało nie jest poprawnym JSON-em, na przykład z komunikatem „Unexpected end of JSON input” dla uciętego `{"title":` i dla pustego ciała. Nagłówka `Content-Type` metoda nie sprawdza, więc ciało formularza `title=A&author=B` też kończy się wyjątkiem, a nie innym sposobem odczytu.
+Metoda `json()` odrzuca Promise wyjątkiem `SyntaxError`, gdy ciało nie jest poprawnym JSON-em, na przykład z komunikatem „Unexpected end of JSON input” dla uciętego `{"title":` i dla pustego ciała. Nagłówka `Content-Type` metoda nie sprawdza, więc ciało formularza `title=A&body=B` też kończy się wyjątkiem, a nie innym sposobem odczytu.
 
 ## Który kod statusu dla którego wyniku
 
@@ -80,33 +80,32 @@ Plik leży w katalogu `app/api/articles/`, więc jego funkcje odpowiadają pod `
 
 ```js
 // app/api/articles/route.js
-import { NextResponse } from "next/server";
-import { getArticles, addArticle } from "@/lib/store"; // @/ to alias korzenia projektu
+import { getArticles, addArticle } from "@/lib/store";
 
-// nazwa funkcji = nazwa metody HTTP, wielkimi literami
+// nazwa funkcji = nazwa metody HTTP
 export async function GET() {
-  const articles = getArticles();
-  return NextResponse.json(articles); // JSON, Content-Type i domyślny status 200
+  await new Promise((r) => setTimeout(r, 1000)); // udajemy wolną bazę: odpowiedź po 1 s
+  return Response.json(getArticles()); // JSON i domyślny status 200
 }
 
 export async function POST(request) {
-  const body = await request.json(); // ciało żądania jako obiekt
-  const article = addArticle(body);
-  return NextResponse.json(article, { status: 201 }); // 201 Created: zasób utworzony
+  const article = addArticle(await request.json()); // ciało żądania jako obiekt
+  return Response.json(article, { status: 201 }); // 201 Created
 }
 ```
 
-**`NextResponse`** rozszerza standardową klasę `Response`. Bugl pisze, że Next.js „rozszerza je o API NextRequest i NextResponse, które ułatwiają obsługę ciasteczek i nagłówków” (*„extends them into NextRequest and NextResponse APIs, which make handling cookies and headers easier”*). Do zwrócenia JSON-u rozszerzenie nie jest potrzebne, bo standardowe `Response.json()` przyjmuje te same argumenty. Obie funkcje zamieniają tablicę na tekst przez `JSON.stringify`, ustawiają nagłówek `Content-Type: application/json` i wkładają ten tekst do ciała odpowiedzi. Klient odtwarza z niego tablicę przez `JSON.parse`, a przy `fetch` przez metodę `res.json()`. Między serwerem a klientem wędruje więc zapis tekstowy obiektów JavaScriptu.
+`GET` czeka sekundę, żeby źródło danych było wolne jak prawdziwa baza. Dzięki temu w kolejnych tematach widać ekran ładowania i zysk z pamięci `fetch`. `Response.json()` zamienia tablicę na tekst przez `JSON.stringify`, ustawia nagłówek `Content-Type: application/json` i wkłada ten tekst do ciała odpowiedzi. Klient odtwarza z niego tablicę przez `JSON.parse`, a przy `fetch` przez metodę `res.json()`. Między serwerem a klientem wędruje więc zapis tekstowy obiektów JavaScriptu.
 
-`POST` nie łapie wyjątku z `request.json()`. Zły format ciała kończy się więc odpowiedzią 500 bez treści, a opis błędu trafia tylko do terminala serwera. Kod 500 oznacza tu błąd serwera, choć zły format wysłał klient. `POST` nie sprawdza też pól: obiekt `{"title":5}` zostanie zapisany jako artykuł z liczbą w tytule.
+Next.js ma też klasę **`NextResponse`**, która rozszerza standardową `Response`. Bugl pisze, że Next.js „rozszerza je o API NextRequest i NextResponse, które ułatwiają obsługę ciasteczek i nagłówków” (*„extends them into NextRequest and NextResponse APIs, which make handling cookies and headers easier”*). Do zwrócenia JSON-u rozszerzenie nie jest potrzebne, bo `Response.json()` przyjmuje te same argumenty.
 
-## Jeden artykuł: `app/api/articles/[id]/route.js`
+`POST` nie łapie wyjątku z `request.json()`. Zły format ciała kończy się więc odpowiedzią 500 bez treści, a opis błędu trafia tylko do terminala serwera. Kod 500 oznacza tu błąd serwera, choć zły format wysłał klient. `POST` nie sprawdza też pól: obiekt `{"title":5}` zostanie zapisany jako artykuł z liczbą w tytule i odpowie `201 Created`.
 
-Katalog w nawiasach kwadratowych tworzy segment dynamiczny, więc `/api/articles/2` trafia do drugiego pliku z parametrem `id` równym `"2"`:
+## Przykład spoza demo: jeden artykuł
+
+Katalog w nawiasach kwadratowych tworzy segment dynamiczny, więc `/api/articles/2` trafiłby do osobnego pliku z parametrem `id` równym `"2"`. Demo takiego pliku nie ma, bo stronę artykułu obsługuje komponent serwerowy. Wariant spoza demo wygląda tak:
 
 ```js
-// app/api/articles/[id]/route.js
-import { NextResponse } from "next/server";
+// Przykład spoza demo: app/api/articles/[id]/route.js
 import { getArticle } from "@/lib/store";
 
 // drugi argument to kontekst; params jest w nim obiektem Promise
@@ -115,13 +114,13 @@ export async function GET(request, { params }) {
   const article = getArticle(id);
   if (!article) {
     // brak zasobu to zwykła odpowiedź z innym kodem
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return Response.json({ error: "Not found" }, { status: 404 });
   }
-  return NextResponse.json(article);
+  return Response.json(article);
 }
 ```
 
-`params` jest obiektem Promise, tak jak w komponencie strony. W Route Handlerze pominięcie `await` daje jednak mylący objaw. Zapis `const { id } = params;` zostawia `id` z wartością `undefined`, więc klient dostaje 404 także dla `/api/articles/1`. Dla klienta API taka odpowiedź wygląda jak brak artykułu. Prawdziwą przyczynę podaje tylko terminal serwera: „`params` is a Promise and must be unwrapped with `await` or `React.use()` before accessing its properties”.
+W projekcie z tym plikiem adres `/api/articles/99` odpowiada `HTTP/1.1 404 Not Found` i ciałem `{"error":"Not found"}`, a `/api/articles/1` zwraca pierwszy artykuł. `params` jest obiektem Promise, tak jak w komponencie strony. W Route Handlerze pominięcie `await` daje jednak mylący objaw. Zapis `const { id } = params;` zostawia `id` z wartością `undefined`, więc klient dostaje 404 także dla `/api/articles/1`. Dla klienta API taka odpowiedź wygląda jak brak artykułu. Prawdziwą przyczynę podaje tylko terminal serwera: „`params` is a Promise and must be unwrapped with `await` or `React.use()` before accessing its properties”.
 
 ## Rysunek 5.2 — droga żądania przez Route Handler
 
@@ -130,7 +129,7 @@ export async function GET(request, { params }) {
 flowchart LR
     C["klient HTTP<br/>przeglądarka, curl"] --> R{"adres i metoda"}
     R -- "GET /api/articles" --> L["route.js: GET<br/>getArticles()"]
-    R -- "GET /api/articles/1" --> D["[id]/route.js: GET<br/>await params, getArticle('1')"]
+    R -- "GET /api/articles/1" --> D["spoza demo: [id]/route.js<br/>await params, getArticle('1')"]
     R -- "DELETE /api/articles" --> X["405, puste ciało"]
     R -- "OPTIONS /api/articles" --> O["204 + allow:<br/>GET, HEAD, OPTIONS, POST"]
     L --> J["200 + tablica"]
@@ -138,20 +137,29 @@ flowchart LR
     D -- "artykułu brak" --> N["404 + { error }"]
 ```
 
-Na Rysunku 5.2 klient wybiera adres i metodę, a Next.js na tej podstawie wskazuje plik i funkcję. Gałęzie `DELETE` i `OPTIONS` obsługuje sam framework, bez kodu w `route.js`. Metoda, której plik nie eksportuje, dostaje `405 Method Not Allowed` z pustym ciałem. MDN wymaga, żeby taka odpowiedź miała nagłówek `Allow` z listą metod, ale Next.js 16.4.0 go przy 405 nie wysyła. Listę podaje dopiero odpowiedź na `OPTIONS`, w nagłówku `allow`. Brak artykułu jest dla API zwykłą odpowiedzią z kodem 404. Co z nią zrobić, decyduje klient.
+Na Rysunku 5.2 klient wybiera adres i metodę, a Next.js na tej podstawie wskazuje plik i funkcję. Gałąź z `[id]` pochodzi z przykładu spoza demo. Gałęzie `DELETE` i `OPTIONS` obsługuje sam framework, bez kodu w `route.js`. Metoda, której plik nie eksportuje, dostaje `405 Method Not Allowed` z pustym ciałem. MDN wymaga, żeby taka odpowiedź miała nagłówek `Allow` z listą metod, ale Next.js 16.4.0 go przy 405 nie wysyła. Listę podaje dopiero odpowiedź na `OPTIONS`, w nagłówku `allow`. Brak artykułu jest dla API zwykłą odpowiedzią z kodem 404. Co z nią zrobić, decyduje klient.
 
 ## Żądanie wysłane z terminala
 
-API sprawdza się najprościej programem **`curl`**, który wysyła żądanie HTTP z terminala i wypisuje surową odpowiedź. Opcja `-i` dokłada nagłówki, `-X` wybiera metodę, `-H` dodaje nagłówek, a `-d` przekazuje ciało:
+API sprawdza się najprościej programem **`curl`**, który wysyła żądanie HTTP z terminala i wypisuje surową odpowiedź. Opcja `-i` dokłada nagłówki, a `-X` wybiera metodę. `-H` dodaje nagłówek, a `-d` przekazuje ciało:
 
 ```bash
-curl -i http://localhost:3000/api/articles/99
+curl -i http://localhost:3000/api/articles
 curl -X POST -H "Content-Type: application/json" \
-  -d '{"title":"From terminal","author":"Ann","body":"Article body sent from the terminal"}' \
+  -d '{"title":"From terminal","body":"Article body sent from the terminal"}' \
   http://localhost:3000/api/articles
 ```
 
-Na pierwsze polecenie serwer odpowiada linią `HTTP/1.1 404 Not Found` i ciałem `{"error":"Not found"}`. Drugie tworzy artykuł z `id` równym 4, więc od tej chwili `GET /api/articles` zwraca cztery pozycje. Taki test oddziela błędy API od błędów interfejsu. Gdy `curl` dostaje złe dane, przyczyna leży w Route Handlerze. Gdy `curl` dostaje dobre dane, a strona pokazuje złe, przyczyna leży w kodzie Reacta.
+Na pierwsze polecenie serwer odpowiada po sekundzie linią `HTTP/1.1 200 OK`, nagłówkiem `content-type: application/json` i ciałem z dwoma artykułami startowymi. Drugie daje `HTTP/1.1 201 Created` i `{"id":3,"title":"From terminal","body":"Article body sent from the terminal"}`, więc od tej chwili `GET /api/articles` zwraca trzy pozycje. Ciało `{"title":` kończy się odpowiedzią `HTTP/1.1 500 Internal Server Error`, a w terminalu serwera pojawia się `SyntaxError: Unexpected end of JSON input`. Taki test oddziela błędy API od błędów interfejsu. Gdy `curl` dostaje złe dane, przyczyna leży w Route Handlerze. Gdy `curl` dostaje dobre dane, a strona pokazuje złe, przyczyna leży w kodzie Reacta.
+
+## Zalety i koszty Route Handlera
+
+Route Handler daje danym adres, który rozumie każdy klient HTTP, ale odpowiedzialność za format, status i walidację spada na autora pliku.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Adres HTTP dla klientów, którzy nie zaimportują `lib/store.js`: przeglądarka, `curl`, aplikacja mobilna | Dane dwa razy zmieniają format: tablica staje się tekstem JSON i wraca | Komponent serwerowy tej aplikacji: wywołanie funkcji z `lib/store.js`, jak na stronie artykułu |
+| Standardowe `Request` i `Response`; test `curl` oddziela błędy API od błędów interfejsu | Każdy `route.js` to publiczny punkt końcowy bez własnej walidacji (`{"title":5}` daje 201); kod statusu dobiera autor (zły JSON bez `try` daje 500) | Zapis z formularza własnej aplikacji: Server Action zamiast ręcznego `POST` |
 
 > 💡 **Zapamiętaj:** Route Handler to plik `route.js`, którego funkcje nazywają się jak metody HTTP, dostają `Request` i zwracają `Response`. <u>Błąd klienta, taki jak zły JSON, odsyła się kodem 4xx</u>, bo nieprzechwycony wyjątek w Route Handlerze kończy się kodem 500.
 

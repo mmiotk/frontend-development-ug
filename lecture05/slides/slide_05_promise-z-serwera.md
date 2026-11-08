@@ -1,8 +1,8 @@
 # Promise z serwera, odczyt w przeglądarce
 
-## Strona, która nie czeka na własne dane
+## Nagłówek czeka na listę, której nie potrzebuje
 
-Strona główna czeka na dane, zanim cokolwiek pokaże w miejscu listy. Przy wolnym źródle użytkownik patrzy na ekran ładowania, choć nagłówek strony mógłby pojawić się od razu. Trasa `/suspend` pokazuje inny układ. Serwer zaczyna pobierać dane bez czekania na wynik i przekazuje komponentowi klienckiemu obiekt Promise, czyli wynik, który jeszcze nie nadszedł. Odczyt takiego obiektu działa tak samo jak w każdym komponencie klienckim: `use` zawiesza komponent do chwili rozstrzygnięcia Promise, a najbliższa granica Suspense pokazuje w tym czasie treść zastępczą. Nowe jest miejsce, w którym Promise powstaje: komponent serwerowy, jeden raz na żądanie.
+`GET /api/articles` odpowiada po sekundzie. Przez ten czas `app/loading.jsx` zasłania całą stronę główną napisem „Loading...”, także nagłówek, który z danymi nie ma nic wspólnego. Pomiar: po 0,3 s widać tylko „Loading...”, a cała strona pojawia się dopiero po ok. 1,2 s. Trasa `/suspend` pokazuje inny układ. Po 0,4 s stoją na niej już nagłówek „Articles with use()” i napis „Waiting for data...”, a lista przychodzi po 1,3–1,5 s. Serwer zaczyna pobierać dane bez czekania na wynik i przekazuje komponentowi klienckiemu obiekt Promise, czyli wynik, który jeszcze nie nadszedł. Odczyt takiego obiektu działa tak samo jak w każdym komponencie klienckim: `use` zawiesza komponent do chwili rozstrzygnięcia Promise, a najbliższa granica Suspense pokazuje w tym czasie treść zastępczą. Nowe jest miejsce, w którym Promise powstaje: komponent serwerowy, jeden raz na żądanie.
 
 ## Promise zaczyna się od razu, wynik przychodzi później
 
@@ -19,23 +19,19 @@ Pierwsza linia kończy się natychmiast. Zmienna `p` trzyma Promise tablicy, wi�
 
 ## Komponent kliencki czyta Promise z propsa
 
-Trasa składa się z dwóch plików. Najpierw powstaje komponent kliencki, bo strona go importuje. Plik `app/suspend/ArticleListClient.jsx`:
+Trasa składa się z dwóch plików. Najpierw powstaje komponent kliencki, bo strona go importuje. Plik `app/suspend/ArticleList.jsx`:
 
 ```jsx
-// app/suspend/ArticleListClient.jsx
+// app/suspend/ArticleList.jsx
 "use client";
 import { use } from "react";
 
-export default function ArticleListClient({ promise }) {
-  // use() zawiesza komponent, dopóki Promise z propsa się nie rozstrzygnie
-  const articles = use(promise);
-
+export default function ArticleList({ promise }) {
+  const articles = use(promise); // czeka, aż Promise z serwera się rozstrzygnie
   return (
     <ul>
       {articles.map((a) => (
-        <li key={a.id}>
-          {a.title} — {a.author}
-        </li>
+        <li key={a.id}>{a.title}</li>
       ))}
     </ul>
   );
@@ -50,25 +46,22 @@ Promise dostarcza strona. Plik `app/suspend/page.jsx`:
 
 ```jsx
 // app/suspend/page.jsx
-// komponent serwerowy: tworzy Promise, ale NIE czeka na niego
+// Komponent serwerowy: tworzy Promise, ale na niego nie czeka
 import { Suspense } from "react";
-import ArticleListClient from "./ArticleListClient";
+import ArticleList from "./ArticleList";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 
 export default function SuspendPage() {
-  // Promise powstaje tutaj, bez await, i idzie w propsie do komponentu klienckiego
-  const articlesPromise = fetch(`${BASE_URL}/api/articles`, {
-    cache: "no-store",
-  }).then((r) => r.json());
+  const promise = fetch(`${BASE_URL}/api/articles`, { cache: "no-store" }).then((r) => r.json());
 
   return (
-    <div>
-      <h1>Articles — use() + Suspense</h1>
-      <Suspense fallback={<p>Suspense is waiting for data...</p>}>
-        <ArticleListClient promise={articlesPromise} />
+    <main>
+      <h1>Articles with use()</h1>
+      <Suspense fallback={<p>Waiting for data...</p>}>
+        <ArticleList promise={promise} />
       </Suspense>
-    </div>
+    </main>
   );
 }
 ```
@@ -76,7 +69,7 @@ export default function SuspendPage() {
 Plik ma trzy ważne cechy:
 
 1. **`SuspendPage` nie jest funkcją `async`.** Komponent kończy pracę od razu i zwraca JSX z nagłówkiem.
-2. **`articlesPromise`** to Promise zwrócony przez `fetch(...).then(...)`. Żądanie już trwa, a wynik jeszcze nie istnieje.
+2. **`promise`** to Promise zwrócony przez `fetch(...).then(...)`. Żądanie już trwa, a wynik jeszcze nie istnieje.
 3. **`<Suspense fallback={...}>`** obejmuje tylko listę. Nagłówek leży poza granicą i nie musi na nic czekać.
 
 ## Co wolno przekazać jako wynik Promise
@@ -87,10 +80,10 @@ Obiekt `Response` jest instancją klasy z metodami i strumieniem treści, więc 
 
 ## Wynik idzie do przeglądarki dwa razy
 
-Przeglądarka nie wysyła własnego żądania do `/api/articles`. Pobiera je tylko serwer, a gotowy wynik dosyła w odpowiedzi na `/suspend` w dwóch postaciach. Pierwsza to HTML listy, który przeglądarka pokazuje od razu. Druga to wiersz danych w skrypcie `self.__next_f.push`, zapisany jako JSON pod numerem wiersza.
+Przeglądarka nie wysyła własnego żądania do `/api/articles`. Pobiera je tylko serwer, a gotowy wynik dosyła w odpowiedzi na `/suspend` w dwóch postaciach. Pierwsza to HTML listy, który przeglądarka pokazuje od razu. Druga to wiersz danych w skrypcie `self.__next_f.push`, zapisany jako JSON pod numerem wiersza (numer zależy od strony).
 
 ```text
-10:[{"id":1,"title":"Intro to Server Components","author":"Alice","body":"Server Components run …"}, …]
+62:[{"id":1,"title":"Server Components","body":"They run only on the server."},{"id":2,"title":"Server Actions","body":"They save data on the server."}]
 ```
 
 Z tego wiersza `use` w przeglądarce odczytuje tę samą tablicę, która posłużyła do wyrenderowania HTML-a, więc lista po hydratacji wygląda identycznie. Wiersz zawiera każde pole obiektu, także `body`, którego lista nie wyświetla. <u>Do przeglądarki trafia cała wartość, którą rozstrzyga się Promise</u>, więc dane wrażliwe albo duże obcina się jeszcze na serwerze, w tym samym `.then`.
@@ -139,7 +132,7 @@ export default async function AwaitPage() {
 }
 ```
 
-Druga przekazuje Promise w dół, do komponentu klienckiego zbudowanego jak `ArticleListClient`.
+Druga przekazuje Promise w dół, do komponentu klienckiego zbudowanego jak `ArticleList`.
 
 ```jsx
 // app/promise/List.jsx (spoza demo): komponent kliencki z use(promise)
@@ -171,7 +164,7 @@ export default function PromisePage() {
 }
 ```
 
-Bez żadnej granicy nad stroną pierwszy bajt odpowiedzi wariantu 1 przychodzi po 1,07 s, a wariantu 2 po 0,07 s, już z nagłówkiem i napisem „waiting”. W `articleviewer` nad każdą stroną stoi granica z `app/loading.jsx`, więc wariant 1 też zaczyna odpowiadać po 0,07 s. Pierwszy kawałek zawiera wtedy jednak tylko „Loading articles...”, a nagłówek przychodzi razem z listą po 1,07 s. <u>Przekazanie Promise w dół nie przyspiesza danych, tylko zmienia, która część strony na nie czeka.</u>
+Bez żadnej granicy nad stroną pierwszy bajt odpowiedzi wariantu 1 przychodzi po 1,07 s, a wariantu 2 po 0,07 s, już z nagłówkiem i napisem „waiting”. W `articleviewer` nad każdą stroną stoi granica z `app/loading.jsx`, więc wariant 1 też zaczyna odpowiadać po 0,07 s. Pierwszy kawałek zawiera wtedy jednak tylko „Loading...”, a nagłówek przychodzi razem z listą po 1,07 s. <u>Przekazanie Promise w dół nie przyspiesza danych, tylko zmienia, która część strony na nie czeka.</u>
 
 Odbiorcą nie musi być komponent kliencki. Dokumentacja pokazuje głębszy komponent serwerowy, który robi `await` na otrzymanym Promise. Komponent kliencki nie może czekać przez `await` w trakcie renderu, więc używa `use`. Dokumentacja podaje typowy powód, żeby dane trafiły do klienta: treść interaktywna, na przykład dymki i okienka. W `/suspend` lista nie ma takiej interakcji, więc ten sam efekt dałby asynchroniczny komponent serwerowy pod tą samą granicą. Trasa pokazuje mimo to wariant z komponentem klienckim, bo tylko w nim widać `use` i przejście obiektu Promise z serwera do przeglądarki, potrzebne, gdy lista dostanie interakcję w przeglądarce.
 
@@ -185,7 +178,7 @@ Część odpowiedzi wysłaną, zanim rozstrzygnie się jakakolwiek praca asynchr
 >
 > — Tejas Kumar, *Fluent React*
 
-Od powłoki zależy **czas do pierwszego bajtu** (**TTFB**, *Time to First Byte*). Przewodnik *Streaming* opisuje oba przypadki. Bez strumieniowania serwer czeka na wszystkie dane, więc TTFB równa się czasowi najwolniejszego zapytania. Ze strumieniowaniem TTFB spada do czasu wyrenderowania layoutów i treści zastępczych. W przykładzie z dwiema stronami to 1,07 s i 0,07 s. W `/suspend` powłoką jest layout z nawigacją, nagłówek strony i akapit „Suspense is waiting for data...”. Element, który ma się pojawić najszybciej, na przykład główny nagłówek, stawia się więc poza granicą.
+Od powłoki zależy **czas do pierwszego bajtu** (**TTFB**, *Time to First Byte*). Przewodnik *Streaming* opisuje oba przypadki. Bez strumieniowania serwer czeka na wszystkie dane, więc TTFB równa się czasowi najwolniejszego zapytania. Ze strumieniowaniem TTFB spada do czasu wyrenderowania layoutów i treści zastępczych. W przykładzie z dwiema stronami to 1,07 s i 0,07 s. W `/suspend` powłoką jest layout z nawigacją, nagłówek strony i akapit „Waiting for data...”. Element, który ma się pojawić najszybciej, na przykład główny nagłówek, stawia się więc poza granicą.
 
 ## Rysunek 5.5 — co trafia do pierwszego kawałka odpowiedzi
 
@@ -210,7 +203,17 @@ Przewodnik *Streaming* zestawia oba narzędzia w tabeli. `loading.js` obejmuje c
 
 Promise tworzony w renderze komponentu klienckiego, czyli `use(fetch(...).then(...))`, powstaje przy każdej próbie renderu od nowa, więc ładowanie nigdy się nie kończy. <u>Promise dla `use` tworzy się poza renderem komponentu, który go odczytuje</u>, a komponent serwerowy spełnia ten warunek, bo tworzy go raz na żądanie.
 
-Kod `SuspendPage` nie sprawdza `r.ok`. Przy odpowiedzi 500 Promise się spełni treścią błędu, a wyjątek wyjdzie dopiero przy `articles.map` i trafi do najbliższej granicy błędów, w tej aplikacji do `app/error.jsx`. W kodzie przeznaczonym do wdrożenia łańcuch rzuca wyjątek przy złym statusie, tak jak `fetchArticles` na stronie głównej.
+Kod `SuspendPage` nie sprawdza `r.ok`. Przy odpowiedzi 500 Promise się spełni treścią błędu, a wyjątek wyjdzie dopiero przy `articles.map` i trafi do najbliższej granicy błędów, w tej aplikacji do `app/error.jsx`. W kodzie przeznaczonym do wdrożenia łańcuch rzuca wyjątek przy złym statusie, tak jak sprawdzenie `res.ok` na stronie głównej.
+
+## Zalety i koszty Promise z serwera
+
+Przekazanie Promise w dół dzieli stronę na część, która pokazuje się od razu, i część, która czeka na dane. Wiele stron tego podziału nie potrzebuje.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Nagłówek w pierwszym kawałku odpowiedzi po 0,4 s, lista po 1,3–1,5 s (w przykładzie z dwiema stronami 0,07 s zamiast 1,07 s) | Dane przychodzą po tym samym czasie: zmienia się tylko to, co na nie czeka | Strona, która bez danych nie ma czego pokazać: `await` na miejscu i `loading.jsx`, czyli najprostsza opcja według dokumentacji |
+| Komponent pisany tak, jakby dane były gotowe, bez `useState` i `useEffect`; przeglądarka nie wysyła własnego żądania | Wynik trafia do przeglądarki dwa razy, jako HTML i jako wiersz danych z każdym polem | Dane wrażliwe albo duże: obciąć je w `.then` jeszcze na serwerze |
+| Granica `<Suspense>` tam, gdzie jest coś do pokazania od razu | Wynik Promise musi dać się zserializować (`.then((r) => r.json())`); dwa pliki zamiast jednego `await` | Lista bez interakcji: asynchroniczny komponent serwerowy pod tą samą granicą daje ten sam efekt |
 
 > 💡 **Zapamiętaj:** komponent serwerowy może zacząć pobieranie bez `await` i przekazać Promise w dół drzewa. Promise musi się rozstrzygnąć wartością, którą da się zserializować, a nagłówek poza granicą trafia do statycznej powłoki, zanim dane nadejdą.
 

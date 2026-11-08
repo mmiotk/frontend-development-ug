@@ -11,7 +11,7 @@ Next.js dokłada zabezpieczenia bez udziału programisty. Akcję wywołuje się 
 # ACTION_ID: identyfikator createArticle z .next/server/server-reference-manifest.json
 send() { curl -s -o /dev/null -w "%{http_code}\n" -X POST localhost:3000/new "$@" \
   -F '$ACTION_REF_1=' -F "\$ACTION_1:0={\"id\":\"$ACTION_ID\",\"bound\":\"\$@1\"}" -F '$ACTION_1:1=[null]' \
-  -F '$ACTION_KEY=k1' -F title="Sent from terminal" -F author=Mallory -F body="No browser was involved here."; }
+  -F '$ACTION_KEY=k1' -F title="Sent from terminal" -F body="No browser was involved here."; }
 send -H "Origin: https://evil.example" # → 500, artykułu nie przybywa
 send                                   # → 303, artykuł zapisany
 ```

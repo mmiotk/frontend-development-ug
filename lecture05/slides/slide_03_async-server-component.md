@@ -1,29 +1,26 @@
 # Komponent, który czeka na dane
 
+## Lista potrzebna, zanim strona powstanie
+
+Lista artykułów ma być w HTML-u, który serwer wysyła przeglądarce. Komponent kliencki z `useEffect` wysyła HTML ze stanem ładowania, a listę dopiero po wczytaniu skryptu i drugim żądaniu do API. Trzeba do tego trzech flag stanu: dane, ładowanie i błąd. Każda z nich ma być w każdej chwili spójna z pozostałymi. Komponent serwerowy czeka na dane, zanim wyśle HTML, więc te flagi nie są potrzebne, a lista jest w pierwszej odpowiedzi.
+
 ## Nawigacja we wspólnym layoucie
 
-Layout główny dostaje pasek nawigacji z linkami do czterech tras aplikacji. Layout obejmuje każdą stronę i zostaje na ekranie przy przejściach, więc menu jest zawsze widoczne. W pliku `app/layout.jsx` dochodzą import `Link`, obiekt `metadata` z tytułem karty i blok `<nav>` przed `children`.
+Layout główny dostaje pasek nawigacji z dwoma linkami. Layout obejmuje każdą stronę i zostaje na ekranie przy przejściach, więc menu jest zawsze widoczne. W pliku `app/layout.jsx` dochodzą import `Link`, obiekt `metadata` z tytułem karty i blok `<nav>` przed `children`.
 
 ```jsx
-// app/layout.jsx (nowe linie i dwie linie kontekstu nad nimi)
+// app/layout.jsx
 import Link from "next/link";
 
-export const metadata = { title: "Articles Viewer" }; // tytuł karty przeglądarki
+export const metadata = { title: "Articles" };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
         <nav>
-          <Link href="/">Articles</Link>
-          {" | "}
-          <Link href="/new">Add</Link>
-          {" | "}
-          <Link href="/suspend">use() demo</Link>
-          {" | "}
-          <Link href="/swr-demo">SWR demo</Link>
+          <Link href="/">Articles</Link> | <Link href="/new">Add</Link>
         </nav>
-        <hr />
         {children}
       </body>
     </html>
@@ -31,7 +28,7 @@ export default function RootLayout({ children }) {
 }
 ```
 
-`<Link>` przełącza strony bez przeładowania dokumentu, a link do trasy bez pliku `page.jsx` prowadzi do strony 404, dopóki ten plik nie powstanie. Trzy z tych tras czytają te same artykuły, każda w inny sposób, a czwarta, `/new`, je dopisuje. Menu pozwala porównać je jednym kliknięciem.
+`<Link>` przełącza strony bez przeładowania dokumentu, a link do trasy bez pliku `page.jsx` prowadzi do strony 404, dopóki ten plik nie powstanie. Tak jest z `Add`: strona `/new` pojawia się dopiero przy formularzu.
 
 ## Strona główna jako funkcja `async`
 
@@ -39,42 +36,34 @@ Plik `app/page.jsx` pobiera listę artykułów z własnego API aplikacji i wyśw
 
 ```jsx
 // app/page.jsx
-// Komponent serwerowy: bez dyrektywy "use client" wykonuje się tylko na serwerze
+// Komponent serwerowy: bez "use client" wykonuje się tylko na serwerze
 import Link from "next/link";
 
-// adres serwera ze zmiennej środowiskowej; ?? podstawia wartość, gdy zmiennej brak
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 
-async function fetchArticles() {
-  const res = await fetch(`${BASE_URL}/api/articles`, {
-    cache: "no-store", // za każdym razem nowe żądanie, bez zapamiętanej odpowiedzi
-  });
-  if (!res.ok) throw new Error(`Failed to fetch articles: ${res.status}`); // status spoza 200–299
-  return res.json();
-}
-
 export default async function HomePage() {
-  console.log("HomePage render — server side"); // wpis w terminalu serwera, nie w przeglądarce
-  const articles = await fetchArticles(); // funkcja czeka tu na dane
+  const res = await fetch(`${BASE_URL}/api/articles`, {
+    cache: "no-store", // za każdym razem nowe żądanie
+  });
+  if (!res.ok) throw new Error(`Failed to fetch articles: ${res.status}`);
+  const articles = await res.json();
 
   return (
-    <div>
+    <main>
       <h1>Articles ({articles.length})</h1>
       <ul>
-        {articles.map((article) => (
-          <li key={article.id}>
-            <Link href={`/articles/${article.id}`}>{article.title}</Link>
-            {" — "}
-            {article.author} ({article.createdAt})
+        {articles.map((a) => (
+          <li key={a.id}>
+            <Link href={`/articles/${a.id}`}>{a.title}</Link>
           </li>
         ))}
       </ul>
-    </div>
+    </main>
   );
 }
 ```
 
-Demo celowo pobiera listę przez własne API, żeby pokazać `fetch` w komponencie serwerowym. Komponent serwerowy mógłby też wywołać `getArticles()` bezpośrednio, bez żądania HTTP. W kodzie brakuje `useState`, `useEffect` i flagi `isLoading`. `HomePage` jest zadeklarowana jako `async function`, a linia `await fetchArticles()` wstrzymuje ją do nadejścia danych. JSX powstaje dopiero z gotową tablicą, tak jak wynik zwykłej funkcji asynchronicznej w Node.js. Dokumentacja Next.js opisuje ten sposób tak:
+Demo celowo pobiera listę przez własne API, żeby pokazać `fetch` w komponencie serwerowym. Komponent serwerowy mógłby też wywołać `getArticles()` bezpośrednio, bez żądania HTTP. W kodzie brakuje `useState`, `useEffect` i flagi `isLoading`. `HomePage` jest zadeklarowana jako `async function`, a pierwsze `await` wstrzymuje ją do nadejścia odpowiedzi. JSX powstaje dopiero z gotową tablicą, tak jak wynik zwykłej funkcji asynchronicznej w Node.js. Dokumentacja Next.js opisuje ten sposób tak:
 
 > **„Aby pobrać dane przez API `fetch`, zamienia się komponent w funkcję asynchroniczną i czeka na wywołanie `fetch`.”**
 >
@@ -82,7 +71,7 @@ Demo celowo pobiera listę przez własne API, żeby pokazać `fetch` w komponenc
 >
 > — dokumentacja Next.js, *Fetching Data*
 
-Opcja `cache: "no-store"` każe pobierać dane przy każdym wejściu na stronę. Jej rola i pozostałe ustawienia pamięci `fetch` to osobny temat, a tutaj wystarcza, że lista zawsze odpowiada bieżącemu stanowi magazynu.
+Opcja `cache: "no-store"` każe pobierać dane przy każdym wejściu na stronę. Jej rola i pozostałe ustawienia pamięci `fetch` to osobny temat, a tutaj wystarcza, że lista zawsze odpowiada bieżącemu stanowi magazynu. Źródło strony (Ctrl+U) ma od razu listę dwóch artykułów, a `curl` na `/` zwraca ten sam HTML. Cenę widać w czasie: `GET /api/articles` czeka sekundę, więc przeglądarka nie pokazuje nic przez ok. 1,4 s (pomiar: 1,46; 1,42 i 1,40 s), a w terminalu przy każdym wejściu stoi `GET /api/articles 200 in 1006ms`.
 
 ## Dlaczego `async` działa tylko na serwerze
 
@@ -96,7 +85,7 @@ Komponent kliencki nie może być funkcją `async`, bo każdy jego render musi z
 
 Dyrektywa `"use client"` na górze tego pliku zamieniłaby `HomePage` w komponent kliencki. Next.js 16.4.0 zgłasza wtedy w trybie deweloperskim w konsoli przeglądarki: „`<HomePage>` is an async Client Component. Only Server Components can be async at the moment.”
 
-Pobieranie w efekcie zaczyna się dopiero po pierwszym renderze i nie działa na serwerze, więc HTML zawiera wtedy tylko stan ładowania. W `HomePage` dane są gotowe, zanim HTML opuści serwer. Trzy stany żądania obsługują tu trzy osobne mechanizmy. Oczekiwanie to samo `await`, sukces to dalszy ciąg funkcji, a porażka to wyjątek rzucony z `fetchArticles`. Przeglądarka dostaje gotową listę w HTML, więc do jej wyświetlenia nie potrzebuje żadnego skryptu.
+Trzy stany żądania obsługują w `HomePage` trzy osobne mechanizmy. Oczekiwanie to samo `await`, sukces to dalszy ciąg funkcji, a porażka to wyjątek rzucony z komponentu. Przeglądarka dostaje gotową listę w HTML, więc do jej wyświetlenia nie potrzebuje żadnego skryptu.
 
 ## Adres względny i adres bezwzględny
 
@@ -140,7 +129,7 @@ await res.json(); // → SyntaxError: Unexpected token '<', "<!DOCTYPE "... is n
 await fetch("http://localhost:3999/"); // → TypeError "fetch failed": na tym porcie nic nie działa
 ```
 
-Obiekt Promise zostaje odrzucony tylko wtedy, gdy odpowiedzi nie ma wcale, na przykład gdy serwer nie działa. Banks i Porcello ujmują to krótko: „czasem żądanie HTTP może zakończyć się sukcesem z błędem” (*„Sometimes an HTTP request can succeed with an error”*). Dlatego linia `if (!res.ok) throw ...` w `fetchArticles` decyduje o czytelności błędu. Z literówką w adresie, `/api/article` bez „s”, wyjątek niesie „Failed to fetch articles: 404”. Bez tej linii strona 404 trafia do `res.json()`, a komunikat „Unexpected token '<'” nie mówi nic o przyczynie. <u>Po każdym `fetch` sprawdza się `res.ok`, zanim odczyta się ciało.</u>
+Obiekt Promise zostaje odrzucony tylko wtedy, gdy odpowiedzi nie ma wcale, na przykład gdy serwer nie działa. Banks i Porcello ujmują to krótko: „czasem żądanie HTTP może zakończyć się sukcesem z błędem” (*„Sometimes an HTTP request can succeed with an error”*). Dlatego linia `if (!res.ok) throw ...` w `HomePage` decyduje o czytelności błędu. Z literówką w adresie, `/api/article` bez „s”, wyjątek niesie „Failed to fetch articles: 404”. Bez tej linii strona 404 trafia do `res.json()`, a komunikat „Unexpected token '<'” nie mówi nic o przyczynie. <u>Po każdym `fetch` sprawdza się `res.ok`, zanim odczyta się ciało.</u>
 
 ## Kaskada żądań: jedno po drugim
 
@@ -159,7 +148,7 @@ await fetch(slowUrl);
 await Promise.all([fetch(slowUrl), fetch(slowUrl)]);
 ```
 
-`Promise.all` przyjmuje tablicę obiektów Promise i zwraca jeden, który spełnia się tablicą wyników w tej samej kolejności. Gdy jedno żądanie się nie powiedzie, całe wywołanie kończy się błędem. Kolejność jest natomiast konieczna, gdy drugie żądanie potrzebuje wyniku pierwszego, na przykład identyfikatora autora z odpowiedzi o artykule. Taki łańcuch skraca dopiero zmiana źródła, na przykład jedno zapytanie do bazy, które zwraca artykuł razem z autorem.
+`Promise.all` przyjmuje tablicę obiektów Promise i zwraca jeden, który spełnia się tablicą wyników w tej samej kolejności. Gdy jedno żądanie się nie powiedzie, całe wywołanie kończy się błędem. Kolejność jest natomiast konieczna, gdy drugie żądanie potrzebuje wyniku pierwszego, na przykład numeru z pierwszej odpowiedzi, który wchodzi do adresu drugiej. Taki łańcuch skraca dopiero zmiana źródła, na przykład jedno zapytanie do bazy, które zwraca oba zbiory razem.
 
 Dokumentacja opisuje też odmianę kaskady rozrzuconą po komponentach. Komponent z danymi, który renderuje się dopiero po innej blokującej pracy, wysyła żądanie późno, choć dane wejściowe są znane od początku. **Wstępne uruchomienie** (*preloading*) polega na wywołaniu funkcji pobierającej bez `await` przed blokującą pracą. Wynik odbiera się dopiero po niej.
 
@@ -177,15 +166,25 @@ const articles = await listPromise;  // wynik odbiera się po pracy, razem ok. 3
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
 flowchart LR
     subgraph A["dwa await po kolei"]
-        A1["fetch lista"] --> A2["fetch artykuł 1"] --> A3["render<br/>czas = suma"]
+        A1["fetch lista"] --> A2["fetch drugie źródło"] --> A3["render<br/>czas = suma"]
     end
     subgraph B["Promise.all"]
         B1["fetch lista"] --> B3["render<br/>czas = wolniejsze"]
-        B2["fetch artykuł 1"] --> B3
+        B2["fetch drugie źródło"] --> B3
     end
 ```
 
-Na Rysunku 5.3 oba warianty dotyczą strony, która obok listy pokazuje wyróżniony artykuł z `/api/articles/1`. W lewej ramce drugie żądanie startuje dopiero po powrocie pierwszego, więc render czeka na sumę obu czasów. W prawej ramce oba żądania wychodzą jednocześnie, a render czeka tylko na wolniejsze. `HomePage` ma jedno żądanie, więc kaskady nie ma, ale pojawia się ona przy drugim `await` dopisanym pod pierwszym.
+Na Rysunku 5.3 oba warianty dotyczą strony, która obok listy pobiera drugie, niezależne źródło. W lewej ramce drugie żądanie startuje dopiero po powrocie pierwszego, więc render czeka na sumę obu czasów. W prawej ramce oba żądania wychodzą jednocześnie, a render czeka tylko na wolniejsze. `HomePage` ma jedno żądanie, więc kaskady nie ma, ale pojawia się ona przy drugim `await` dopisanym pod pierwszym.
+
+## Zalety i koszty komponentu serwerowego z `await`
+
+Komponent `async` zastępuje flagi stanu zwykłym `await`, ale cała strona czeka na najwolniejsze źródło.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Lista w HTML-u (`curl` na `/` ją zwraca), bez `useState`, `useEffect` i flag | Cała strona czeka na najwolniejsze źródło: lista pojawia się po ok. 1,2–1,4 s przy każdym wejściu | Dane zmienne w trakcie oglądania albo zależne od wpisywania: pobieranie w przeglądarce (SWR i TanStack Query) |
+| Kod pobierający dane nie trafia do przeglądarki | Pełny adres w `BASE_URL` i ręczne sprawdzanie `res.ok` | Dane z własnego modułu: wywołanie funkcji z `lib/store.js` bez HTTP, jak na stronie artykułu |
+| Komponent czyta się jak zwykła funkcja asynchroniczna | Dwa `await` jeden pod drugim robią kaskadę, a bez komponentu klienckiego nie ma interakcji | Niezależne żądania: `Promise.all`; interakcja: osobny komponent kliencki obok |
 
 > 💡 **Zapamiętaj:** <u>komponent serwerowy może być funkcją `async` i czekać na dane przez `await`</u>, bez efektu i stanu ładowania. Na serwerze `fetch` potrzebuje pełnego adresu i sprawdzenia `res.ok`, bo status 404 nie odrzuca obiektu Promise.
 

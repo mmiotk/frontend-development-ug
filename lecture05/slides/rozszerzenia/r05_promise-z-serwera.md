@@ -15,11 +15,11 @@ return (
       <ArticleCount promise={articlesPromise} /> {/* use(promise), potem <p>{articles.length} articles</p> */}
     </Suspense>
     <Suspense fallback={<p>Loading list…</p>}>
-      <ArticleListClient promise={articlesPromise} />
+      <ArticleList promise={articlesPromise} />
     </Suspense>
   </div>
 );
-// → jedno żądanie GET /api/articles w logu serwera, w HTML „3 articles” i trzy tytuły
+// → jedno żądanie GET /api/articles w logu serwera, w HTML „2 articles” i dwa tytuły
 ```
 
 Przewodnik *Streaming* zaznacza, że Promise można przekazywać przez dowolnie wiele poziomów. Granicy `<Suspense>` potrzebuje tylko komponent, który wywołuje `use`. Gdy odbiorców jest wielu i leżą głęboko, przewodnik podaje wzorzec z kontekstem:
@@ -53,4 +53,4 @@ $ curl -s -o /dev/null -w "%{time_starttransfer}\n" localhost:3001/stream   # pr
 1.024
 ```
 
-Strona `/stream` ma pod granicą `<Suspense>` komponent, który czeka sekundę, więc za buforującym pośrednikiem TTFB wraca do czasu najwolniejszego zapytania, choć aplikacja strumieniuje poprawnie.
+Strona `/stream` ma pod granicą `<Suspense>` komponent, który czeka sekundę, więc za pośrednikiem, który zbiera odpowiedź w całości, TTFB wraca do czasu najwolniejszego zapytania, choć aplikacja strumieniuje poprawnie.

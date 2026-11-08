@@ -1,22 +1,19 @@
 // app/suspend/page.jsx
-// Server Component — creates Promise but does NOT await it
+// Komponent serwerowy: tworzy Promise, ale na niego nie czeka
 import { Suspense } from "react";
-import ArticleListClient from "./ArticleListClient";
+import ArticleList from "./ArticleList";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 
 export default function SuspendPage() {
-  // Promise created here — NOT awaited — passed as prop to Client Component
-  const articlesPromise = fetch(`${BASE_URL}/api/articles`, {
-    cache: "no-store",
-  }).then((r) => r.json());
+  const promise = fetch(`${BASE_URL}/api/articles`, { cache: "no-store" }).then((r) => r.json());
 
   return (
-    <div>
-      <h1>Articles — use() + Suspense</h1>
-      <Suspense fallback={<p>Suspense is waiting for data...</p>}>
-        <ArticleListClient promise={articlesPromise} />
+    <main>
+      <h1>Articles with use()</h1>
+      <Suspense fallback={<p>Waiting for data...</p>}>
+        <ArticleList promise={promise} />
       </Suspense>
-    </div>
+    </main>
   );
 }

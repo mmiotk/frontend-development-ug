@@ -1,14 +1,13 @@
 // app/api/articles/route.js
-import { NextResponse } from "next/server";
 import { getArticles, addArticle } from "@/lib/store";
 
+// nazwa funkcji = nazwa metody HTTP
 export async function GET() {
-  const articles = getArticles();
-  return NextResponse.json(articles);
+  await new Promise((r) => setTimeout(r, 1000)); // udajemy wolną bazę: odpowiedź po 1 s
+  return Response.json(getArticles()); // JSON i domyślny status 200
 }
 
 export async function POST(request) {
-  const body = await request.json();
-  const article = addArticle(body);
-  return NextResponse.json(article, { status: 201 });
+  const article = addArticle(await request.json()); // ciało żądania jako obiekt
+  return Response.json(article, { status: 201 }); // 201 Created
 }

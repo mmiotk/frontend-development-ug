@@ -18,7 +18,7 @@ Opcja `cacheTime` z wersji 4 nazywa się teraz `gcTime`, a stan `loading` ma ter
 
 ## Rozszerzenie: klucze zapytań
 
-Klucz jest tablicą. Dokumentacja *Query Keys* zaczyna od zdania, że biblioteka zarządza pamięcią na podstawie kluczy. Jeśli funkcja zapytania zależy od zmiennej, zmienna trafia do klucza: lista po autorze ma klucz `["articles", { author }]`. Klucze działają jak zależności funkcji zapytania, więc zmiana klucza oznacza nowe zapytanie.
+Klucz jest tablicą. Dokumentacja *Query Keys* zaczyna od zdania, że biblioteka zarządza pamięcią na podstawie kluczy. Jeśli funkcja zapytania zależy od zmiennej, zmienna trafia do klucza: lista po frazie z tytułu ma klucz `["articles", { q }]`. Klucze działają jak zależności funkcji zapytania, więc zmiana klucza oznacza nowe zapytanie.
 
 Klucze układa się hierarchicznie: `["articles"]` dla listy, `["articles", id]` dla szczegółów. Barklund zauważa zaletę: do zapytań odwołuje się dokładnym kluczem albo jego początkiem. `invalidateQueries({ queryKey: ["articles"] })` oznacza jako nieświeże wszystkie zapytania z kluczem zaczynającym się od `"articles"`, a aktywne pobierają się od razu.
 
@@ -29,16 +29,16 @@ Trzy opcje sterują tym, co zapytanie robi z kluczem:
 - **`placeholderData: keepPreviousData`** robi przy paginacji z kluczem `["articles", page]` to samo co `keepPreviousData` w SWR, a flaga `isPlaceholderData` mówi, że na ekranie są stare dane.
 
 ```jsx
-// Przykład spoza demo: liczba artykułów autora, pobierana dopiero po wyborze
-const [author, setAuthor] = useState("");
+// Przykład spoza demo: liczba artykułów pasujących do frazy (route.js z filtrem ?q=), pobierana po wpisaniu frazy
+const [q, setQ] = useState("");
 const { data: count, status, fetchStatus } = useQuery({
-  queryKey: ["articles", { author }],
-  queryFn: () => fetch(`/api/articles?author=${author}`).then((r) => r.json()),
-  enabled: !!author,              // czeka na wybór autora
+  queryKey: ["articles", { q }],
+  queryFn: () => fetch(`/api/articles?q=${q}`).then((r) => r.json()),
+  enabled: !!q,                   // czeka na wpisanie frazy
   select: (data) => data.length,  // komponent dostaje samą liczbę
 });
-// przed wyborem           → status "pending", fetchStatus "idle", count undefined, brak żądań
-// po setAuthor("Alice")   → GET /api/articles?author=Alice, status "success", count 1
+// przed wpisaniem          → status "pending", fetchStatus "idle", count undefined, brak żądań
+// po setQ("Actions")       → GET /api/articles?q=Actions, status "success", count 1
 ```
 
 ## Rozszerzenie: ręczne wycofanie zmiany
@@ -88,7 +88,7 @@ export default async function Page() {
     </Providers>
   );
 }
-// HTML strony → trzy <li> z tytułami
+// HTML strony → dwa <li> z tytułami
 // staleTime: 0         → po hydratacji GET /api/articles
 // staleTime: 60 * 1000 → po hydratacji brak żądań
 ```

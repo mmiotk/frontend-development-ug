@@ -10,13 +10,13 @@ Słownik MDN nazywa dwie własności metod. Metoda jest **bezpieczna** (*safe*),
 # Przykład spoza demo: dwa identyczne POST-y dopisują dwa artykuły
 for i in 1 2; do
   curl -s -X POST localhost:3000/api/articles -H "Content-Type: application/json" \
-    -d '{"title":"Caching in Next.js","author":"Alice","body":"Notes about fetch cache."}'
+    -d '{"title":"Caching in Next.js","body":"Notes about fetch cache."}'
 done
+# → {"id":3,"title":"Caching in Next.js",…}
 # → {"id":4,"title":"Caching in Next.js",…}
-# → {"id":5,"title":"Caching in Next.js",…}
 ```
 
-Dwa `GET`-y przed zapisem zwróciły tę samą listę trzech artykułów, dlatego klient może ponowić `GET` po zerwanym połączeniu, a `POST` nie. Według MDN <u>pilnowanie tej umowy należy do aplikacji</u>, bo serwer nie zabroni funkcji `GET` zapisywać danych.
+Dwa `GET`-y przed zapisem zwróciły tę samą listę dwóch artykułów, dlatego klient może ponowić `GET` po zerwanym połączeniu, a `POST` nie. Według MDN <u>pilnowanie tej umowy należy do aplikacji</u>, bo serwer nie zabroni funkcji `GET` zapisywać danych.
 
 ## Rozszerzenie: odpowiedź 400 i nagłówek `Location`
 
@@ -29,32 +29,32 @@ export async function POST(request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
   const article = addArticle(body);
-  return NextResponse.json(article, {
+  return Response.json(article, {
     status: 201,
-    headers: { Location: `/api/articles/${article.id}` }, // adres nowego zasobu
+    headers: { Location: `/api/articles/${article.id}` }, // adres nowego zasobu (trasa z przykładu [id])
   });
 }
 ```
 
-Ciało `{"title":` daje teraz `400 Bad Request`, a poprawny artykuł `201 Created` z nagłówkiem `location`, na przykład `/api/articles/5`. Sprawdzenie, czy obiekt ma właściwe pola, to osobny krok, którego ten wariant nadal nie robi.
+Ciało `{"title":` daje teraz `400 Bad Request`, a poprawny artykuł `201 Created` z nagłówkiem `location`, na przykład `/api/articles/3`. Sprawdzenie, czy obiekt ma właściwe pola, to osobny krok, którego ten wariant nadal nie robi.
 
-## Rozszerzenie: filtr `?author=`
+## Rozszerzenie: filtr `?q=`
 
 Część adresu po znaku `?` czyta się z obiektu żądania. W Route Handlerze `request` jest obiektem **`NextRequest`**, który ma przetworzony adres w polu `nextUrl`:
 
 ```js
-// Rozszerzenie spoza demo: filtr po parametrze ?author=
+// Rozszerzenie spoza demo: filtr po parametrze ?q=
 export async function GET(request) {
-  const author = request.nextUrl.searchParams.get("author"); // null, gdy parametru brak
+  const q = request.nextUrl.searchParams.get("q"); // null, gdy parametru brak
   const articles = getArticles();
-  return NextResponse.json(author ? articles.filter((a) => a.author === author) : articles);
+  return Response.json(q ? articles.filter((a) => a.title.toLowerCase().includes(q.toLowerCase())) : articles);
 }
 ```
 
-Adres z `?author=Alice` zwraca jeden artykuł, a `?author=Nikt` pustą tablicę z kodem 200. Pusta lista jest poprawnym wynikiem wyszukiwania, więc nie jest przypadkiem dla 404.
+Adres z `?q=components` zwraca jeden artykuł, a `?q=nikt` pustą tablicę z kodem 200. Pusta lista jest poprawnym wynikiem wyszukiwania, więc nie jest przypadkiem dla 404.
 
 ## Rozszerzenie: nagłówki i ciasteczka żądania
 
@@ -62,13 +62,11 @@ Route Handler może czytać nagłówki i ciasteczka. `request.headers` daje stan
 
 ```js
 // Przykład spoza demo: app/api/whoami/route.js
-import { NextResponse } from "next/server";
-
 export async function GET(request) {
   const agent = request.headers.get("user-agent");
   const token = request.cookies.get("token")?.value ?? null; // null, gdy ciasteczka brak
   // nagłówek odpowiedzi ustawia się w nowym obiekcie odpowiedzi
-  return NextResponse.json({ agent, token }, { headers: { "X-Has-Token": token ? "yes" : "no" } });
+  return Response.json({ agent, token }, { headers: { "X-Has-Token": token ? "yes" : "no" } });
 }
 ```
 
@@ -89,17 +87,16 @@ Przeglądarka pilnuje, kto czyta odpowiedź. Skrypt może odczytać odpowiedź t
 
 ```js
 // Przykład spoza demo: app/api/public/route.js, lista dla strony z innego portu
-import { NextResponse } from "next/server";
 import { getArticles } from "@/lib/store";
 
 export async function GET() {
-  return NextResponse.json(getArticles(), {
+  return Response.json(getArticles(), {
     headers: { "Access-Control-Allow-Origin": "http://localhost:3001" }, // dozwolone pochodzenie
   });
 }
 // w przeglądarce na http://localhost:3001:
 // await fetch("http://localhost:3000/api/articles") → TypeError: Failed to fetch
-// await fetch("http://localhost:3000/api/public")   → status 200, trzy artykuły
+// await fetch("http://localhost:3000/api/public")   → status 200 i lista z magazynu
 ```
 
 Konsola pod pierwszym wywołaniem pisze „No 'Access-Control-Allow-Origin' header is present on the requested resource.”. `curl` dostaje obie odpowiedzi bez przeszkód, bo CORS jest regułą przeglądarki, a nie serwera.

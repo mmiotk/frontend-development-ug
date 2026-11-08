@@ -31,8 +31,8 @@ console.log(typeof formData.get("count"), formData.get("cover").constructor.name
 Wynik wypisany przez akcję:
 
 ```text
-z JavaScriptem  → ["$ACTION_REF_1","$ACTION_1:0","$ACTION_1:1","$ACTION_KEY","title","author","body"]
-bez JavaScriptu → ["title","author","body"]
+z JavaScriptem  → ["$ACTION_REF_1","$ACTION_1:0","$ACTION_1:1","$ACTION_KEY","title","body"]
+bez JavaScriptu → ["title","body"]
 ```
 
 Bez JavaScriptu przeglądarka wysyła zwykły formularz HTML z tymi polami, a Next.js odczytuje z nich, którą akcję wywołać, i usuwa je przed wywołaniem. `createArticle` wybiera pola jawnie, po jednym, więc dodatkowe klucze nie mają znaczenia. Dokumentacja `useActionState` opisuje skutek.
@@ -43,7 +43,7 @@ Bez JavaScriptu przeglądarka wysyła zwykły formularz HTML z tymi polami, a Ne
 >
 > — dokumentacja React, *useActionState*
 
-Przed hydratacją nie działa natomiast `SubmitButton`. `useFormStatus` nie ma czego zgłosić, więc przycisk nie blokuje się w czasie wysyłki, a dwa szybkie kliknięcia mogą zapisać dwa artykuły o tej samej treści.
+Przed hydratacją nie działa natomiast wyłączanie przycisku. `pending` z `useActionState` zmienia się dopiero w przeglądarce z uruchomionym skryptem, więc przycisk nie blokuje się w czasie wysyłki, a dwa szybkie kliknięcia mogą zapisać dwa artykuły o tej samej treści.
 
 ## Rozszerzenie: identyfikatory po wdrożeniu
 

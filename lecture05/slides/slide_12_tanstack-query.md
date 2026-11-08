@@ -1,11 +1,15 @@
 # TanStack Query: zapytanie z cyklem życia
 
+## Gdy pobierania w przeglądarce przybywa
+
+Jedna lista z odświeżaniem to zadanie dla SWR. Aplikacja z wieloma zapisami wygląda inaczej: po dodaniu artykułu trzeba odświeżyć listę i licznik, po edycji szczegóły i listę, a nieudane żądanie nie powinno od razu kończyć się błędem na ekranie. Pojawiają się klucze zależne od siebie (lista, szczegóły, strona wyników), ponawianie żądań i potrzeba zobaczenia, co dokładnie leży w pamięci przeglądarki. SWR daje z tego tylko część: wpis pod kluczem, odświeżanie i `mutate`. Druga popularna biblioteka, **TanStack Query** (dawniej React Query), traktuje dane z serwera jako osobny rodzaj stanu z cyklem życia i mutacjami.
+
 ## Ta sama lista w drugiej bibliotece
 
-To slajd porównawczy: aplikacja `articleviewer` nie instaluje **TanStack Query**, dawniej React Query, najpopularniejszej alternatywy dla SWR, więc wszystkie fragmenty poniżej pochodzą spoza projektu. Pokazują pobranie tej samej listy z `/api/articles` w wersji 5 biblioteki, przypiętej tu w wydaniu 5.104.1. Biblioteka trzyma pamięć w jednym obiekcie, który udostępnia drzewu dostawca:
+To slajd porównawczy i pokaz. Aplikacja `articleviewer` nie instaluje biblioteki, więc wszystkie fragmenty poniżej pochodzą spoza projektu. Pokazują pobranie tej samej listy z `/api/articles` w wersji 5, przypiętej tu w wydaniu 5.104.1. Biblioteka trzyma pamięć w jednym obiekcie, który udostępnia drzewu dostawca:
 
 ```jsx
-// Rozszerzenie spoza demo: app/providers.jsx
+// Przykład spoza demo: app/providers.jsx
 "use client"; // dostawca korzysta z kontekstu, więc plik jest komponentem klienckim
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -19,7 +23,7 @@ export default function Providers({ children }) {
 Layout główny owija `{children}` tym komponentem, czyli `<body><Providers>{children}</Providers></body>`, więc każda strona może pobierać dane przez TanStack Query. Klient powstaje w `useState` z funkcją inicjalizującą. Na serwerze powstaje więc osobno dla każdego żądania, a w przeglądarce raz na sesję. Samo pobranie wygląda w komponencie klienckim tak:
 
 ```jsx
-// Rozszerzenie spoza demo: komponent kliencki pod Providers
+// Przykład spoza demo: komponent kliencki pod Providers
 "use client";
 import { useQuery } from "@tanstack/react-query";
 
@@ -39,7 +43,7 @@ export default function ArticleList() {
 }
 ```
 
-`useQuery` przyjmuje obiekt z kluczem `queryKey` i funkcją `queryFn`. Pierwsze ładowanie to stan `isPending`, a po odpowiedzi `data` zawiera tablicę trzech artykułów. HTML wysłany przez serwer zawiera tylko stan oczekiwania, bez listy. Listę przynosi jedno żądanie `GET /api/articles` z przeglądarki, tak jak w SWR.
+`useQuery` przyjmuje obiekt z kluczem `queryKey` i funkcją `queryFn`. Pierwsze ładowanie to stan `isPending`, a po odpowiedzi `data` zawiera tablicę dwóch artykułów. HTML wysłany przez serwer zawiera tylko stan oczekiwania, bez listy. Listę przynosi jedno żądanie `GET /api/articles` z przeglądarki, tak jak w SWR.
 
 ## Stan serwera to osobny rodzaj stanu
 
@@ -96,7 +100,7 @@ Strona *Important Defaults* opisuje zachowania bez konfiguracji. Dane z `useQuer
 >
 > — dokumentacja TanStack Query, *Important Defaults*
 
-Przewodnik *Query Retries* podaje szczegóły: opóźnienie zaczyna się od 1000 ms, podwaja się przy każdej próbie i nie przekracza 30 sekund. W kodzie wersji 5.104.1 to `Math.min(1000 * 2 ** n, 30000)`, liczone od nadejścia nieudanej odpowiedzi, a w karcie bez fokusu ponowienie czeka na jego powrót. Zapytanie o `/api/articles/99` wysyła więc cztery żądania z przerwami 1, 2 i 4 sekundy. Komunikat „Error: HTTP 404” pojawia się po ponad siedmiu sekundach, a do tego czasu `isPending` ma wartość `true`. Brak zasobu się nie naprawi, więc dla takich zapytań ustawia się `retry: false` albo funkcję `retry`, która dostaje licznik prób i błąd. Na serwerze domyślna liczba ponowień wynosi 0: w kodzie wersji 5.104.1 wartość domyślna to `isServer() ? 0 : 3`, żeby nieudane zapytanie nie wstrzymywało renderu.
+Przewodnik *Query Retries* podaje szczegóły: opóźnienie zaczyna się od 1000 ms, podwaja się przy każdej próbie i nie przekracza 30 sekund. W kodzie wersji 5.104.1 to `Math.min(1000 * 2 ** n, 30000)`, liczone od nadejścia nieudanej odpowiedzi, a w karcie bez fokusu ponowienie czeka na jego powrót. Zapytanie o `/api/articles/99` wysyła więc cztery żądania z przerwami około 1, 2 i 4 sekund. Komunikat „Error: HTTP 404” pojawił się w pomiarze po 7,7 s od pierwszego żądania (żądania po 0,3 s, 1,6 s, 3,7 s i 7,7 s), a do tego czasu `isPending` ma wartość `true`. Brak zasobu się nie naprawi, więc dla takich zapytań ustawia się `retry: false` albo funkcję `retry`, która dostaje licznik prób i błąd. Na serwerze domyślna liczba ponowień wynosi 0: w kodzie wersji 5.104.1 wartość domyślna to `isServer() ? 0 : 3`, żeby nieudane zapytanie nie wstrzymywało renderu.
 
 Błąd zapytania zostaje domyślnie w polu `error` i komponent sam decyduje, co pokazać. Opcja **`throwOnError: true`** rzuca go w trakcie renderu, więc trafia do najbliższej granicy błędów, czyli komponentu, który pokazuje komunikat zamiast poddrzewa z wyjątkiem. W wersji 4 ta opcja nazywała się `useErrorBoundary`. Zapytanie o `/api/articles/99` z `retry: false` i `throwOnError: true` wysyła jedno żądanie, a zaraz po odpowiedzi ekran pokazuje `app/error.jsx` z tekstem „Error: HTTP 404” i przyciskiem „Try again”.
 
@@ -121,16 +125,12 @@ Odpowiednikiem `refreshInterval` z SWR jest **`refetchInterval`**. Dokumentacja 
 
 Dwa ustawienia działają niewidocznie. **Współdzielenie strukturalne** (*structural sharing*) zostawia w `data` ten sam obiekt, gdy nowa odpowiedź ma tę samą treść. **Śledzone właściwości** sprawiają, że komponent renderuje się ponownie tylko po zmianie tych pól wyniku, które odczytał. Komponent, który nie odczytuje `isFetching`, nie renderuje się przy samym rozpoczęciu i końcu pobierania w tle.
 
-## SWR czy TanStack Query
-
-Barklund ocenia, że SWR jest w pewnym sensie prostsza w użyciu, a TanStack Query jest znacznie popularniejsza. Gdy wystarczy pobrać dane i odświeżać je przy fokusie albo co kilka sekund, SWR robi to jednym hookiem bez dostawcy. Gdy aplikacja ma wiele mutacji, zależne od siebie klucze, paginację i potrzebę podglądu pamięci w panelu `@tanstack/react-query-devtools`, TanStack Query daje gotowe mechanizmy. Obie biblioteki służą do danych, które mają żyć w przeglądarce.
-
 ## Mutacja i unieważnienie listy
 
 Bugl odróżnia dwa rodzaje operacji. Zapytania z założenia są idempotentne, więc bibliotece wolno je ponawiać. Mutacje tworzą, zmieniają albo usuwają dane na serwerze. Poniższy fragment, także spoza projektu, dodaje artykuł i unieważnia listę:
 
 ```jsx
-// Rozszerzenie spoza demo: mutacja, która unieważnia listę
+// Przykład spoza demo: mutacja, która unieważnia listę
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function useAddArticle() {
@@ -148,7 +148,17 @@ Komponent dostaje z hooka funkcję `mutate(dane)` i flagę `isPending` do zablok
 
 ## Gdzie powstaje ekran i kto go odświeża
 
-W `articleviewer` lista na `/` powstaje na serwerze przy każdym żądaniu z odpowiedzi API zapamiętanej na minutę, a zapis obsługuje akcja z `revalidatePath`. Strona `/swr-demo` trzyma kopię w przeglądarce, w widocznej karcie odświeża ją co pięć sekund, a po własnym zapisie od razu przez `mutate()`. <u>W przeglądarce pobiera się tylko dane, których serwer nie dostarczy w chwili renderu: zmienne w czasie albo zależne od działań użytkownika</u>.
+W `articleviewer` lista na `/` powstaje na serwerze przy każdym żądaniu z odpowiedzi API zapamiętanej na minutę, a zapis obsługuje akcja z `revalidatePath` i `redirect`. Kopię w przeglądarce, odświeżaną co pięć sekund, pokazał przykład z SWR, ale nie należy ona do projektu. <u>W przeglądarce pobiera się tylko dane, których serwer nie dostarczy w chwili renderu: zmienne w czasie albo zależne od działań użytkownika</u>.
+
+## Zalety i koszty TanStack Query
+
+Barklund ocenia, że SWR jest w pewnym sensie prostsza w użyciu, a TanStack Query jest znacznie popularniejsza. Gdy wystarczy pobrać dane i odświeżać je przy fokusie albo co kilka sekund, SWR robi to jednym hookiem bez dostawcy. Gdy aplikacja ma wiele mutacji, zależne od siebie klucze, paginację i potrzebę podglądu pamięci w panelu `@tanstack/react-query-devtools`, TanStack Query daje gotowe mechanizmy.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Nazwane stany cyklu życia wpisu (świeże, nieświeże, nieaktywne, usunięte) i flagi `isPending`, `isFetching`, `isLoading`, które odróżniają brak danych od pobierania w tle | Dostawca i klient zapytań w layoucie, więcej pojęć niż w SWR; `isLoading` znaczy co innego niż w SWR | Proste pobieranie z odpytywaniem: SWR, jeden hook bez dostawcy |
+| Hierarchiczne unieważnianie: `invalidateQueries({ queryKey: ["articles"] })` odświeża wszystkie zapytania zaczynające się od tego klucza; mutacje domyślnie nie są ponawiane | Ciche trzy ponowienia: błąd 404 pojawił się po 7,7 s, więc dla zapytań, które się nie naprawią, trzeba ustawić `retry: false` | Dane dostępne na serwerze w chwili renderu: komponent serwerowy |
+| Panel devtools z podglądem pamięci i gotowe wzorce dla paginacji oraz mutacji | HTML od serwera ma tylko stan oczekiwania, bez listy (pomiar); do tej samej listy dochodzi pakiet biblioteki w przeglądarce | Jedna lista, jedna mutacja: SWR; treść dla wyszukiwarek: serwer |
 
 > 💡 **Zapamiętaj:** TanStack Query traktuje dane z serwera jako stan z cyklem życia: świeże, nieświeże, nieaktywne i usunięte. Nieudane zapytanie jest w przeglądarce domyślnie ponawiane trzy razy, klucze układa się hierarchicznie, a po mutacji unieważnia się je przez `invalidateQueries`.
 

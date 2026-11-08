@@ -10,14 +10,14 @@ Pamięć procesu ma dwie granice. Pierwsza to restart: wszystko, co dodano, znik
 # Przykład spoza demo: dwa procesy next start z jednego buildu, każdy z własnym magazynem
 npx next start -p 3001 & npx next start -p 3002 &
 curl -s -X POST localhost:3001/api/articles -H "Content-Type: application/json" \
-  -d '{"title":"Sent to 3001","author":"Alice","body":"Each process has its own store."}'
-# → {"id":4,"title":"Sent to 3001",…}
+  -d '{"title":"Sent to 3001","body":"Each process has its own store."}'
+# → {"id":3,"title":"Sent to 3001",…}
 curl -s -X POST localhost:3002/api/articles -H "Content-Type: application/json" \
-  -d '{"title":"Sent to 3002","author":"Alice","body":"Each process has its own store."}'
-# → {"id":4,"title":"Sent to 3002",…}
+  -d '{"title":"Sent to 3002","body":"Each process has its own store."}'
+# → {"id":3,"title":"Sent to 3002",…}
 ```
 
-Każdy serwer ma potem cztery artykuły, ale inny czwarty, więc aplikacja uruchamiana w wielu kopiach potrzebuje bazy danych poza procesem.
+Każdy serwer ma potem trzy artykuły, ale inny trzeci, więc aplikacja uruchamiana w wielu kopiach potrzebuje bazy danych poza procesem.
 
 Obiekt globalny ma też koszt. Każdy moduł w procesie może go odczytać i nadpisać, więc nazwa `articleStore` musi być unikalna, a cała logika zostaje w funkcjach modułu. Kod spoza `lib/store.js` nie sięga do `globalThis.articleStore` bezpośrednio.
 

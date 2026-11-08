@@ -22,8 +22,8 @@ export const revalidate = 30; // ISR dla całego segmentu
 // Przykład spoza demo: odczyt magazynu przez unstable_cache na stronie z connection()
 import { unstable_cache } from "next/cache";
 const getCachedArticles = unstable_cache(async () => getArticles(), ["articles"], { revalidate: 30 });
-const articles = await getCachedArticles(); // pierwsze wejście → 3
-// po POST /api/articles: API → 4 artykuły, strona dalej → 3 (wynik z pamięci)
+const articles = await getCachedArticles(); // pierwsze wejście → 2
+// po POST /api/articles: API → 3 artykuły, strona dalej → 2 (wynik z pamięci)
 ```
 
 Osobnym mechanizmem jest **deduplikacja żądań** (w dokumentacji *request memoization*, bez związku z `useMemo`). Według dokumentacji `fetch` żądania `GET` z tym samym adresem i opcjami wykonują się w trakcie jednego przebiegu renderu raz.
@@ -62,7 +62,7 @@ Cache-Control: s-maxage=30, stale-while-revalidate=31535970
 
 Druga liczba w nagłówku to rok w sekundach pomniejszony o 30. Dokumentacja opcji `expireTime` w `next.config.js` wyjaśnia, że ten nagłówek jest przeznaczony dla sieci CDN (*Content Delivery Network*), czyli serwerów pośrednich trzymających kopie odpowiedzi blisko użytkowników.
 
-Pamięć `fetch` żyje poza procesem pojedynczego żądania: zapisane odpowiedzi leżą jako pliki w katalogu `.next/cache/fetch-cache`. Przewodnik *How Revalidation Works* nazywa to domyślną pamięcią w systemie plików, wystarczającą dla jednej instancji serwera. Pamięć przeżywa restart serwera, a magazyn artykułów nie. Po restarcie `/api/articles` zwraca znowu trzy wpisy, a strona `/` nadal pokazuje „Articles (4)” z zapisanej odpowiedzi. Ten sam przewodnik dodaje, że przy rewalidacji trasy Next.js generuje od nowa zarówno HTML, jak i RSC Payload, i trzyma je w jednym wpisie.
+Pamięć `fetch` żyje poza procesem pojedynczego żądania: zapisane odpowiedzi leżą jako pliki w katalogu `.next/cache/fetch-cache`. Przewodnik *How Revalidation Works* nazywa to domyślną pamięcią w systemie plików, wystarczającą dla jednej instancji serwera. Pamięć przeżywa restart serwera, a magazyn artykułów nie. W `next dev` pliki leżą w `.next/dev/cache/fetch-cache`. Po restarcie `/api/articles` zwraca znowu dwa wpisy, a strona `/`, która zapamiętała odpowiedź z trzema, nadal pokazuje „Articles (3)”. Ten sam przewodnik dodaje, że przy rewalidacji trasy Next.js generuje od nowa zarówno HTML, jak i RSC Payload, i trzyma je w jednym wpisie.
 
 ## Rozszerzenie: pamięć w trybie deweloperskim
 
@@ -71,10 +71,10 @@ Twarde odświeżenie (Ctrl+Shift+R) albo zaznaczone „Disable cache” w narzę
 ```js
 // Przykład spoza demo: strona /dev-cache pod next dev
 const res = await fetch(`${BASE_URL}/api/articles`, { cache: "force-cache" });
-// po POST /api/articles (4 artykuły w magazynie):
-// zwykłe żądanie                     → Articles (3), odpowiedź z pamięci
-// żądanie z cache-control: no-cache  → Articles (4)
-// zwykłe żądanie potem               → Articles (4), wpis w pamięci nadpisany
+// po POST /api/articles (3 artykuły w magazynie):
+// zwykłe żądanie                     → Articles (2), odpowiedź z pamięci
+// żądanie z cache-control: no-cache  → Articles (3)
+// zwykłe żądanie potem               → Articles (3), wpis w pamięci nadpisany
 ```
 
 Sprzeczne opcje w jednym wywołaniu, czyli `cache: "no-store"` razem z `next: { revalidate: 3600 }`, kończą się w terminalu `next dev` ostrzeżeniem. Brzmi ono `⚠ Specified "cache: no-store" and "revalidate: 3600", only one should be specified.`

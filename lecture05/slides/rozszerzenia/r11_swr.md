@@ -12,13 +12,14 @@ Dokumentacja API podaje wartości domyślne:
 - **`refreshInterval = 0`** i **`refreshWhenHidden = false`**: odpytywanie jest wyłączone, a włączone nie działa w karcie schowanej w tle.
 
 ```js
-// Przykład spoza demo: /swr-demo z projektu, licznik żądań w przeglądarce przez minutę
+// Przykład spoza demo: strona /swr-demo ze slajdu, licznik żądań w przeglądarce przez minutę
 const { data } = useSWR("/api/articles", fetcher, { refreshInterval: 5000 });
-// → 12 żądań GET /api/articles w pierwszej minucie, licząc pierwsze, bez żadnej zmiany danych
+// → 11 żądań GET /api/articles w pierwszej minucie, licząc pierwsze, bez żadnej zmiany danych
+// (odstęp 6 s: 5 s od zakończenia poprzedniej odpowiedzi plus 1 s odpowiedzi API)
 // → 0 żądań przez 15 s po ustawieniu document.visibilityState na "hidden"
 ```
 
-Sto otwartych okien to tysiąc dwieście żądań na minutę, prawie zawsze z tą samą listą, więc interwał dobiera się do tempa zmian danych.
+Sto otwartych okien to tysiąc sto żądań na minutę, prawie zawsze z tą samą listą, więc interwał dobiera się do tempa zmian danych.
 
 ## Rozszerzenie: wyścig żądań
 
@@ -29,8 +30,8 @@ Dokumentacja Reacta ostrzega, że odpowiedzi sieciowe mogą przyjść w innej ko
 const [id, setId] = useState(1);
 const { data } = useSWR(`/api/slow-articles/${id}`, fetcher); // każdy id to osobny klucz
 // kliknięcie „Article 2” zaraz po wejściu: odpowiedzi przychodzą w kolejności 2, 1
-// → nagłówek „Why use Server Actions?” (artykuł 2), spóźniona odpowiedź go nie nadpisuje
-// → powrót do id 1 od razu pokazuje „Intro to Server Components” z wpisu klucza artykułu 1
+// → odpowiedzi w kolejności 2, 1; nagłówek „Server Actions” (artykuł 2), spóźniona odpowiedź go nie nadpisuje
+// → powrót do id 1 od razu pokazuje „Server Components” z wpisu klucza artykułu 1
 ```
 
 Wyścig między zapisem a odświeżaniem w tle rozwiązuje osobny hook do zapisu, `useSWRMutation`, który po mutacji porzuca trwające żądanie `useSWR` i pobiera dane ponownie.
@@ -62,15 +63,15 @@ Pierwszy render ma wtedy listę z serwera, a odpytywanie działa dalej. Komponen
 Zmienna, od której zależą dane, musi być częścią klucza. Dokumentacja pokazuje błąd z tokenem przekazanym tylko do `fetcher`: klucz się nie zmienia, więc SWR zwróci złe dane. Rozwiązaniem jest klucz-tablica związany z pamięcią w całości, a klucz `null` wyłącza pobieranie.
 
 ```jsx
-// Przykład spoza demo: API z filtrem ?author= (rozszerzenie slajdu 02)
-const fetcher = ([url, author]) => fetch(`${url}?author=${author}`).then((r) => r.json());
-const [author, setAuthor] = useState(null);
-const { data } = useSWR(author ? ["/api/articles", author] : null, fetcher); // null: bez żądania
+// Przykład spoza demo: API z filtrem ?q= po tytule (route.js rozszerzony o filtrowanie)
+const fetcher = ([url, q]) => fetch(`${url}?q=${q}`).then((r) => r.json());
+const [q, setQ] = useState(null);
+const { data } = useSWR(q ? ["/api/articles", q] : null, fetcher); // null: bez żądania
 // → przed wyborem: brak żądań, data === undefined
-// → setAuthor("Alice"): GET /api/articles?author=Alice, tytuł „Intro to Server Components”
+// → setQ("Actions"): GET /api/articles?q=Actions, tytuł „Server Actions”
 ```
 
-Po zapisie nieaktualna może być też lista pod `/api/articles?author=Ann`. Globalna funkcja `mutate` z `swr` przyjmuje zamiast klucza funkcję filtrującą: `mutate((key) => (Array.isArray(key) ? key[0] : key)?.startsWith("/api/articles"))` odświeża wszystkie pasujące wpisy, tu `GET /api/articles` i `GET /api/articles?author=Ann`. Klucz-tablica ma adres w pierwszym elemencie, dlatego filtr sprawdza `key[0]`. Dokumentacja zastrzega, że globalny `mutate` z samym kluczem nic nie zrobi bez zamontowanego hooka z tym kluczem.
+Po zapisie nieaktualna może być też lista pod `/api/articles?q=Components`. Globalna funkcja `mutate` z `swr` przyjmuje zamiast klucza funkcję filtrującą: `mutate((key) => (Array.isArray(key) ? key[0] : key)?.startsWith("/api/articles"))` odświeża wszystkie pasujące wpisy. W pomiarze, z dwoma zamontowanymi hookami, kliknięcie wysłało `GET /api/articles` i `GET /api/articles?q=Components`. Klucz-tablica ma adres w pierwszym elemencie, dlatego filtr sprawdza `key[0]`. Dokumentacja zastrzega, że globalny `mutate` z samym kluczem nic nie zrobi bez zamontowanego hooka z tym kluczem.
 
 Gdy wiele komponentów korzysta z tego samego `fetcher`, podaje się go raz w `<SWRConfig value={{ fetcher }}>` nad drzewem, a `useSWR` dostaje sam klucz. Jedna funkcja może wtedy sprawdzać `r.ok` za wszystkie zapytania.
 

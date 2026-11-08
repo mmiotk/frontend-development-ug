@@ -1,17 +1,19 @@
 # Zapis, który wykonuje się na serwerze
 
+## Formularz w przeglądarce, magazyn na serwerze
+
+Formularz na `/new` działa w przeglądarce, a tablica artykułów z `lib/store.js` leży w pamięci serwera. Zapis musi więc przejść przez sieć. Bez Server Action trzeba napisać do tego `POST` w Route Handlerze, w komponencie klienckim zamienić pola na JSON, wysłać go przez `fetch`, odczytać odpowiedź i sprawdzić kod statusu. Do tego dochodzą stan wysyłania i stan błędu, każdy z własną flagą. Server Action zamienia całą tę drogę na wywołanie funkcji, która wykonuje się na serwerze, tam gdzie leży magazyn.
+
 ## Opis poprawnego artykułu
 
-Kolejny krok to zapis nowego artykułu do magazynu `lib/store.js`. Zanim powstanie formularz, powstaje opis poprawnych danych. Schemat w bibliotece Zod działa tak samo jak przy formularzach z akcjami w przeglądarce, w tej samej przypiętej wersji 3.25.76. Tak wygląda plik `lib/validate.js`.
+Zanim powstanie formularz, powstaje opis poprawnych danych. Schemat w bibliotece Zod działa tak samo jak przy formularzach z akcjami w przeglądarce, w tej samej przypiętej wersji 3.25.76. Tak wygląda plik `lib/validate.js`.
 
 ```js
 // lib/validate.js
 import { z } from "zod";
 
-// trzy wymagane napisy z minimalną długością; komunikaty trafią pod pola formularza
 export const articleSchema = z.object({
   title: z.string().min(3, "Title: at least 3 characters"),
-  author: z.string().min(2, "Author: at least 2 characters"),
   body: z.string().min(10, "Body: at least 10 characters"),
 });
 ```
@@ -23,7 +25,7 @@ Schemat leży w osobnym pliku, bo z tego samego opisu może korzystać każde mi
 Zapis ma się wykonać na serwerze, bo tam leży magazyn. Komponent kliencki nie ma do niego dostępu, ale może wywołać funkcję, która wykona się po drugiej stronie sieci. Taką funkcję oznacza dyrektywa `"use server"`. Najmniejszy przykład spoza demo wygląda tak.
 
 ```js
-// lib/ping.js
+// Przykład spoza demo: lib/ping.js
 "use server"; // każdy eksport tego pliku wykonuje się na serwerze
 export async function ping(name) {
   return `pong: ${name}`;
@@ -31,7 +33,7 @@ export async function ping(name) {
 ```
 
 ```jsx
-// komponent kliencki: importuje funkcję serwerową jak zwykłą funkcję
+// Przykład spoza demo: komponent kliencki importuje funkcję serwerową jak zwykłą funkcję
 "use client";
 import { ping } from "@/lib/ping";
 
@@ -98,37 +100,25 @@ Zapis artykułu wykonuje funkcja w pliku `lib/actions.js`.
 
 ```js
 // lib/actions.js
-"use server"; // ten plik eksportuje wyłącznie funkcje serwerowe
+"use server"; // każdy eksport tego pliku wykonuje się na serwerze
 
 import { addArticle } from "./store";
 import { articleSchema } from "./validate";
-import { revalidatePath } from "next/cache";
 
 export async function createArticle(prevState, formData) {
-  // surowe wartości z FormData
-  const raw = {
-    title: formData.get("title"),
-    author: formData.get("author"),
-    body: formData.get("body"),
-  };
-
   // walidacja na serwerze: danym z przeglądarki się nie ufa
-  const result = articleSchema.safeParse(raw);
-  if (!result.success) {
-    return { error: result.error.flatten().fieldErrors };
-  }
+  const result = articleSchema.safeParse({
+    title: formData.get("title"),
+    body: formData.get("body"),
+  });
+  if (!result.success) return { error: result.error.flatten().fieldErrors };
 
-  // zapis do magazynu w pamięci serwera
   addArticle(result.data);
-
-  // unieważnienie zapamiętanej strony głównej, żeby lista pokazała nowy artykuł
-  revalidatePath("/");
-
   return { success: true };
 }
 ```
 
-Ciało funkcji ma układ znany z akcji formularza w przeglądarce: odczyt pól z `FormData`, `safeParse`, zwrot błędów pól jako wartości i zapis `result.data`. Nowa jest dyrektywa na górze pliku. Dzięki niej `addArticle` i schemat wykonują się po stronie, na której leży magazyn. Linia z `revalidatePath("/")` unieważnia zapamiętaną odpowiedź listy, którą strona główna trzyma w pamięci `fetch` przez minutę, więc nowy artykuł widać od razu po powrocie na listę.
+Ciało funkcji ma układ znany z akcji formularza w przeglądarce: odczyt pól z `FormData`, `safeParse`, zwrot błędów pól jako wartości i zapis `result.data`. Nowa jest dyrektywa na górze pliku. Dzięki niej `addArticle` i schemat wykonują się po stronie, na której leży magazyn. Akcja zmienia tylko magazyn. Lista na stronie głównej ma własną pamięć odpowiedzi, więc po zapisie dalej pokazuje „Articles (2)”, choć `/articles/3` już działa.
 
 ## Komponent serwerowy czyta, akcja zapisuje
 
@@ -150,56 +140,57 @@ flowchart LR
     B["przeglądarka /new<br/>odnośnik: ID akcji"] -- "POST /new<br/>Next-Action + FormData" --> A["createArticle<br/>(prevState, formData)"]
     A --> V{"safeParse"}
     V -- "błąd" --> E["return { error }"]
-    V -- "ok" --> S["addArticle<br/>revalidatePath('/')"]
+    V -- "ok" --> S["addArticle"]
     E -. "zwykły obiekt" .-> ST["state w NewArticlePage"]
     S -. "{ success: true }" .-> ST
-    ST --> M["komunikat pod polem<br/>albo „Article added successfully!”"]
+    ST --> M["komunikat pod polem<br/>albo „Article saved.”"]
 ```
 
-Rysunek 5.7 dodaje do kodu format przesyłki: dane jadą na serwer jako `FormData` w treści typu `multipart/form-data`, a wracają jako zwykły obiekt. Akcja sama odczytuje pola po nazwach i sama wybiera kształt odpowiedzi, a komponent musi znać ten kształt, żeby wyświetlić `state.error.title[0]`. Wyjątek rzucony w akcji omija `state` i trafia do najbliższej granicy błędów, w tej aplikacji `app/error.jsx`. Wszystko, co da się opisać użytkownikowi, akcja zwraca więc jako wartość.
+Rysunek 5.7 dodaje do kodu format przesyłki: dane jadą na serwer jako `FormData` w treści typu `multipart/form-data`, a wracają jako zwykły obiekt. Akcja sama odczytuje pola po nazwach i sama wybiera kształt odpowiedzi, a komponent musi znać ten kształt, żeby wyświetlić `state.error.title`. Wyjątek rzucony w akcji omija `state` i trafia do najbliższej granicy błędów, w tej aplikacji `app/error.jsx`. Wszystko, co da się opisać użytkownikowi, akcja zwraca więc jako wartość.
 
 ## Formularz `/new`
 
-Akcję wywołuje strona z `useActionState` i przyciskiem opartym na `useFormStatus`. Oba hooki działają tak samo jak przy akcji wykonywanej w przeglądarce. Nowe linie w `app/new/page.jsx` to import akcji i podłączenie jej do formularza.
+Akcję wywołuje strona z `useActionState`. Hook działa tak samo jak przy akcji wykonywanej w przeglądarce, a jego trzeci element, `pending`, jest `true`, dopóki akcja trwa na serwerze, i wyłącza przycisk. Nowe w `app/new/page.jsx` są import akcji i podłączenie jej do formularza.
 
 ```jsx
-// app/new/page.jsx (fragment)
+// app/new/page.jsx
 "use client";
-
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 import { createArticle } from "@/lib/actions";
 
-// ... SubmitButton: useFormStatus, napis „Saving...” w trakcie wysyłki
-
 export default function NewArticlePage() {
-  const [state, action] = useActionState(createArticle, null);
+  // pending: true, dopóki akcja trwa na serwerze
+  const [state, action, pending] = useActionState(createArticle, null);
 
   return (
-    <div>
+    <main>
       <h1>New article</h1>
-
-      {state?.success && <p>Article added successfully!</p>}
-
+      {state?.success && <p>Article saved.</p>}
       <form action={action}>
-        <div>
-          <label>
-            Title: <input name="title" />
-          </label>
-          {state?.error?.title && <p>{state.error.title[0]}</p>}
-        </div>
-        {/* ... pola author i body w tym samym układzie, potem <SubmitButton /> */}
+        <p>Title: <input name="title" /> {state?.error?.title}</p>
+        <p>Body: <textarea name="body" /> {state?.error?.body}</p>
+        <button disabled={pending}>Add article</button>
       </form>
-    </div>
+    </main>
   );
 }
 ```
 
-**`import { createArticle } from "@/lib/actions"`** wygląda jak zwykły import, ale daje odnośnik do funkcji serwerowej. Tytuł „ab” wraca z komunikatem „Title: at least 3 characters” pod polem, a poprawny artykuł daje napis „Article added successfully!” i nową pozycję na końcu listy pod `/`. `SubmitButton` jest zadeklarowany poza `NewArticlePage`. Deklaracja wewnątrz strony tworzyłaby przy każdym renderze nowy typ komponentu, więc React montowałby przycisk od nowa.
+**`import { createArticle } from "@/lib/actions"`** wygląda jak zwykły import, ale daje odnośnik do funkcji serwerowej. Tytuł „ab” wraca z komunikatem „Title: at least 3 characters” pod polem. Poprawny artykuł daje napis „Article saved.” i puste pola, a w narzędziach przeglądarki żądanie `POST /new` z nagłówkiem `Next-Action`.
 
 ## Plik akcji bez dyrektywy
 
-Usunięcie `"use server"` z `lib/actions.js` robi z pliku zwykły moduł, który bundler dokleja do kodu przeglądarki razem z importami. Next.js 16.4.0 przerywa wtedy budowanie strony `/new` komunikatem „You're importing a module that depends on "revalidatePath". This API is only available in Server Components in the App Router, but you are using it in the Pages Router”. Wzmianka o Pages Routerze myli, bo projekt go nie używa. Przyczyną jest brakująca dyrektywa.
+Usunięcie `"use server"` z `lib/actions.js` robi z pliku zwykły moduł, który bundler dokleja do kodu przeglądarki razem z importami. Budowanie przechodzi bez błędu, a formularz wygląda na sprawny: pokazuje „Article saved.” i czyści pola. W narzędziach przeglądarki nie ma jednak żadnego żądania `POST`, a `/api/articles` dalej zwraca dwa artykuły, bo funkcja zapisała dane do kopii magazynu w przeglądarce. Brak dyrektywy nie kończy się więc komunikatem, tylko cichym zapisem w złym miejscu.
+
+## Zalety i koszty Server Action
+
+Server Action zastępuje ręcznie pisany punkt końcowy wywołaniem funkcji. Przez sieć nadal idzie zwykłe żądanie.
+
+| Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
+|---|---|---|
+| Wywołanie jak zwykłej funkcji, bez adresu i JSON-u; kod funkcji i jej importy (magazyn, schemat, sekrety) zostają na serwerze, w paczce tylko identyfikator | Akcja to publiczny punkt końcowy `POST`, a jej argumenty kontroluje klient | Odczyt danych: komponent serwerowy, bo akcje nie są przeznaczone do pobierania danych |
+| Błędy pól wracają jako wartość do `useActionState` i trafiają pod pola; `pending` wyłącza przycisk | Akcje z jednej karty wykonują się po kolei, nie równolegle | Klient spoza aplikacji, na przykład `curl` albo aplikacja mobilna: Route Handler |
+| Formularz z akcją działa przed załadowaniem skryptów, a `useActionState` pokazuje odpowiedź serwera przed hydratacją | Brak `"use server"` nie daje błędu, tylko cichy zapis w przeglądarce (pomiar powyżej) | Zmiana wywołana zdarzeniem `onClick`: działa, ale trzeba ją zamknąć w `startTransition`, żeby React śledził jej trwanie |
 
 > 💡 **Zapamiętaj:** Server Action to funkcja `async` z `"use server"`, którą build zamienia w przeglądarce na odnośnik wysyłający `POST` pod adres strony. Argumenty przychodzą z treści tego żądania, więc kontroluje je klient.
 

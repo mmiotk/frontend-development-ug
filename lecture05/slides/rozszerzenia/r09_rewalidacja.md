@@ -16,6 +16,7 @@ export async function addAndRefresh(article) {
   addArticle(article);
   refresh(); // nowy render trasy z tą samą zapamiętaną odpowiedzią
 }
+// → po kliknięciu: nagłówek strony dalej „Articles (2)”, a /api/articles zwraca 3 pozycje
 ```
 
 Dokumentacja `useRouter` stawia granicę wprost:
@@ -70,7 +71,7 @@ export async function POST(request) {
 Tag to dowolny napis do 256 znaków, najwyżej 128 tagów na jedno wywołanie `fetch`. <u>Wszystkie wywołania `fetch` z tym samym tagiem, na dowolnej stronie, tworzą jedną grupę</u>, którą unieważnia się jednym wywołaniem. Dwie funkcje różnią się tym, co zobaczy następny czytelnik:
 
 - **`updateTag("articles")`** działa wyłącznie w Server Action i od razu usuwa wpis. Następne żądanie czeka na świeże dane, więc autor widzi swój zapis już przy pierwszym wejściu na listę. Przewodnik dodaje, że oczekiwanie obejmuje też render dołączany do odpowiedzi akcji. To narzędzie dokładnie na sytuację z formularzem `/new`.
-- **`revalidateTag("articles", "max")`** działa także w Route Handlerze. Profil `'max'` daje zachowanie *stale-while-revalidate*: pierwsze wejście po wywołaniu dostaje jeszcze starą listę i uruchamia pobranie w tle, a dopiero kolejne widzi nowy artykuł.
+- **`revalidateTag("articles", "max")`** działa także w Route Handlerze. Profil `'max'` daje zachowanie *stale-while-revalidate*: pierwsze wejście po wywołaniu dostaje jeszcze starą listę i uruchamia pobranie w tle, a dopiero kolejne, po zakończeniu pobrania w tle, widzi nowy artykuł. W tej aplikacji pobranie trwa sekundę, bo tyle odpowiada API.
 
 Dokumentacja `revalidateTag` mówi wprost, że forma z jednym argumentem jest przestarzała (*„The single-argument form `revalidateTag(tag)` is deprecated.”*). Działa dziś jak natychmiastowe wygaśnięcie, ale może zniknąć w przyszłej wersji. Gdy dane muszą wygasnąć od razu poza Server Action, dokumentacja podaje wariant `revalidateTag(tag, { expire: 0 })`.
 
@@ -105,7 +106,8 @@ export async function POST(request) {
 }
 // POST bez nagłówka                → 401 {"error":"Unauthorized"}
 // POST z x-webhook-secret: s3cret  → 200 {"revalidated":true}
-// strona z tagiem "articles": pierwsze wejście → stara liczba, drugie → nowa
+// strona z tagiem "articles" (magazyn po zapisie ma 3 artykuły): pierwsze wejście → „Articles (2)”,
+// drugie zaraz potem → „Articles (2)”, po 3 s → „Articles (3)”
 ```
 
 Dokumentacja zaznacza też, że rewalidację uruchamia żądanie, a nie samo wywołanie `revalidateTag`. Strony z tagiem odświeżają się w miarę odwiedzin, a nie wszystkie naraz. Przy kilku instancjach serwera za równoważeniem ruchu wywołanie działa domyślnie tylko na instancji, która je dostała. Pozostałe podają stare dane, dopóki wspólny magazyn pamięci nie przekaże im zdarzenia.
@@ -118,11 +120,12 @@ Dokumentacja zaznacza też, że rewalidację uruchamia żądanie, a nie samo wyw
 // Przykład spoza demo: trzy strony z connection() i tagiem "articles"
 // /tag-a, /tag-b: fetch(`${BASE_URL}/api/articles`, { cache: "force-cache", next: { tags: ["articles"] } })
 // /tag-c:         fetch(`${BASE_URL}/api/articles?page=c`, { cache: "force-cache", next: { tags: ["articles"] } })
+// stan początkowy: /tag-a, /tag-b, /tag-c → Articles (2)
 addArticle(article);
 revalidatePath("/tag-a");
-// → /tag-a: Articles (4), /tag-b: Articles (4), /tag-c: Articles (3)
+// → /tag-a: Articles (3), /tag-b: Articles (3), /tag-c: Articles (2)
 revalidateTag("articles", "max");
-// → /tag-c: Articles (3) przy pierwszym wejściu, Articles (4) przy drugim
+// → /tag-c: Articles (2) przy pierwszym wejściu i zaraz potem, Articles (3) po 3 s
 ```
 
 <u>Ścieżka trafia w dane strony, a tag w dane z tą nazwą na każdej stronie.</u> Bugl opisuje to tak: rewalidacja tagiem może objąć wiele ścieżek naraz.

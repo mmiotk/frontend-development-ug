@@ -33,7 +33,7 @@ export async function POST(request) {
 }
 ```
 
-Wywołanie `fetch` z metodą `POST` i artykułem w treści daje dwa różne wyniki. Pod `/api/go307` przekierowanie powtarza `POST` pod `/api/articles` i odpowiedź ma kod 201. Na liście przybywa artykuł, choć `go307` niczego nie zapisuje. Pod `/api/go303` `fetch` idzie dalej metodą `GET` i dostaje listę z kodem 200. <u>Przekierowanie po zapisie w Route Handlerze potrzebuje jawnego kodu 303.</u> Bez drugiego argumentu `NextResponse.redirect` też odpowiada kodem 307.
+Wywołanie `fetch` z metodą `POST` i artykułem w treści daje dwa różne wyniki. Pod `/api/go307` przekierowanie powtarza `POST` pod `/api/articles` i odpowiedź ma kod 201. Na liście przybywa jeden artykuł, choć `go307` niczego nie zapisuje. Pod `/api/go303` `fetch` idzie dalej metodą `GET` i dostaje listę z kodem 200. <u>Przekierowanie po zapisie w Route Handlerze potrzebuje jawnego kodu 303.</u> Bez drugiego argumentu `NextResponse.redirect` też odpowiada kodem 307.
 
 Przekierowanie niezależne od danych strony, na przykład ze starego adresu po zmianie struktury witryny, wpisuje się wcześniej. Służy do tego opcja `redirects` w `next.config.js` albo plik `proxy.js`, który wywołuje `NextResponse.redirect`, zanim Next.js zacznie obsługiwać trasę.
 
@@ -66,7 +66,7 @@ Komunikat da się przenieść na stronę docelową na dwa sposoby. Żadnego z ni
 ```js
 // Przykład spoza demo: akcja z ciasteczkiem jednorazowym
 export async function createWithFlash(formData) {
-  addArticle({ title: formData.get("title"), author: "Alice", body: "Flash cookie example body." });
+  addArticle({ title: formData.get("title"), body: "Flash cookie example body." });
   revalidatePath("/");
   (await cookies()).set("flash", "Article added", { maxAge: 10 }); // ciasteczko żyje 10 s
   redirect("/flash");

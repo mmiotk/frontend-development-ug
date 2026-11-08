@@ -32,6 +32,7 @@ Dla wyróżnionego artykułu zasada „wszystko albo nic” z `Promise.all` jest
 
 ```jsx
 // Przykład spoza demo: lista i wyróżniony artykuł, który nie istnieje
+// (zakłada trasę /api/articles/[id] z przykładu o Route Handlerze)
 async function fetchJson(path) {
   const res = await fetch(`${BASE_URL}${path}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to fetch ${path}: ${res.status}`);
@@ -43,7 +44,7 @@ console.log(featured.reason.message);      // → Failed to fetch /api/articles/
 // JSX: {featured.status === "fulfilled" ? <h2>{featured.value.title}</h2> : <p>Featured article unavailable</p>}
 ```
 
-Spełniony wynik niesie dane w `value`, odrzucony powód w `reason`, więc strona pokazuje trzy tytuły i komunikat „Featured article unavailable”.
+Spełniony wynik niesie dane w `value`, odrzucony powód w `reason`, więc strona pokazuje dwa tytuły i komunikat „Featured article unavailable”.
 
 ## Rozszerzenie: limit czasu dla `fetch`
 
@@ -57,7 +58,7 @@ const res = await fetch(`${BASE_URL}/api/slow`, { signal: AbortSignal.timeout(10
 console.log(res.status); // → 200
 ```
 
-W `fetchArticles` taki sygnał zamienia zawieszoną stronę na zwykły wyjątek, który obsługuje `error.jsx`.
+W `HomePage` taki sygnał zamienia zawieszoną stronę na zwykły wyjątek, który obsługuje `error.jsx`.
 
 ## Rozszerzenie: zmienna, której zabrakło
 
