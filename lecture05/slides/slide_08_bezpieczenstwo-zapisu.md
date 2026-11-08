@@ -8,7 +8,7 @@ Akcja `createArticle` przepuszcza do magazynu tylko dane zgodne ze schematem `ar
 2. **To samo żądanie `POST /new` wysłane bez formularza**, na przykład z terminala, razem z polami ukrytymi formularza.
 3. **Route Handler `POST /api/articles`**, który woła `addArticle` bezpośrednio.
 
-Pierwsza droga sprawdza dane schematem. Druga przechodzi przez tę samą akcję, więc też je sprawdza: tytuł „ab” wraca z komunikatem „Tytuł: minimum 3 znaki”. Trzecia nie sprawdza niczego. Route Handler z pliku `app/api/articles/route.js` przekazuje ciało żądania do `addArticle` bez zmian. Treść `{"title":"","author":"","body":""}` daje odpowiedź 201 i artykuł z trzema pustymi polami. Treść `{"title":5}` daje 201 i rekord z tytułem będącym liczbą 5, bez autora i bez treści. Oba trafiają na listę pod `/`. <u>Walidacja w jednym wejściu nie chroni pozostałych.</u>
+Pierwsza droga sprawdza dane schematem. Druga przechodzi przez tę samą akcję, więc też je sprawdza: tytuł „ab” wraca z komunikatem „Title: at least 3 characters”. Trzecia nie sprawdza niczego. Route Handler z pliku `app/api/articles/route.js` przekazuje ciało żądania do `addArticle` bez zmian. Treść `{"title":"","author":"","body":""}` daje odpowiedź 201 i artykuł z trzema pustymi polami. Treść `{"title":5}` daje 201 i rekord z tytułem będącym liczbą 5, bez autora i bez treści. Oba trafiają do magazynu, a lista pod `/` pokaże je dopiero po wygaśnięciu wpisu (`revalidate: 60`), bo Route Handler nie wywołuje `revalidatePath`. <u>Walidacja w jednym wejściu nie chroni pozostałych.</u>
 
 ## Dane od klienta są niezaufane
 

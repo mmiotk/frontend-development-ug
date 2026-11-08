@@ -72,7 +72,7 @@ try {
 }
 
 // komponent kliencki ("use client") po next build z BASE_URL i NEXT_PUBLIC_SITE_NAME
-<p>{String(process.env.BASE_URL)} | {process.env.NEXT_PUBLIC_SITE_NAME}</p> // → undefined | Articles Viewer
+<p>{String(process.env.BASE_URL)} | {process.env.NEXT_PUBLIC_SITE_NAME}</p> // → w przeglądarce: undefined | Articles Viewer
 ```
 
-Komunikat nie wspomina o zmiennej środowiskowej, więc przyczyny szuka się w konfiguracji, a nie w kodzie strony. Do przeglądarki trafiają wyłącznie zmienne z przedrostkiem `NEXT_PUBLIC_`, wpisywane w pliki przy budowaniu.
+Komunikat nie wspomina o zmiennej środowiskowej, więc przyczyny szuka się w konfiguracji, a nie w kodzie strony. W komponencie klienckim `process.env.BASE_URL` jest w przeglądarce równe `undefined`, bo do jej kodu trafiają wyłącznie zmienne z przedrostkiem `NEXT_PUBLIC_`, wpisywane w pliki przy budowaniu. Pierwszy HTML z serwera zawiera jednak prawdziwą wartość, więc tekst z serwera i z przeglądarki się rozjeżdża. Hydratacja kończy się błędem: w trybie deweloperskim „Hydration failed because the server rendered text didn't match the client”, po `next build` „Minified React error #418”.

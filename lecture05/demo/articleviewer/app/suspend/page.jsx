@@ -13,8 +13,8 @@ export default function SuspendPage() {
 
   return (
     <div>
-      <h1>Artykuły — use() + Suspense</h1>
-      <Suspense fallback={<p>Suspense czeka na dane...</p>}>
+      <h1>Articles — use() + Suspense</h1>
+      <Suspense fallback={<p>Suspense is waiting for data...</p>}>
         <ArticleListClient promise={articlesPromise} />
       </Suspense>
     </div>

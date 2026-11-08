@@ -23,13 +23,13 @@ export default function SwrDemoPage() {
     mutate(); // tell SWR: re-fetch now, don't wait for refreshInterval
   }
 
-  if (isLoading) return <p>Ładowanie (SWR)...</p>;
-  if (error) return <p>Błąd: {error.message}</p>;
+  if (isLoading) return <p>Loading (SWR)...</p>;
+  if (error) return <p>Error: {error.message}</p>;
 
   return (
     <div>
-      <h1>Artykuły — SWR</h1>
-      <button onClick={handleAddTest}>Dodaj testowy artykuł</button>
+      <h1>Articles — SWR</h1>
+      <button onClick={handleAddTest}>Add test article</button>
       <ul>
         {articles.map((a) => (
           <li key={a.id}>

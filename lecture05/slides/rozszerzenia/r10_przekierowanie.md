@@ -50,7 +50,7 @@ try {
   redirect("/");
 } catch (e) {
   unstable_rethrow(e); // wyjątki z redirect() i notFound() idą dalej, do frameworka
-  return { error: { _form: ["Zapis się nie udał"] } }; // tu docierają tylko zwykłe błędy
+  return { error: { _form: ["Save failed"] } }; // tu docierają tylko zwykłe błędy
 }
 ```
 

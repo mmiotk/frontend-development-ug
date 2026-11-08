@@ -26,7 +26,7 @@ export async function createArticle(prevState, formData) {
 }
 ```
 
-`redirect` pochodzi z modułu `next/navigation`, tego samego co `notFound`. Po udanym zapisie użytkownik trafia na listę, a nowy artykuł jest na niej od razu dzięki wcześniejszemu `revalidatePath`. Gałąź z błędem walidacji nadal zwraca `{ error }`. Za krótki tytuł zostawia więc użytkownika na `/new` z komunikatem „Tytuł: minimum 3 znaki” pod polem, a przekierowanie dotyczy tylko sukcesu.
+`redirect` pochodzi z modułu `next/navigation`, tego samego co `notFound`. Po udanym zapisie użytkownik trafia na listę, a nowy artykuł jest na niej od razu dzięki wcześniejszemu `revalidatePath`. Gałąź z błędem walidacji nadal zwraca `{ error }`. Za krótki tytuł zostawia więc użytkownika na `/new` z komunikatem „Title: at least 3 characters” pod polem, a przekierowanie dotyczy tylko sukcesu.
 
 Schwarzmüller w *React Key Concepts* opisuje ten układ jako typowy.
 
@@ -54,7 +54,7 @@ Wzorzec nosi nazwę **Post/Redirect/Get** (PRG): formularz wysyła `POST`, serwe
 
 Dokumentacja `redirect` opisuje dwa tryby pracy w Server Action. Gdy JavaScript jest dostępny, następuje nawigacja po stronie klienta. Formularz wysłany przed załadowaniem skryptów dostaje odpowiedź HTTP **303**. Ruch sieciowy w obu trybach wygląda inaczej:
 
-- **z JavaScriptem:** jedno żądanie `POST /new` z kodem 200 i żadnego osobnego `GET /`;
+- **z JavaScriptem:** jedno żądanie `POST /new` z kodem 200 i żadnego osobnego żądania dokumentu `/`. W wersji zbudowanej po `POST` dochodzą tylko żądania pobierania z wyprzedzeniem, które wysyła komponent `Link`, z parametrem `?_rsc=`, a w `next dev` jest wyłącznie `POST /new 200`;
 - **bez JavaScriptu:** `POST /new` z kodem 303 i nagłówkiem `Location: /`, a po nim `GET /` z kodem 200.
 
 Pierwszy wynik wynika z tego, że odpowiedź akcji niesie wynik razem z nowym widokiem. Przy `redirect` jest to widok strony docelowej, jak opisuje przewodnik:
@@ -74,11 +74,11 @@ Komentarz w kodzie mówi, że `redirect` „rzuca wyjątek wewnętrznie”. Taki
 ```js
 class Redirect extends Error {}
 function go(path) { throw new Redirect(path); }
-function save() { go("/"); console.log("po go()"); } // ta linia się nie wykona
+function save() { go("/"); console.log("after go()"); } // ta linia się nie wykona
 
 try { save(); }
-catch (e) { console.log(e instanceof Redirect ? `przekierowanie na ${e.message}` : "inny błąd"); }
-// wypisuje: przekierowanie na /
+catch (e) { console.log(e instanceof Redirect ? `redirect to ${e.message}` : "other error"); }
+// → redirect to /
 ```
 
 Next.js robi to samo. Dokumentacja podaje, że wywołanie `redirect()` rzuca wyjątek `NEXT_REDIRECT`, który framework łapie na zewnątrz akcji, a `notFound()` działa na tej samej zasadzie. Dokumentacja mutacji danych opisuje skutek dla akcji:
@@ -110,27 +110,25 @@ Rysunek 5.10 zestawia na jednym schemacie trzy losy tego samego wyjątku: dwa tr
 
 ## Pułapka bloku `try`
 
-Zapis i odświeżenie łatwo objąć blokiem `try`, żeby obsłużyć ewentualny błąd zapisu. Taki układ zamienia trzy ostatnie linie `createArticle` na:
+Zapis i odświeżenie łatwo objąć blokiem `try`, żeby obsłużyć ewentualny błąd zapisu. Gdy `redirect("/")` stoi wewnątrz `try`, blok `catch` łapie wyjątek sterujący jak zwykły błąd (w logu `caught: NEXT_REDIRECT`). Artykuł trafia do magazynu, ale strona zostaje na `/new` z pustymi polami i bez komunikatu. Stan `{ success: false }`, zwracany wtedy z `catch`, nie ma pola `error` ani `success: true`, więc formularz nie pokazuje niczego. Użytkownik nie wie, czy zapis się udał, i może wysłać formularz jeszcze raz. Każde takie wysłanie dopisze kolejny artykuł, choć ekran nigdy tego nie potwierdzi.
+
+Dokumentacja `redirect` zaleca wprost wywołanie go poza blokiem `try`. Blok `try` obejmuje wtedy tylko zapis do bazy, a `revalidatePath` i `redirect` stoją za nim.
 
 ```js
-// wariant błędny: redirect wewnątrz try
 try {
-  addArticle(result.data);
-  revalidatePath("/");
-  redirect("/");
+  addArticle(result.data); // tylko zapis w bloku try
 } catch (e) {
-  console.log("caught:", e.message); // e.message to "NEXT_REDIRECT"
   return { success: false };
 }
+revalidatePath("/");
+redirect("/"); // poza try: wyjątek NEXT_REDIRECT dociera do Next.js
 ```
 
-Blok `catch` łapie wyjątek sterujący jak zwykły błąd. Artykuł trafia do magazynu, ale strona zostaje na `/new` z pustymi polami i bez komunikatu. Stan `{ success: false }` nie ma pola `error` ani `success: true`, więc formularz nie pokazuje niczego. Użytkownik nie wie, czy zapis się udał, i może wysłać formularz jeszcze raz. Każde takie wysłanie dopisze kolejny artykuł, choć ekran nigdy tego nie potwierdzi.
-
-Dokumentacja `redirect` zaleca wprost wywołanie go poza blokiem `try`. Poprawny układ pokazuje przewodnik Next.js o przekierowaniach. Blok `try` obejmuje tylko wywołanie bazy danych, a `revalidatePath` i `redirect` stoją za nim. Wyjątek, którego nikt nie zaplanował, na przykład awaria bazy, nadal wychodzi z akcji do `app/error.jsx`.
+Awaria zapisu kończy się wtedy zwróceniem `{ success: false }`, a wyjątek `NEXT_REDIRECT` nie trafia do żadnego `catch`.
 
 ## Cena przekierowania
 
-Komunikat „Artykuł dodany pomyślnie!” przestaje być widoczny, bo formularz na `/new` znika razem ze stanem `useActionState`. Kod tego komunikatu jednak zostaje. Gałąź `{state?.success && <p>Artykuł dodany pomyślnie!</p>}` w `app/new/page.jsx` jest teraz martwym kodem: akcja po sukcesie nie zwraca już żadnej wartości, więc `state.success` nigdy nie będzie prawdą. W kodzie przeznaczonym do wdrożenia usuwa się ją razem ze zmianą akcji.
+Komunikat „Article added successfully!” przestaje być widoczny, bo formularz na `/new` znika razem ze stanem `useActionState`. Kod tego komunikatu jednak zostaje. Gałąź `{state?.success && <p>Article added successfully!</p>}` w `app/new/page.jsx` jest teraz martwym kodem: akcja po sukcesie nie zwraca już żadnej wartości, więc `state.success` nigdy nie będzie prawdą. W kodzie przeznaczonym do wdrożenia usuwa się ją razem ze zmianą akcji.
 
 Użytkownik widzi tylko efekt: nowy artykuł na końcu listy, pod trzema istniejącymi. Przy długiej liście łatwo go przeoczyć.
 

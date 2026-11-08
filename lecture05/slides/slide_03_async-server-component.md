@@ -12,12 +12,12 @@ export const metadata = { title: "Articles Viewer" }; // tytuł karty przegląda
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pl">
+    <html lang="en">
       <body>
         <nav>
-          <Link href="/">Artykuły</Link>
+          <Link href="/">Articles</Link>
           {" | "}
-          <Link href="/new">Dodaj</Link>
+          <Link href="/new">Add</Link>
           {" | "}
           <Link href="/suspend">use() demo</Link>
           {" | "}
@@ -59,7 +59,7 @@ export default async function HomePage() {
 
   return (
     <div>
-      <h1>Artykuły ({articles.length})</h1>
+      <h1>Articles ({articles.length})</h1>
       <ul>
         {articles.map((article) => (
           <li key={article.id}>
@@ -94,7 +94,7 @@ Komponent kliencki nie może być funkcją `async`, bo każdy jego render musi z
 >
 > — Tejas Kumar, *Fluent React*
 
-Dyrektywa `"use client"` na górze tego pliku zamieniłaby `HomePage` w komponent kliencki. Next.js 16.4.0 zgłasza wtedy w konsoli przeglądarki: „`<HomePage>` is an async Client Component. Only Server Components can be async at the moment.”
+Dyrektywa `"use client"` na górze tego pliku zamieniłaby `HomePage` w komponent kliencki. Next.js 16.4.0 zgłasza wtedy w trybie deweloperskim w konsoli przeglądarki: „`<HomePage>` is an async Client Component. Only Server Components can be async at the moment.”
 
 Pobieranie w efekcie zaczyna się dopiero po pierwszym renderze i nie działa na serwerze, więc HTML zawiera wtedy tylko stan ładowania. W `HomePage` dane są gotowe, zanim HTML opuści serwer. Trzy stany żądania obsługują tu trzy osobne mechanizmy. Oczekiwanie to samo `await`, sukces to dalszy ciąg funkcji, a porażka to wyjątek rzucony z `fetchArticles`. Przeglądarka dostaje gotową listę w HTML, więc do jej wyświetlenia nie potrzebuje żadnego skryptu.
 
@@ -107,9 +107,9 @@ W przeglądarce `fetch("/api/articles")` działa, bo adres względny rozwija si�
 try {
   await fetch("/api/articles");
 } catch (e) {
-  e.name;          // "TypeError"
-  e.message;       // "Failed to parse URL from /api/articles"
-  e.cause.message; // "Invalid URL"
+  e.name;          // → "TypeError"
+  e.message;       // → "Failed to parse URL from /api/articles"
+  e.cause.message; // → "Invalid URL"
 }
 await fetch("http://localhost:3000/api/articles"); // adres bezwzględny działa
 ```
@@ -131,13 +131,13 @@ Odpowiedź z kodem błędu nie odrzuca obiektu Promise zwróconego przez `fetch`
 Różnicę widać na samej aplikacji, która na nieznany adres odpowiada stroną HTML z kodem 404.
 
 ```js
-const res = await fetch("http://localhost:3000/brak"); // trasa nie istnieje, wyjątku brak
-res.status; // 404
-res.ok;     // false: ok jest true tylko dla statusów 200–299
+const res = await fetch("http://localhost:3000/missing"); // trasa nie istnieje, wyjątku brak
+res.status; // → 404
+res.ok;     // → false: ok jest true tylko dla statusów 200–299
 
-await res.json(); // SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+await res.json(); // → SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
 
-await fetch("http://localhost:3999/"); // na tym porcie nic nie działa: TypeError "fetch failed"
+await fetch("http://localhost:3999/"); // → TypeError "fetch failed": na tym porcie nic nie działa
 ```
 
 Obiekt Promise zostaje odrzucony tylko wtedy, gdy odpowiedzi nie ma wcale, na przykład gdy serwer nie działa. Banks i Porcello ujmują to krótko: „czasem żądanie HTTP może zakończyć się sukcesem z błędem” (*„Sometimes an HTTP request can succeed with an error”*). Dlatego linia `if (!res.ok) throw ...` w `fetchArticles` decyduje o czytelności błędu. Z literówką w adresie, `/api/article` bez „s”, wyjątek niesie „Failed to fetch articles: 404”. Bez tej linii strona 404 trafia do `res.json()`, a komunikat „Unexpected token '<'” nie mówi nic o przyczynie. <u>Po każdym `fetch` sprawdza się `res.ok`, zanim odczyta się ciało.</u>

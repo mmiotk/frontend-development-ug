@@ -43,13 +43,13 @@ const fetcher = (url) => fetch(url).then((r) => r.json());
 export default function SwrDemoPage() {
   const { data: articles, error, isLoading } = useSWR("/api/articles", fetcher);
 
-  if (isLoading) return <p>Ładowanie (SWR)...</p>;
-  if (error) return <p>Błąd: {error.message}</p>;
+  if (isLoading) return <p>Loading (SWR)...</p>;
+  if (error) return <p>Error: {error.message}</p>;
 
   return (
     <div>
-      <h1>Artykuły — SWR</h1>
-      <p>SWR odświeża dane przy fokusie okna i ponownym połączeniu.</p>
+      <h1>Articles — SWR</h1>
+      <p>SWR refreshes data on window focus and reconnect.</p>
       <ul>
         {articles.map((a) => (
           <li key={a.id}>
@@ -62,7 +62,7 @@ export default function SwrDemoPage() {
 }
 ```
 
-Funkcja `fetcher` stoi poza komponentem, więc nie powstaje na nowo przy każdym renderze. Nie sprawdza `r.ok`, więc odpowiedź 404 z treścią JSON trafiłaby do `data`, a nie do `error`. Dwa wczesne `return` obsługują ładowanie i błąd, a lista renderuje się dopiero przy gotowej tablicy. Strona najpierw pokazuje „Ładowanie (SWR)...”, a potem listę w formacie „Intro to Server Components — Alice”. Przeglądarka wysyła przy tym jedno żądanie `GET /api/articles`.
+Funkcja `fetcher` stoi poza komponentem, więc nie powstaje na nowo przy każdym renderze. Nie sprawdza `r.ok`, więc odpowiedź 404 z treścią JSON trafiłaby do `data`, a nie do `error`. Dwa wczesne `return` obsługują ładowanie i błąd, a lista renderuje się dopiero przy gotowej tablicy. Strona najpierw pokazuje „Loading (SWR)...”, a potem listę w formacie „Intro to Server Components — Alice”. Przeglądarka wysyła przy tym jedno żądanie `GET /api/articles`.
 
 Kod działa w przeglądarce, więc wystarcza ścieżka `/api/articles` bez hosta. Źródłem danych jest Route Handler, jedyne miejsce, z którego przeglądarka odczytuje artykuły. Zapis z formularza idzie inną drogą, przez akcję `createArticle`. Druga wersja dodaje odświeżanie co pięć sekund. Zmienia się tylko wywołanie hooka:
 
@@ -100,11 +100,11 @@ Dokumentacja dodaje szczegół: dane startowe i dane poprzedniego klucza nie lic
 
 ## Czego nie ma w pierwszym HTML-u
 
-Strona `/` wysyła listę w HTML-u. Strona `/swr-demo` wysyła napis „Ładowanie (SWR)...” i pobiera dane po załadowaniu JavaScriptu, więc robot, który skryptu nie wykona, listy nie zobaczy. Oba modele można łączyć: dane z komponentu serwerowego mogą być wartością startową dla SWR, a odpytywanie w przeglądarce dba o ich dalszą świeżość.
+Strona `/` wysyła listę w HTML-u. Strona `/swr-demo` wysyła napis „Loading (SWR)...” i pobiera dane po załadowaniu JavaScriptu, więc robot, który skryptu nie wykona, listy nie zobaczy. Oba modele można łączyć: dane z komponentu serwerowego mogą być wartością startową dla SWR, a odpytywanie w przeglądarce dba o ich dalszą świeżość.
 
 ## Przycisk, który dodaje artykuł
 
-Po własnym zapisie użytkownik nie powinien czekać na kolejny cykl. Ostatnia wersja pliku dostaje przycisk „Dodaj testowy artykuł”, a zdanie o fokusie okna znika. Nowe są `mutate` w wyniku hooka, funkcja obsługi i przycisk:
+Po własnym zapisie użytkownik nie powinien czekać na kolejny cykl. Ostatnia wersja pliku dostaje przycisk „Add test article”, a zdanie o fokusie okna znika. Nowe są `mutate` w wyniku hooka, funkcja obsługi i przycisk:
 
 ```jsx
 // app/swr-demo/page.jsx (nowe linie)
@@ -126,7 +126,7 @@ async function handleAddTest() {
 }
 
 // w JSX, pod nagłówkiem:
-<button onClick={handleAddTest}>Dodaj testowy artykuł</button>
+<button onClick={handleAddTest}>Add test article</button>
 ```
 
 Funkcja **`mutate`** z wyniku hooka to według dokumentacji **związany `mutate`** (*bound mutate*), który zna klucz z wywołania `useSWR`. Wywołany bez danych oznacza wpis jako przeterminowany i pobiera go ponownie. Po kliknięciu przeglądarka wysyła `POST`, a zaraz po nim `GET` do `/api/articles`, a na końcu listy staje pozycja „Test SWR 17… — SWR User”.
@@ -135,7 +135,7 @@ Funkcja **`mutate`** z wyniku hooka to według dokumentacji **związany `mutate`
 
 ## Klucz jako nazwa wpisu i argument `fetcher`
 
-Domyślnie klucz trafia do `fetcher` jako argument, więc tutaj musi być adresem. Klucz `"moje-artykuly"` daje `fetch("moje-artykuly")`, czyli `/moje-artykuly`. Next.js odpowiada stroną 404 w HTML-u, a `r.json()` rzuca `SyntaxError`. Ekran pokazuje wtedy „Błąd: Unexpected token '<', "<!DOCTYPE "... is not valid JSON”.
+Domyślnie klucz trafia do `fetcher` jako argument, więc tutaj musi być adresem. Klucz `"my-articles"` daje `fetch("my-articles")`, czyli `/my-articles`. Next.js odpowiada stroną 404 w HTML-u, a `r.json()` rzuca `SyntaxError`. Ekran pokazuje wtedy „Error: Unexpected token '<', "<!DOCTYPE "... is not valid JSON”.
 
 ## Odpytywanie czy unieważnienie
 
@@ -147,7 +147,7 @@ Pamięć SWR jest osobna od pamięci Next.js na serwerze, więc `revalidatePath`
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
 flowchart LR
     M["montowanie, klucz /api/articles"] --> E{"wpis w pamięci?"}
-    E -- "nie" --> L["isLoading = true<br/>„Ładowanie (SWR)...”"] --> F["fetcher(klucz)"]
+    E -- "nie" --> L["isLoading = true<br/>„Loading (SWR)...”"] --> F["fetcher(klucz)"]
     E -- "tak" --> S["stara lista od razu<br/>isValidating = true"] --> F
     T["fokus, sieć, co 5 s,<br/>mutate()"] --> S
     RP["revalidatePath('/')"] -. "✗ brak połączenia" .-> S

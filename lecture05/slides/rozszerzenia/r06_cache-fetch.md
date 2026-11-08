@@ -62,7 +62,7 @@ Cache-Control: s-maxage=30, stale-while-revalidate=31535970
 
 Druga liczba w nagłówku to rok w sekundach pomniejszony o 30. Dokumentacja opcji `expireTime` w `next.config.js` wyjaśnia, że ten nagłówek jest przeznaczony dla sieci CDN (*Content Delivery Network*), czyli serwerów pośrednich trzymających kopie odpowiedzi blisko użytkowników.
 
-Pamięć `fetch` żyje poza procesem pojedynczego żądania: zapisane odpowiedzi leżą jako pliki w katalogu `.next/cache/fetch-cache`. Przewodnik *How Revalidation Works* nazywa to domyślną pamięcią w systemie plików, wystarczającą dla jednej instancji serwera. Pamięć przeżywa restart serwera, a magazyn artykułów nie. Po restarcie `/api/articles` zwraca znowu trzy wpisy, a strona `/` nadal pokazuje „Artykuły (4)” z zapisanej odpowiedzi. Ten sam przewodnik dodaje, że przy rewalidacji trasy Next.js generuje od nowa zarówno HTML, jak i RSC Payload, i trzyma je w jednym wpisie.
+Pamięć `fetch` żyje poza procesem pojedynczego żądania: zapisane odpowiedzi leżą jako pliki w katalogu `.next/cache/fetch-cache`. Przewodnik *How Revalidation Works* nazywa to domyślną pamięcią w systemie plików, wystarczającą dla jednej instancji serwera. Pamięć przeżywa restart serwera, a magazyn artykułów nie. Po restarcie `/api/articles` zwraca znowu trzy wpisy, a strona `/` nadal pokazuje „Articles (4)” z zapisanej odpowiedzi. Ten sam przewodnik dodaje, że przy rewalidacji trasy Next.js generuje od nowa zarówno HTML, jak i RSC Payload, i trzyma je w jednym wpisie.
 
 ## Rozszerzenie: pamięć w trybie deweloperskim
 
@@ -75,10 +75,8 @@ const res = await fetch(`${BASE_URL}/api/articles`, { cache: "force-cache" });
 // zwykłe żądanie                     → Articles (3), odpowiedź z pamięci
 // żądanie z cache-control: no-cache  → Articles (4)
 // zwykłe żądanie potem               → Articles (4), wpis w pamięci nadpisany
-
-// Przykład spoza demo: sprzeczne opcje w jednym wywołaniu
-await fetch(`${BASE_URL}/api/articles`, { cache: "no-store", next: { revalidate: 3600 } });
-// → w terminalu next dev: ⚠ Specified "cache: no-store" and "revalidate: 3600", only one should be specified.
 ```
+
+Sprzeczne opcje w jednym wywołaniu, czyli `cache: "no-store"` razem z `next: { revalidate: 3600 }`, kończą się w terminalu `next dev` ostrzeżeniem. Brzmi ono `⚠ Specified "cache: no-store" and "revalidate: 3600", only one should be specified.`
 
 Przy `force-cache` lista po twardym odświeżeniu wygląda więc na świeżą, a efekt pamięci widać tylko przy zwykłym odświeżeniu przed takim żądaniem.

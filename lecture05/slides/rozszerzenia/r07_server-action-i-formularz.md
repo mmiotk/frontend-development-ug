@@ -8,10 +8,10 @@ Formularz edycji potrzebuje identyfikatora artykułu, którego użytkownik nie w
 
 ```js
 function save(id, text) {
-  return `zapis ${id}: ${text}`;
+  return `save ${id}: ${text}`;
 }
 const saveSeven = save.bind(null, 7); // pierwszy argument ustalony z góry
-saveSeven("nowa treść");              // "zapis 7: nowa treść"
+saveSeven("new body");               // → save 7: new body
 ```
 
 Zapis `updateArticle.bind(null, article.id)` daje więc akcję, która dostaje identyfikator przed `FormData`. Według przewodnika `bind` działa w komponentach serwerowych i klienckich i wspiera progresywne wzbogacanie, czyli działanie formularza bez JavaScriptu. Alternatywą jest pole `<input type="hidden" name="id">`, którego wartość staje się częścią wyrenderowanego HTML-a i nie jest kodowana. W obu przypadkach identyfikator przychodzi od klienta, więc akcja sprawdza, czy wolno go zmienić.
@@ -23,11 +23,16 @@ React dokłada do formularza z akcją ukryte pola. Widać je, gdy akcja wypisze 
 ```js
 // Przykład spoza demo: pierwsza linia createArticle w lib/actions.js
 console.log(JSON.stringify([...formData.keys()]));
-// z JavaScriptem  → ["$ACTION_REF_1","$ACTION_1:0","$ACTION_1:1","$ACTION_KEY","title","author","body"]
-// bez JavaScriptu → ["title","author","body"]
 
 // pola innych typów w osobnym formularzu: <input type="number" name="count" defaultValue={42}> i pusty <input type="file" name="cover">
 console.log(typeof formData.get("count"), formData.get("cover").constructor.name); // → string File
+```
+
+Wynik wypisany przez akcję:
+
+```text
+z JavaScriptem  → ["$ACTION_REF_1","$ACTION_1:0","$ACTION_1:1","$ACTION_KEY","title","author","body"]
+bez JavaScriptu → ["title","author","body"]
 ```
 
 Bez JavaScriptu przeglądarka wysyła zwykły formularz HTML z tymi polami, a Next.js odczytuje z nich, którą akcję wywołać, i usuwa je przed wywołaniem. `createArticle` wybiera pola jawnie, po jednym, więc dodatkowe klucze nie mają znaczenia. Dokumentacja `useActionState` opisuje skutek.

@@ -33,8 +33,8 @@ export default function ArticleList() {
     },
   });
 
-  if (isPending) return <p>Ładowanie...</p>;
-  if (isError) return <p>Błąd: {error.message}</p>;
+  if (isPending) return <p>Loading...</p>;
+  if (isError) return <p>Error: {error.message}</p>;
   return <ul>{data.map((a) => <li key={a.id}>{a.title}</li>)}</ul>;
 }
 ```
@@ -96,9 +96,9 @@ Strona *Important Defaults* opisuje zachowania bez konfiguracji. Dane z `useQuer
 >
 > — dokumentacja TanStack Query, *Important Defaults*
 
-Przewodnik *Query Retries* podaje szczegóły: opóźnienie zaczyna się od 1000 ms, podwaja się przy każdej próbie i nie przekracza 30 sekund. W kodzie wersji 5.104.1 to `Math.min(1000 * 2 ** n, 30000)`, liczone od nadejścia nieudanej odpowiedzi, a w karcie bez fokusu ponowienie czeka na jego powrót. Zapytanie o `/api/articles/99` wysyła więc cztery żądania z przerwami 1, 2 i 4 sekundy. Komunikat „Błąd: HTTP 404” pojawia się po ponad siedmiu sekundach, a do tego czasu `isPending` ma wartość `true`. Brak zasobu się nie naprawi, więc dla takich zapytań ustawia się `retry: false` albo funkcję `retry`, która dostaje licznik prób i błąd. Na serwerze domyślna liczba ponowień wynosi 0: w kodzie wersji 5.104.1 wartość domyślna to `isServer() ? 0 : 3`, żeby nieudane zapytanie nie wstrzymywało renderu.
+Przewodnik *Query Retries* podaje szczegóły: opóźnienie zaczyna się od 1000 ms, podwaja się przy każdej próbie i nie przekracza 30 sekund. W kodzie wersji 5.104.1 to `Math.min(1000 * 2 ** n, 30000)`, liczone od nadejścia nieudanej odpowiedzi, a w karcie bez fokusu ponowienie czeka na jego powrót. Zapytanie o `/api/articles/99` wysyła więc cztery żądania z przerwami 1, 2 i 4 sekundy. Komunikat „Error: HTTP 404” pojawia się po ponad siedmiu sekundach, a do tego czasu `isPending` ma wartość `true`. Brak zasobu się nie naprawi, więc dla takich zapytań ustawia się `retry: false` albo funkcję `retry`, która dostaje licznik prób i błąd. Na serwerze domyślna liczba ponowień wynosi 0: w kodzie wersji 5.104.1 wartość domyślna to `isServer() ? 0 : 3`, żeby nieudane zapytanie nie wstrzymywało renderu.
 
-Błąd zapytania zostaje domyślnie w polu `error` i komponent sam decyduje, co pokazać. Opcja **`throwOnError: true`** rzuca go w trakcie renderu, więc trafia do najbliższej granicy błędów, czyli komponentu, który pokazuje komunikat zamiast poddrzewa z wyjątkiem. W wersji 4 ta opcja nazywała się `useErrorBoundary`. Zapytanie o `/api/articles/99` z `retry: false` i `throwOnError: true` wysyła jedno żądanie, a zaraz po odpowiedzi ekran pokazuje `app/error.jsx` z tekstem „Błąd: HTTP 404” i przyciskiem „Spróbuj ponownie”.
+Błąd zapytania zostaje domyślnie w polu `error` i komponent sam decyduje, co pokazać. Opcja **`throwOnError: true`** rzuca go w trakcie renderu, więc trafia do najbliższej granicy błędów, czyli komponentu, który pokazuje komunikat zamiast poddrzewa z wyjątkiem. W wersji 4 ta opcja nazywała się `useErrorBoundary`. Zapytanie o `/api/articles/99` z `retry: false` i `throwOnError: true` wysyła jedno żądanie, a zaraz po odpowiedzi ekran pokazuje `app/error.jsx` z tekstem „Error: HTTP 404” i przyciskiem „Try again”.
 
 ## Jak długo dane są świeże
 

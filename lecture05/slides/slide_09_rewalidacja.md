@@ -11,17 +11,9 @@ revalidatePath("/"); // unieważnia zapamiętane dane strony głównej
 return { success: true };
 ```
 
-Lista na stronie głównej trzyma odpowiedź `/api/articles` w pamięci `fetch` przez 60 sekund (`next: { revalidate: 60 }`). Wywołanie `await connection()` sprawia tylko, że sama strona renderuje się przy każdym żądaniu. Bez linii z `revalidatePath` akcja zapisuje artykuł, ale licznik „Artykuły (…)” stoi w miejscu, także po F5. Rośnie najwcześniej po minucie:
+Lista na stronie głównej trzyma odpowiedź `/api/articles` w pamięci `fetch` przez 60 sekund (`next: { revalidate: 60 }`). Wywołanie `await connection()` sprawia tylko, że sama strona renderuje się przy każdym żądaniu. Bez linii z `revalidatePath` akcja zapisuje artykuł, ale licznik „Articles (…)” stoi w miejscu, także po F5. Nowa liczba pojawia się dopiero po wygaśnięciu wpisu: po 61 sekundach pierwsze wejście pokazuje jeszcze 3, a drugie 4, bo pamięć czasowa działa według wzorca *stale-while-revalidate*.
 
-```js
-// lib/actions.js: wariant z wyłączoną linią (do omówienia)
-addArticle(result.data);
-// revalidatePath("/"); // bez unieważnienia lista podaje zapamiętaną odpowiedź
-```
-
-Po upływie minuty pierwsze wejście dostaje jeszcze starą liczbę, a dopiero następne nową, bo pamięć czasowa działa według wzorca *stale-while-revalidate*.
-
-Z punktu widzenia serwera wszystko działa. `addArticle` dopisała artykuł do magazynu, a strona główna uczciwie podaje odpowiedź zapamiętaną zgodnie z opcją `revalidate`. Z punktu widzenia osoby, która przed chwilą kliknęła „Dodaj artykuł”, aplikacja zgubiła jej dane. Z linią `revalidatePath("/")` ta sama lista pokazuje nowy artykuł od razu po powrocie na stronę główną.
+Z punktu widzenia serwera wszystko działa. `addArticle` dopisała artykuł do magazynu, a strona główna uczciwie podaje odpowiedź zapamiętaną zgodnie z opcją `revalidate`. Z punktu widzenia osoby, która przed chwilą kliknęła „Add article”, aplikacja zgubiła jej dane. Z linią `revalidatePath("/")` ta sama lista pokazuje nowy artykuł od razu po powrocie na stronę główną.
 
 ## Odczyt własnego zapisu
 

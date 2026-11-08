@@ -11,10 +11,10 @@ export default async function ArticlePage({ params }) {
 
   return (
     <article>
-      <Link href="/">← Lista</Link>
+      <Link href="/">← List</Link>
       <h1>{article.title}</h1>
       <p>
-        Autor: {article.author} | Data: {article.createdAt}
+        Author: {article.author} | Date: {article.createdAt}
       </p>
       <p>{article.body}</p>
     </article>

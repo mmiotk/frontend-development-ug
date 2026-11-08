@@ -14,7 +14,7 @@ Projekt powstaje kreatorem `create-next-app` w wersji 16.4.0: JavaScript, App Ro
 
 **Bundler** to narzędzie, które składa moduły aplikacji w pliki wykonywane na serwerze i w przeglądarce. Wynikiem jego pracy są **paczki** (*bundles*): pliki JavaScriptu, w których zebrany jest kod wszystkich modułów potrzebnych w danym miejscu aplikacji. Tabela zmian w dokumentacji Turbopacka przy wersji 16.0.0 zapisuje: „Turbopack staje się domyślnym bundlerem Next.js” (*„Turbopack becomes the default bundler for Next.js”*).
 
-Szablonowa strona startowa ma logo, linki i style, więc zostaje z niej jeden akapit „Articles Viewer”. Szablonowy layout pobiera fonty Geist z modułu `next/font/google`, który przy pierwszym uruchomieniu łączy się z serwerami Google, a bez sieci kończy się błędem. Nowy layout zwraca tylko `<html lang="pl">` i `<body>` z `children`. Komponenty bez dyrektywy `"use client"` są komponentami serwerowymi, więc obie strony aplikacji zaczynają od serwera.
+Szablonowa strona startowa ma logo, linki i style, więc zostaje z niej jeden akapit „Articles Viewer”. Szablonowy layout pobiera fonty Geist z modułu `next/font/google`, który przy pierwszym uruchomieniu łączy się z serwerami Google, a bez sieci kończy się błędem. Nowy layout zwraca tylko `<html lang="en">` i `<body>` z `children`. Komponenty bez dyrektywy `"use client"` są komponentami serwerowymi, więc obie strony aplikacji zaczynają od serwera.
 
 ## Magazyn jako jedyne wejście do danych
 
@@ -36,12 +36,12 @@ Operator `??=` przypisuje wartość tylko wtedy, gdy zmienna jest pusta, czyli m
 let a = null;
 a ??= { n: 1 }; // a było puste: przypisanie się wykonuje
 a ??= { n: 2 }; // a ma już wartość: prawa strona nawet się nie oblicza
-a.n; // 1
+a.n; // → 1
 
 const s1 = (globalThis.demoStore ??= { items: [] }); // pierwsze wywołanie tworzy obiekt
 const s2 = (globalThis.demoStore ??= { items: [] }); // drugie dostaje ten sam
 s1.items.push("x");
-s1 === s2; // true, a s2.items.length to 1
+s1 === s2; // → true, a s2.items.length to 1
 ```
 
 Górna część `lib/store.js` używa dokładnie tego zapisu.
@@ -105,7 +105,7 @@ Pierwsza dotyczy odbiorców. Wszyscy użytkownicy, którzy wchodzą na stronę, 
 
 ## Dlaczego zwykła zmienna modułu nie wystarcza
 
-Najprostszy magazyn to zmienna modułu: `let articles = [...]`. Moduł wykonuje się raz na paczkę, więc w obrębie jednej paczki każdy import dostaje tę samą tablicę. Dokumentacja Turbopacka mówi ogólnie, że „Next.js obsługuje wiele środowisk wyjściowych, na przykład klienta i serwer” (*„Next.js supports multiple output environments (e.g., client and server)”*). Po stronie serwera podział idzie jednak dalej. W Next.js 16.4.0 kod `lib/store.js` trafia przy budowaniu do kilku plików paczek: do osobnego pliku dla strony `/new` i osobnego dla `/articles/[id]` w katalogu `.next/server/chunks/ssr/` oraz do pliku wspólnego dla Route Handlerów z `app/api/`. Każdy taki plik ma własny rejestr załadowanych modułów i wykonuje własną kopię `lib/store.js`, a każda kopia miałaby własną tablicę. Reguła „moduł wykonuje się raz” obowiązuje więc w obrębie jednej paczki, a nie całego procesu.
+Najprostszy magazyn to zmienna modułu: `let articles = [...]`. Moduł wykonuje się raz na paczkę, więc w obrębie jednej paczki każdy import dostaje tę samą tablicę. Dokumentacja Turbopacka mówi ogólnie, że „Next.js obsługuje wiele środowisk wyjściowych, na przykład klienta i serwer” (*„Next.js supports multiple output environments (e.g., client and server)”*). Po stronie serwera podział idzie jednak dalej. W Next.js 16.4.0 strony i Server Actions dzielą jedną kopię `lib/store.js`, a Route Handlery z `app/api/` mają drugą. Każda kopia ma własny rejestr załadowanych modułów, a więc miałaby własną tablicę. Reguła „moduł wykonuje się raz” obowiązuje więc w obrębie jednej paczki, a nie całego procesu.
 
 Z magazynem w zwykłej zmiennej strona, która dopisuje artykuł przez `addArticle`, widzi po pierwszym wejściu 4 artykuły, a po drugim 5. Odpowiedź `/api/articles` cały czas zawiera 3. Z magazynem na `globalThis` obie liczby rosną razem: 4 i 4, potem 5 i 5. <u>Kod, który polega na jednej kopii modułu, działa przypadkiem i przestaje działać po zmianie narzędzia.</u>
 
@@ -144,17 +144,10 @@ Funkcja w trakcie działania nie może więc zostać przerwana przez inny kod, d
 let nextId = 1;
 function addSync() { return nextId++; } // odczyt i zwiększenie w jednym ciągu
 
-async function addWithAwait() {
-  const id = nextId; // odczyt
-  await null;        // tu inne zadania mogą wejść
-  nextId = id + 1;   // zapis
-  return id;
-}
-
-await Promise.all([1, 2, 3].map(async () => addSync())); // [1, 2, 3]
-nextId = 1;
-await Promise.all([1, 2, 3].map(() => addWithAwait()));  // [1, 1, 1]
+await Promise.all([1, 2, 3].map(async () => addSync())); // → [1, 2, 3]
 ```
+
+Wersja z `await` między odczytem a zapisem, czyli `const id = nextId; await null; nextId = id + 1; return id;`, daje po trzech równoległych wywołaniach `[1, 1, 1]`. Każde wywołanie odczytuje `nextId` przed pierwszym zapisem i oddaje ten sam numer.
 
 `addArticle` nie ma w środku `await`, więc odczyt `nextId`, zwiększenie licznika i `push` wykonują się jednym ciągiem: 20 równoległych żądań `POST` daje 20 artykułów o różnych numerach. Wersja z bazą danych, która najpierw odczytuje największy numer, czeka na wynik, a potem zapisuje rekord, zachowuje się jak `addWithAwait`. Dlatego numer nadaje sama baza, na przykład kolumną z automatycznym licznikiem.
 

@@ -7,12 +7,12 @@ Powrót: [`slide_12_tanstack-query.md`](../slide_12_tanstack-query.md)
 Wersja 5 przyjmuje wyłącznie obiekt. Przewodnik migracji pisze krótko: „teraz obsługujemy wyłącznie format obiektowy” (*„now we only support the object format.”*). Stare wywołanie z poradników nie zadziała, tak samo jak `invalidateQueries(['posts'])` z książki Bugla, pisanej pod wersję 4.
 
 ```jsx
-// Przykład spoza demo: zapis z wersji 4 w @tanstack/react-query 5.104.1
-const { data } = useQuery(["articles"], getArticles);
-// next dev   → Error: Bad argument type. Starting with v5, only the "Object" form is allowed when calling query related functions. …
-// next build → TypeError: m.defaultQueryOptions is not a function (przerwany prerender strony)
-const { data: ok } = useQuery({ queryKey: ["articles"], queryFn: getArticles }); // zapis z wersji 5
+// Przykład spoza demo: zapis z wersji 5 w @tanstack/react-query 5.104.1
+const getArticles = () => fetch("/api/articles").then((r) => r.json()); // funkcja zapytania
+const { data } = useQuery({ queryKey: ["articles"], queryFn: getArticles });
 ```
+
+Zapis z wersji 4, `useQuery(["articles"], getArticles)`, w tej wersji kończy się błędem. W `next dev` ekran i konsola pokazują „Error: Bad argument type. Starting with v5, only the "Object" form is allowed when calling query related functions. …”, a `next build` przerywa prerender strony komunikatem „TypeError: m.defaultQueryOptions is not a function”.
 
 Opcja `cacheTime` z wersji 4 nazywa się teraz `gcTime`, a stan `loading` ma teraz nazwę `pending`.
 

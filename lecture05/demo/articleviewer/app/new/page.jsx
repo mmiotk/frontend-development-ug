@@ -10,7 +10,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending}>
-      {pending ? "Zapisywanie..." : "Dodaj artykuł"}
+      {pending ? "Saving..." : "Add article"}
     </button>
   );
 }
@@ -20,28 +20,28 @@ export default function NewArticlePage() {
 
   return (
     <div>
-      <h1>Nowy artykuł</h1>
+      <h1>New article</h1>
 
-      {state?.success && <p>Artykuł dodany pomyślnie!</p>}
+      {state?.success && <p>Article added successfully!</p>}
 
       <form action={action}>
         <div>
           <label>
-            Tytuł: <input name="title" />
+            Title: <input name="title" />
           </label>
           {state?.error?.title && <p>{state.error.title[0]}</p>}
         </div>
 
         <div>
           <label>
-            Autor: <input name="author" />
+            Author: <input name="author" />
           </label>
           {state?.error?.author && <p>{state.error.author[0]}</p>}
         </div>
 
         <div>
           <label>
-            Treść: <textarea name="body" rows={4} />
+            Body: <textarea name="body" rows={4} />
           </label>
           {state?.error?.body && <p>{state.error.body[0]}</p>}
         </div>

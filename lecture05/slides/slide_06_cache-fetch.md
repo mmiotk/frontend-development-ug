@@ -46,7 +46,7 @@ const res = await fetch(`${BASE_URL}/api/articles`, {
 });
 ```
 
-Odpowiedź `/api/articles` trafia do pamięci serwera przy pierwszym wejściu na stronę główną. Nowy artykuł wysłany żądaniem `POST /api/articles` prosto do Route Handlera ląduje w magazynie, a API od razu zwraca go razem z pozostałymi. Licznik w nagłówku „Artykuły (3)” na `/` się nie zmienia. Nic nie jest zepsute. Serwer Next.js podaje odpowiedź z własnej pamięci podręcznej, bo tak go poproszono.
+Odpowiedź `/api/articles` trafia do pamięci serwera przy pierwszym wejściu na stronę główną. Nowy artykuł wysłany żądaniem `POST /api/articles` prosto do Route Handlera ląduje w magazynie, a API od razu zwraca go razem z pozostałymi. Licznik w nagłówku „Articles (3)” na `/` się nie zmienia. Nic nie jest zepsute. Serwer Next.js podaje odpowiedź z własnej pamięci podręcznej, bo tak go poproszono.
 
 ## `fetch` z dodatkową pamięcią
 

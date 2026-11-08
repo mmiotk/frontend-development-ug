@@ -7,7 +7,7 @@ Strona główna czeka na dane przez `await`, a `fetchArticles` rzuca wyjątek pr
 ```jsx
 // app/loading.jsx: treść zastępcza na czas, gdy strona czeka na dane
 export default function Loading() {
-  return <p>Ładowanie artykułów...</p>;
+  return <p>Loading articles...</p>;
 }
 ```
 
@@ -18,9 +18,9 @@ export default function Loading() {
 export default function Error({ error, retry }) {
   return (
     <div>
-      <p>Błąd: {error.message}</p>
+      <p>Error: {error.message}</p>
       {/* retry() pobiera segment od nowa (Next.js 16.3+) */}
-      <button onClick={() => retry()}>Spróbuj ponownie</button>
+      <button onClick={() => retry()}>Try again</button>
     </div>
   );
 }
@@ -37,7 +37,7 @@ let state = { isLoading: true, isError: false };
 
 // procedura obsługi błędu zmienia jedną flagę i zapomina o drugiej
 state = { ...state, isError: true };
-state; // { isLoading: true, isError: true }: komunikat i wskaźnik ładowania naraz
+state; // → { isLoading: true, isError: true }: komunikat i wskaźnik ładowania naraz
 ```
 
 Ekran pokazuje wtedy jednocześnie komunikat o błędzie i niekończący się wskaźnik ładowania. Wieruch naprawia to reducerem, który zmienia obie flagi w jednym kroku. Reducer zamyka możliwe stany w kilku gałęziach `switch`, ale nadal trzeba je zapisać i pilnować w każdym komponencie, który pobiera dane. Granice usuwają problem u źródła, bo flag nie ma wcale. `HomePage` opisuje tylko widok gotowych danych. O czekaniu React wie, bo funkcja `async` komponentu jeszcze nie zwróciła JSX. O błędzie wie, bo render rzucił wyjątek. Schwarzmüller ujmuje tę zaletę tak:
@@ -58,7 +58,7 @@ Błąd oczekiwany zwraca się jako zwykłą wartość, a komponent decyduje, co 
 // Wariant spoza demo: zły status zwracany jako wynik
 async function loadArticles() {
   const res = await fetch(`${BASE_URL}/api/articles`, { cache: "no-store" });
-  if (!res.ok) return { articles: [], error: "Lista chwilowo niedostępna" };
+  if (!res.ok) return { articles: [], error: "List temporarily unavailable" };
   return { articles: await res.json(), error: null };
 }
 
@@ -73,7 +73,7 @@ Różnica dotyczy miejsca, w którym kończy się problem. Wyjątek z `fetchArti
 
 ## Komunikat błędu w trybie produkcyjnym
 
-Druga różnica dotyczy trybu produkcyjnego, czyli aplikacji zbudowanej przez `next build`. W trybie deweloperskim granica dostaje pełną treść wyjątku, więc ekran pokazuje „Błąd: Failed to fetch articles: 500” i łatwo uznać ten napis za tekst dla użytkownika. W trybie produkcyjnym wyjątek z komponentu serwerowego nie przekazuje swojej treści do przeglądarki. Pole `error.message` ma wtedy ogólny tekst „Minified React error #441; visit https://react.dev/errors/441 for the full message…”, a oryginalny komunikat trafia do logu serwera razem z identyfikatorem `digest`. Ten sam `digest` dostaje granica w przeglądarce, więc pozwala znaleźć wpis w logu, ale użytkownikowi nic nie mówi. Tekst, który użytkownik ma przeczytać, niesie więc wartość zwracana, a wyjątek służy diagnozie.
+Druga różnica dotyczy trybu produkcyjnego, czyli aplikacji zbudowanej przez `next build`. W trybie deweloperskim granica dostaje pełną treść wyjątku, więc ekran pokazuje „Error: Failed to fetch articles: 500” i łatwo uznać ten napis za tekst dla użytkownika. W trybie produkcyjnym wyjątek z komponentu serwerowego nie przekazuje swojej treści do przeglądarki. Pole `error.message` ma wtedy ogólny tekst „Minified React error #441; visit https://react.dev/errors/441 for the full message…”, a oryginalny komunikat trafia do logu serwera razem z identyfikatorem `digest`. Ten sam `digest` dostaje granica w przeglądarce, więc pozwala znaleźć wpis w logu, ale użytkownikowi nic nie mówi. Tekst, który użytkownik ma przeczytać, niesie więc wartość zwracana, a wyjątek służy diagnozie.
 
 ## Strona artykułu z magazynu
 
@@ -93,10 +93,10 @@ export default async function ArticlePage({ params }) {
 
   return (
     <article>
-      <Link href="/">← Lista</Link>
+      <Link href="/">← List</Link>
       <h1>{article.title}</h1>
       <p>
-        Autor: {article.author} | Data: {article.createdAt}
+        Author: {article.author} | Date: {article.createdAt}
       </p>
       <p>{article.body}</p>
     </article>
@@ -109,13 +109,13 @@ Obok leży osobny plik ładowania dla tego segmentu.
 ```jsx
 // app/articles/[id]/loading.jsx: bliższy stronie niż app/loading.jsx, więc wygrywa
 export default function Loading() {
-  return <p>Ładowanie artykułu...</p>;
+  return <p>Loading article...</p>;
 }
 ```
 
 Brak artykułu to przypadek oczekiwany, więc strona woła `notFound()`, wyjątek sterujący, który Next.js zamienia na widok „nie znaleziono”. Nowe jest to, czego w pliku nie ma: wywołania `fetch`, adresu i formatu JSON. Strona mogłaby zamiast `notFound()` zwrócić własny akapit „Brak artykułu”. Odpowiedź wyglądałaby wtedy dla przeglądarki i robotów jak zwykła udana strona, bez znacznika `noindex` i bez wspólnego widoku „nie znaleziono”.
 
-Przy przejściu z listy obowiązuje plik ładowania leżący najbliżej strony. Router pokazuje go od razu po kliknięciu, jeśli strona jeszcze nie przyszła z serwera. `getArticle` odpowiada jednak bez czekania, więc gotowa strona zwykle wyprzedza napis „Ładowanie artykułu...”, który mignie tylko przy wolniejszej odpowiedzi serwera.
+Przy przejściu z listy obowiązuje plik ładowania leżący najbliżej strony. Router pokazuje go od razu po kliknięciu, jeśli strona jeszcze nie przyszła z serwera. `getArticle` odpowiada jednak bez czekania, więc gotowa strona zwykle wyprzedza napis „Loading article...”, który mignie tylko przy wolniejszej odpowiedzi serwera.
 
 ## Dwie drogi do tych samych danych
 
@@ -127,8 +127,8 @@ Na serwerze pierwsza droga jest okrężna. Żądanie wychodzi z procesu Next.js 
 const article = { title: "A", createdAt: new Date("2025-01-01T00:00:00Z") };
 const back = JSON.parse(JSON.stringify(article)); // droga przez HTTP w skrócie
 
-typeof back.createdAt; // "string": obiekt Date stał się napisem
-back.createdAt;        // "2025-01-01T00:00:00.000Z"
+typeof back.createdAt; // → "string": obiekt Date stał się napisem
+back.createdAt;        // → "2025-01-01T00:00:00.000Z"
 ```
 
 W tej aplikacji różnicy nie widać, bo `createdAt` od początku jest napisem `"2025-01-01"`. Druga droga omija te koszty. Kod z dostępem do danych i tak zostaje poza plikami przeglądarki, bo importuje go tylko komponent serwerowy.

@@ -70,7 +70,7 @@ const { data } = useSWR(author ? ["/api/articles", author] : null, fetcher); // 
 // → setAuthor("Alice"): GET /api/articles?author=Alice, tytuł „Intro to Server Components”
 ```
 
-Po zapisie nieaktualna może być też lista pod `/api/articles?author=Ala`. Globalna funkcja `mutate` z `swr` przyjmuje zamiast klucza funkcję filtrującą: `mutate((key) => typeof key === "string" && key.startsWith("/api/articles"))` odświeża wszystkie pasujące wpisy. Dokumentacja zastrzega, że globalny `mutate` z samym kluczem nic nie zrobi bez zamontowanego hooka z tym kluczem.
+Po zapisie nieaktualna może być też lista pod `/api/articles?author=Ann`. Globalna funkcja `mutate` z `swr` przyjmuje zamiast klucza funkcję filtrującą: `mutate((key) => (Array.isArray(key) ? key[0] : key)?.startsWith("/api/articles"))` odświeża wszystkie pasujące wpisy, tu `GET /api/articles` i `GET /api/articles?author=Ann`. Klucz-tablica ma adres w pierwszym elemencie, dlatego filtr sprawdza `key[0]`. Dokumentacja zastrzega, że globalny `mutate` z samym kluczem nic nie zrobi bez zamontowanego hooka z tym kluczem.
 
 Gdy wiele komponentów korzysta z tego samego `fetcher`, podaje się go raz w `<SWRConfig value={{ fetcher }}>` nad drzewem, a `useSWR` dostaje sam klucz. Jedna funkcja może wtedy sprawdzać `r.ok` za wszystkie zapytania.
 

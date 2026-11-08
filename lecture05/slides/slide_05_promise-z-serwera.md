@@ -11,8 +11,8 @@ Wywołanie `fetch` nie czeka na odpowiedź. Zwraca od razu Promise, a żądanie 
 ```js
 // fetch z adresem data: nie potrzebuje sieci ani serwera
 const p = fetch("data:application/json,[1,2,3]").then((r) => r.json());
-console.log(p);        // Promise { <pending> }: wyniku jeszcze nie ma
-console.log(await p);  // [ 1, 2, 3 ]: wynik po odczytaniu treści odpowiedzi
+console.log(p);        // → Promise { <pending> }: wyniku jeszcze nie ma
+console.log(await p);  // → [ 1, 2, 3 ]: wynik po odczytaniu treści odpowiedzi
 ```
 
 Pierwsza linia kończy się natychmiast. Zmienna `p` trzyma Promise tablicy, więc `console.log(p)` wypisuje stan oczekiwania. Dopiero `await` zatrzymuje funkcję do chwili, gdy oba kroki się zakończą. Komponent serwerowy, który pominie `await`, kończy więc pracę od razu i może przekazać `p` dalej jak każdą inną wartość.
@@ -64,8 +64,8 @@ export default function SuspendPage() {
 
   return (
     <div>
-      <h1>Artykuły — use() + Suspense</h1>
-      <Suspense fallback={<p>Suspense czeka na dane...</p>}>
+      <h1>Articles — use() + Suspense</h1>
+      <Suspense fallback={<p>Suspense is waiting for data...</p>}>
         <ArticleListClient promise={articlesPromise} />
       </Suspense>
     </div>
@@ -81,18 +81,7 @@ Plik ma trzy ważne cechy:
 
 ## Co wolno przekazać jako wynik Promise
 
-Propsy z komponentu serwerowego do klienckiego przechodzą przez sieć, więc muszą dać się zserializować. Dokumentacja Reacta stosuje tę regułę także do obiektów Promise: „jego rozwiązana wartość musi dać się serializować” (*„its resolved value must be serializable”*). Liczy się więc nie sam Promise, ale to, czym się rozstrzygnie. Wariant bez `.then` łamie ten warunek.
-
-```jsx
-// przykład spoza demo (importy i BASE_URL jak w app/suspend/page.jsx):
-// Promise rozstrzyga się obiektem Response
-export default function BrokenPage() {
-  const promise = fetch(`${BASE_URL}/api/articles`, { cache: "no-store" });
-  return <ArticleListClient promise={promise} />;
-}
-// terminal: Error: Only plain objects, and a few built-ins, can be passed
-// to Client Components from Server Components. Classes or null prototypes are not supported.
-```
+Propsy z komponentu serwerowego do klienckiego przechodzą przez sieć, więc muszą dać się zserializować. Dokumentacja Reacta stosuje tę regułę także do obiektów Promise: „jego rozwiązana wartość musi dać się serializować” (*„its resolved value must be serializable”*). Liczy się więc nie sam Promise, ale to, czym się rozstrzygnie. Wariant bez `.then` łamie ten warunek: zapis `fetch(...)` bez `.then((r) => r.json())` przekazuje do komponentu klienckiego Promise z obiektem `Response`. W terminalu pojawia się wtedy `Error: Only plain objects, and a few built-ins, can be passed to Client Components from Server Components. Classes or null prototypes are not supported.`
 
 Obiekt `Response` jest instancją klasy z metodami i strumieniem treści, więc nie przechodzi przez granicę. Strona i tak odpowiada kodem 200, bo błąd pojawia się już po wysłaniu początku odpowiedzi. Tablica zwykłych obiektów z napisami i liczbami przechodzi bez problemu. Dlatego `.then((r) => r.json())` stoi jeszcze po stronie serwera: do przeglądarki trafia Promise gotowych danych, a nie Promise odpowiedzi HTTP. Ten sam warunek wyklucza Promise, który rozstrzyga się funkcją albo instancją własnej klasy.
 
@@ -119,10 +108,10 @@ Promise trzeba w końcu rozpakować. Dokumentacja Reacta opisuje obie drogi. Pro
 Różnicę widać na dwóch stronach spoza demo, które czytają to samo źródło odpowiadające po sekundzie. Źródło i funkcja pobierająca wyglądają tak.
 
 ```js
-// app/api/slow/route.js (spoza demo): odpowiedź po 1 s
+// app/api/slow-list/route.js (spoza demo): odpowiedź po 1 s
 export async function GET() {
   await new Promise((r) => setTimeout(r, 1000));
-  return Response.json([{ id: 1, title: "Wolny artykuł" }]);
+  return Response.json([{ id: 1, title: "Slow article" }]);
 }
 ```
 
@@ -130,7 +119,7 @@ export async function GET() {
 // lib/items.js (spoza demo): wspólna funkcja obu stron
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 export const getItems = () =>
-  fetch(`${BASE_URL}/api/slow`, { cache: "no-store" }).then((r) => r.json());
+  fetch(`${BASE_URL}/api/slow-list`, { cache: "no-store" }).then((r) => r.json());
 ```
 
 Pierwsza strona czeka na dane w całości.
@@ -143,7 +132,7 @@ export default async function AwaitPage() {
   const items = await getItems(); // strona czeka tu w całości
   return (
     <>
-      <h1>Nagłówek</h1>
+      <h1>Heading</h1>
       <ul>{items.map((i) => <li key={i.id}>{i.title}</li>)}</ul>
     </>
   );
@@ -173,8 +162,8 @@ export default function PromisePage() {
   const promise = getItems(); // bez await
   return (
     <>
-      <h1>Nagłówek</h1>
-      <Suspense fallback={<p>czekam</p>}>
+      <h1>Heading</h1>
+      <Suspense fallback={<p>waiting</p>}>
         <List promise={promise} />
       </Suspense>
     </>
@@ -182,7 +171,7 @@ export default function PromisePage() {
 }
 ```
 
-Bez żadnej granicy nad stroną pierwszy bajt odpowiedzi wariantu 1 przychodzi po 1,07 s, a wariantu 2 po 0,07 s, już z nagłówkiem i napisem „czekam”. W `articleviewer` nad każdą stroną stoi granica z `app/loading.jsx`, więc wariant 1 też zaczyna odpowiadać po 0,07 s. Pierwszy kawałek zawiera wtedy jednak tylko „Ładowanie artykułów...”, a nagłówek przychodzi razem z listą po 1,07 s. <u>Przekazanie Promise w dół nie przyspiesza danych, tylko zmienia, która część strony na nie czeka.</u>
+Bez żadnej granicy nad stroną pierwszy bajt odpowiedzi wariantu 1 przychodzi po 1,07 s, a wariantu 2 po 0,07 s, już z nagłówkiem i napisem „waiting”. W `articleviewer` nad każdą stroną stoi granica z `app/loading.jsx`, więc wariant 1 też zaczyna odpowiadać po 0,07 s. Pierwszy kawałek zawiera wtedy jednak tylko „Loading articles...”, a nagłówek przychodzi razem z listą po 1,07 s. <u>Przekazanie Promise w dół nie przyspiesza danych, tylko zmienia, która część strony na nie czeka.</u>
 
 Odbiorcą nie musi być komponent kliencki. Dokumentacja pokazuje głębszy komponent serwerowy, który robi `await` na otrzymanym Promise. Komponent kliencki nie może czekać przez `await` w trakcie renderu, więc używa `use`. Dokumentacja podaje typowy powód, żeby dane trafiły do klienta: treść interaktywna, na przykład dymki i okienka. W `/suspend` lista nie ma takiej interakcji, więc ten sam efekt dałby asynchroniczny komponent serwerowy pod tą samą granicą. Trasa pokazuje mimo to wariant z komponentem klienckim, bo tylko w nim widać `use` i przejście obiektu Promise z serwera do przeglądarki, potrzebne, gdy lista dostanie interakcję w przeglądarce.
 
@@ -196,7 +185,7 @@ Część odpowiedzi wysłaną, zanim rozstrzygnie się jakakolwiek praca asynchr
 >
 > — Tejas Kumar, *Fluent React*
 
-Od powłoki zależy **czas do pierwszego bajtu** (**TTFB**, *Time to First Byte*). Przewodnik *Streaming* opisuje oba przypadki. Bez strumieniowania serwer czeka na wszystkie dane, więc TTFB równa się czasowi najwolniejszego zapytania. Ze strumieniowaniem TTFB spada do czasu wyrenderowania layoutów i treści zastępczych. W przykładzie z dwiema stronami to 1,07 s i 0,07 s. W `/suspend` powłoką jest layout z nawigacją, nagłówek strony i akapit „Suspense czeka na dane...”. Element, który ma się pojawić najszybciej, na przykład główny nagłówek, stawia się więc poza granicą.
+Od powłoki zależy **czas do pierwszego bajtu** (**TTFB**, *Time to First Byte*). Przewodnik *Streaming* opisuje oba przypadki. Bez strumieniowania serwer czeka na wszystkie dane, więc TTFB równa się czasowi najwolniejszego zapytania. Ze strumieniowaniem TTFB spada do czasu wyrenderowania layoutów i treści zastępczych. W przykładzie z dwiema stronami to 1,07 s i 0,07 s. W `/suspend` powłoką jest layout z nawigacją, nagłówek strony i akapit „Suspense is waiting for data...”. Element, który ma się pojawić najszybciej, na przykład główny nagłówek, stawia się więc poza granicą.
 
 ## Rysunek 5.5 — co trafia do pierwszego kawałka odpowiedzi
 
@@ -205,7 +194,7 @@ Od powłoki zależy **czas do pierwszego bajtu** (**TTFB**, *Time to First Byte*
 flowchart LR
     A1["AwaitPage<br/>await getItems()"] --> A2["kawałek 1 po 0,07 s<br/>tylko app/loading.jsx"]
     A2 --> A3["kawałek 2 po 1,07 s<br/>nagłówek + lista"]
-    P1["PromisePage<br/>promise bez await"] --> P2["kawałek 1 po 0,07 s<br/>nagłówek + „czekam”"]
+    P1["PromisePage<br/>promise bez await"] --> P2["kawałek 1 po 0,07 s<br/>nagłówek + „waiting”"]
     P2 --> P3["kawałek 2 po 1,07 s<br/>sama lista"]
 ```
 

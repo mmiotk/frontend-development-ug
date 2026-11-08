@@ -5,12 +5,12 @@ export const metadata = { title: "Articles Viewer" };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pl">
+    <html lang="en">
       <body>
         <nav>
-          <Link href="/">Artykuły</Link>
+          <Link href="/">Articles</Link>
           {" | "}
-          <Link href="/new">Dodaj</Link>
+          <Link href="/new">Add</Link>
           {" | "}
           <Link href="/suspend">use() demo</Link>
           {" | "}

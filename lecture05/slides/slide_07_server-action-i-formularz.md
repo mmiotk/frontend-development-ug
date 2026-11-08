@@ -10,9 +10,9 @@ import { z } from "zod";
 
 // trzy wymagane napisy z minimalną długością; komunikaty trafią pod pola formularza
 export const articleSchema = z.object({
-  title: z.string().min(3, "Tytuł: minimum 3 znaki"),
-  author: z.string().min(2, "Autor: minimum 2 znaki"),
-  body: z.string().min(10, "Treść: minimum 10 znaków"),
+  title: z.string().min(3, "Title: at least 3 characters"),
+  author: z.string().min(2, "Author: at least 2 characters"),
+  body: z.string().min(10, "Body: at least 10 characters"),
 });
 ```
 
@@ -36,7 +36,7 @@ export async function ping(name) {
 import { ping } from "@/lib/ping";
 
 export default function PingButton() {
-  return <button onClick={async () => alert(await ping("Ala"))}>ping</button>;
+  return <button onClick={async () => alert(await ping("Ann"))}>ping</button>;
 }
 ```
 
@@ -47,9 +47,9 @@ POST /
 Next-Action: 4051dec969faafcb8afae660872b527071fde1ed27
 Content-Type: text/plain;charset=UTF-8
 
-["Ala"]                      ← argumenty wywołania, zserializowane
+["Ann"]                      ← argumenty wywołania, zserializowane
 
-odpowiedź:  1:"pong: Ala"    ← wartość zwrócona przez funkcję
+odpowiedź:  1:"pong: Ann"    ← wartość zwrócona przez funkcję
 ```
 
 Argumenty jadą w treści żądania jako tablica, a wynik wraca w formacie, z którego React odtwarza wartość.
@@ -82,7 +82,7 @@ Kumar w *Fluent React* opisuje to od strony paczki. Funkcja akcji według niego 
 
 ## Argumenty przychodzą z sieci
 
-Tablica `["Ala"]` z żądania jest jedynym źródłem argumentów funkcji. Kto wyśle to samo żądanie z inną tablicą, ten wywoła funkcję z innymi argumentami, więc argumenty są danymi od nieznanego nadawcy. Lista typów dozwolonych w kierunku **klient → serwer** jest węższa od listy propsów. Przechodzą wartości proste, tablice, `Map`, `Set`, `Date`, `FormData`, zwykłe obiekty, obiekty Promise i inne funkcje serwerowe. Dokumentacja Reacta wymienia wyjątki.
+Tablica `["Ann"]` z żądania jest jedynym źródłem argumentów funkcji. Kto wyśle to samo żądanie z inną tablicą, ten wywoła funkcję z innymi argumentami, więc argumenty są danymi od nieznanego nadawcy. Lista typów dozwolonych w kierunku **klient → serwer** jest węższa od listy propsów. Przechodzą wartości proste, tablice, `Map`, `Set`, `Date`, `FormData`, zwykłe obiekty, obiekty Promise i inne funkcje serwerowe. Dokumentacja Reacta wymienia wyjątki.
 
 > **„Nie są obsługiwane w szczególności: elementy Reacta, czyli JSX.”**
 >
@@ -153,7 +153,7 @@ flowchart LR
     V -- "ok" --> S["addArticle<br/>revalidatePath('/')"]
     E -. "zwykły obiekt" .-> ST["state w NewArticlePage"]
     S -. "{ success: true }" .-> ST
-    ST --> M["komunikat pod polem<br/>albo „Artykuł dodany pomyślnie!”"]
+    ST --> M["komunikat pod polem<br/>albo „Article added successfully!”"]
 ```
 
 Rysunek 5.7 dodaje do kodu format przesyłki: dane jadą na serwer jako `FormData` w treści typu `multipart/form-data`, a wracają jako zwykły obiekt. Akcja sama odczytuje pola po nazwach i sama wybiera kształt odpowiedzi, a komponent musi znać ten kształt, żeby wyświetlić `state.error.title[0]`. Wyjątek rzucony w akcji omija `state` i trafia do najbliższej granicy błędów, w tej aplikacji `app/error.jsx`. Wszystko, co da się opisać użytkownikowi, akcja zwraca więc jako wartość.
@@ -170,21 +170,21 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { createArticle } from "@/lib/actions";
 
-// ... SubmitButton: useFormStatus, napis „Zapisywanie...” w trakcie wysyłki
+// ... SubmitButton: useFormStatus, napis „Saving...” w trakcie wysyłki
 
 export default function NewArticlePage() {
   const [state, action] = useActionState(createArticle, null);
 
   return (
     <div>
-      <h1>Nowy artykuł</h1>
+      <h1>New article</h1>
 
-      {state?.success && <p>Artykuł dodany pomyślnie!</p>}
+      {state?.success && <p>Article added successfully!</p>}
 
       <form action={action}>
         <div>
           <label>
-            Tytuł: <input name="title" />
+            Title: <input name="title" />
           </label>
           {state?.error?.title && <p>{state.error.title[0]}</p>}
         </div>
@@ -195,7 +195,7 @@ export default function NewArticlePage() {
 }
 ```
 
-**`import { createArticle } from "@/lib/actions"`** wygląda jak zwykły import, ale daje odnośnik do funkcji serwerowej. Tytuł „ab” wraca z komunikatem „Tytuł: minimum 3 znaki” pod polem, a poprawny artykuł daje napis „Artykuł dodany pomyślnie!” i nową pozycję na końcu listy pod `/`. `SubmitButton` jest zadeklarowany poza `NewArticlePage`. Deklaracja wewnątrz strony tworzyłaby przy każdym renderze nowy typ komponentu, więc React montowałby przycisk od nowa.
+**`import { createArticle } from "@/lib/actions"`** wygląda jak zwykły import, ale daje odnośnik do funkcji serwerowej. Tytuł „ab” wraca z komunikatem „Title: at least 3 characters” pod polem, a poprawny artykuł daje napis „Article added successfully!” i nową pozycję na końcu listy pod `/`. `SubmitButton` jest zadeklarowany poza `NewArticlePage`. Deklaracja wewnątrz strony tworzyłaby przy każdym renderze nowy typ komponentu, więc React montowałby przycisk od nowa.
 
 ## Plik akcji bez dyrektywy
 

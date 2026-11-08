@@ -21,14 +21,14 @@ POST /api/articles HTTP/1.1
 Host: localhost:3000
 Content-Type: application/json
 
-{"title":"Nowy","author":"Ala","body":"Treść artykułu"}
+{"title":"New","author":"Ann","body":"Article body"}
 ```
 
 ```http
 HTTP/1.1 201 Created
 Content-Type: application/json
 
-{"id":4,"title":"Nowy","author":"Ala","body":"Treść artykułu","createdAt":"2026-10-18"}
+{"id":4,"title":"New","author":"Ann","body":"Article body","createdAt":"2026-10-18"}
 ```
 
 Adres wskazuje **zasób** (*resource*), na przykład kolekcję artykułów. **Metoda** mówi, co z nim zrobić: `GET` odczytuje, `POST` tworzy nowy element kolekcji, `PUT` i `PATCH` zmieniają istniejący element, a `DELETE` go usuwa. Banks i Porcello w *Learning React* streszczają to tak:
@@ -50,12 +50,12 @@ Route Handler nie czyta surowego tekstu. Next.js podaje mu żądanie jako obiekt
 ```js
 // odpowiedź z ciałem JSON, kodem 201 i ustawionym nagłówkiem
 const res = Response.json({ ok: 1 }, { status: 201 });
-res.status;                      // 201
-res.headers.get("content-type"); // "application/json"
+res.status;                      // → 201
+res.headers.get("content-type"); // → "application/json"
 
 // żądanie z ciałem; json() czyta ciało i parsuje je, zwraca Promise
 const req = new Request("http://x/", { method: "POST", body: '{"title":"A"}' });
-await req.json(); // { title: "A" }
+await req.json(); // → { title: "A" }
 ```
 
 Metoda `json()` odrzuca Promise wyjątkiem `SyntaxError`, gdy ciało nie jest poprawnym JSON-em, na przykład z komunikatem „Unexpected end of JSON input” dla uciętego `{"title":` i dla pustego ciała. Nagłówka `Content-Type` metoda nie sprawdza, więc ciało formularza `title=A&author=B` też kończy się wyjątkiem, a nie innym sposobem odczytu.
@@ -147,7 +147,7 @@ API sprawdza się najprościej programem **`curl`**, który wysyła żądanie HT
 ```bash
 curl -i http://localhost:3000/api/articles/99
 curl -X POST -H "Content-Type: application/json" \
-  -d '{"title":"Z terminala","author":"Ala","body":"Treść artykułu wysłanego z terminala"}' \
+  -d '{"title":"From terminal","author":"Ann","body":"Article body sent from the terminal"}' \
   http://localhost:3000/api/articles
 ```
 

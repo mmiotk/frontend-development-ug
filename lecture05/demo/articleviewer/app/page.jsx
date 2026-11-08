@@ -20,7 +20,7 @@ export default async function HomePage() {
 
   return (
     <div>
-      <h1>Artykuły ({articles.length})</h1>
+      <h1>Articles ({articles.length})</h1>
       <ul>
         {articles.map((article) => (
           <li key={article.id}>
