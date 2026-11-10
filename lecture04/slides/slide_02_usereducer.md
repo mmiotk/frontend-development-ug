@@ -14,7 +14,7 @@ Dokumentacja definiuje hook jednym zdaniem.
 >
 > — dokumentacja React, *useReducer*
 
-Hook przyjmuje reducer i stan początkowy, a zwraca parę: bieżący stan i funkcję `dispatch`. Najmniejszy przykład spoza projektu to licznik:
+Hook przyjmuje reducer i stan początkowy, a zwraca parę: bieżący stan i funkcję `dispatch`. Najmniejszy przykład, oddzielny od sklepu, to licznik:
 
 ```jsx
 import { useReducer } from 'react';
@@ -133,10 +133,11 @@ function Both() {
     dispatch({ type: 'inc' });   // reducer dostaje 1, zwraca 2
     setM(m + 1);                 // m + 1 liczone z migawki: 1
     setM(m + 1);                 // znowu 1, bo m w tym renderze to nadal 0
+    console.log(n);              // → 0 przy pierwszym kliknięciu, 2 przy drugim: migawka z tego renderu
   }
   return <button onClick={handleClick}>n={n} m={m}</button>;
 }
-// → n=2 m=1 po jednym kliknięciu: jeden render.
+// → start n=0 m=0, po pierwszym kliknięciu n=2 m=1, po drugim n=4 m=2: jeden render na kliknięcie.
 ```
 
 Reducer działa więc jak aktualizator przekazany do settera, czyli funkcja w rodzaju `(m) => m + 1`. Różnica polega na tym, że aktualizator pisze się przy każdym wywołaniu od nowa, a reducer raz, w jednym miejscu. Ta sama seria akcji zawsze daje ten sam koszyk, bo każda gałąź liczy wynik wyłącznie z poprzedniego stanu i akcji.

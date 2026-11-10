@@ -8,7 +8,7 @@ Akcja `createArticle` przepuszcza do magazynu tylko dane zgodne ze schematem `ar
 2. **To samo żądanie `POST /new` wysłane bez formularza**, na przykład z terminala, razem z polami ukrytymi formularza.
 3. **Route Handler `POST /api/articles`**, który woła `addArticle` bezpośrednio.
 
-Pierwsza droga sprawdza dane schematem. Druga przechodzi przez tę samą akcję, więc też je sprawdza: tytuł „ab” wraca z komunikatem „Title: at least 3 characters”. Trzecia nie sprawdza niczego. Route Handler z pliku `app/api/articles/route.js` przekazuje ciało żądania do `addArticle` bez zmian. Treść `{"title":"","body":""}` daje odpowiedź 201 i artykuł z dwoma pustymi polami. Treść `{"title":5}` daje 201 i `{"id":4,"title":5}`: rekord z tytułem będącym liczbą 5 i bez pola `body`. Oba trafiają do magazynu, a lista pod `/` pokaże je dopiero po wygaśnięciu wpisu (`revalidate: 60`), bo Route Handler nie wywołuje `revalidatePath`. <u>Walidacja w jednym wejściu nie chroni pozostałych.</u>
+Pierwsza droga sprawdza dane schematem. Druga przechodzi przez tę samą akcję, więc też je sprawdza: tytuł „ab” wraca z komunikatem „Title: at least 3 characters”. Trzecia nie sprawdza niczego. Route Handler z pliku `app/api/articles/route.js` przekazuje ciało żądania do `addArticle` bez zmian. Treść `{"title":"","body":""}` daje odpowiedź 201 i artykuł z dwoma pustymi polami. Treść `{"title":5}` daje 201 i `{"id":4,"title":5}`: rekord z tytułem będącym liczbą 5 i bez pola `body`. Oba trafiają do magazynu, a lista pod `/` pokaże je dopiero po wygaśnięciu wpisu (`revalidate: 60`), bo w tej wersji Route Handler nie wywołuje `revalidatePath`. <u>Walidacja w jednym wejściu nie chroni pozostałych.</u>
 
 ## Dane od klienta są niezaufane
 
@@ -40,12 +40,19 @@ Schemat w tej aplikacji ustala tylko minimalne długości, a **górnej granicy n
 
 ## Naprawa w miejscu wejścia
 
-Najprostsza naprawa używa tego samego schematu w Route Handlerze. Schemat leży w `lib/validate.js`, więc `app/api/articles/route.js` może go zaimportować. Poniższa wersja `POST` nie należy do projektu i pokazuje tylko kierunek zmiany.
+Najprostsza naprawa używa tego samego schematu w Route Handlerze. Schemat leży w `lib/validate.js`, więc `app/api/articles/route.js` może go zaimportować. Poniższa wersja `POST` należy do projektu: sprawdza dane tym samym schematem i odświeża listę pod `/`.
 
 ```js
-// app/api/articles/route.js, wariant spoza demo: POST sprawdzany tym samym schematem
-import { addArticle } from "@/lib/store";
+// app/api/articles/route.js
+import { revalidatePath } from "next/cache";
+import { getArticles, addArticle } from "@/lib/store";
 import { articleSchema } from "@/lib/validate";
+
+// nazwa funkcji = nazwa metody HTTP
+export async function GET() {
+  await new Promise((r) => setTimeout(r, 1000)); // udajemy wolną bazę: odpowiedź po 1 s
+  return Response.json(getArticles()); // JSON i domyślny status 200
+}
 
 export async function POST(request) {
   let body;
@@ -61,11 +68,12 @@ export async function POST(request) {
     return Response.json({ error: result.error.flatten().fieldErrors }, { status: 400 });
   }
   const article = addArticle(result.data);
-  return Response.json(article, { status: 201 });
+  revalidatePath("/"); // lista na / pokaże nowy artykuł od razu
+  return Response.json(article, { status: 201 }); // 201 Created
 }
 ```
 
-Ciało, którego nie da się odczytać jako JSON, dostaje teraz odpowiedź 400 zamiast 500, a treść `{"title":5}` odpowiedź 400 z dwoma komunikatami zamiast miejsca w magazynie.
+Ciało, którego nie da się odczytać jako JSON, dostaje teraz odpowiedź 400 zamiast 500, a treść `{"title":5}` odpowiedź 400 z dwoma komunikatami zamiast miejsca w magazynie. Po poprawnym zapisie `revalidatePath("/")` unieważnia wpis listy, więc artykuł pojawia się pod `/` przy następnym wejściu, a nie po wygaśnięciu `revalidate: 60`.
 
 ```text
 {"error":{"title":["Expected string, received number"],"body":["Required"]}}
@@ -141,6 +149,5 @@ Do `addArticle` prowadzą trzy drogi, więc każda musi mieć własną kontrolę
 | Kształt błędów jak w formularzu, więc klient API dostaje komunikaty tego samego rodzaju | Kontrola na poziomie strony nie obejmuje akcji, więc sprawdzenie trzeba powtórzyć w każdej akcji | Ochrony frameworka, takie jak kontrola `Origin`, nie zastępują sprawdzenia danych |
 
 > 💡 **Zapamiętaj:** każde wejście, które zapisuje dane, samo sprawdza ich kształt, bo Server Action i Route Handler to publiczne punkty końcowe. Ochrony frameworka, takie jak kontrola `Origin`, tego sprawdzenia nie zastępują.
-
 
 Materiał rozszerzony do tego slajdu: [`rozszerzenia/r08_bezpieczenstwo-zapisu.md`](rozszerzenia/r08_bezpieczenstwo-zapisu.md)

@@ -1,10 +1,11 @@
 'use client';
 
-import { useCart } from '../context/CartContext';
+import { useCartState, useCartDispatch } from '../context/CartContext';
 import CartSummary from '../components/CartSummary';
 
 export default function CartPage() {
-  const { cart, dispatch } = useCart();
+  const cart = useCartState();
+  const dispatch = useCartDispatch();
 
   return (
     <main>

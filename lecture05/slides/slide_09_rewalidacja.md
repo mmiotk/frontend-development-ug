@@ -16,7 +16,7 @@ import { addArticle } from "./store";
   return { success: true };
 ```
 
-Z linią `revalidatePath("/")` ten sam zapis kończy się napisem „Articles (3)” na liście, z nowym tytułem na końcu. Bez niej nowa liczba pojawia się dopiero po wygaśnięciu wpisu, według wzorca *stale-while-revalidate*. Pomiar po zapisie przez `POST /api/articles`, który też nie unieważnia pamięci: 62 sekundy po pierwszym pobraniu pierwsze wejście na `/` pokazało jeszcze „Articles (2)”. Drugie tuż po nim również, bo pobranie w tle trwa 1 s, tyle ile odpowiada API. Po kolejnych trzech sekundach lista miała „Articles (3)”.
+Z linią `revalidatePath("/")` ten sam zapis kończy się napisem „Articles (3)” na liście, z nowym tytułem na końcu. Bez niej nowa liczba pojawia się dopiero po wygaśnięciu wpisu, według wzorca *stale-while-revalidate*. Pomiar po zapisie przez `POST /api/articles` w wersji bez unieważnienia: 62 sekundy po pierwszym pobraniu pierwsze wejście na `/` pokazało jeszcze „Articles (2)”. Drugie tuż po nim również, bo pobranie w tle trwa 1 s, tyle ile odpowiada API. Po kolejnych trzech sekundach lista miała „Articles (3)”.
 
 Z punktu widzenia serwera wszystko działa. `addArticle` dopisała artykuł do magazynu, a strona główna uczciwie podaje odpowiedź zapamiętaną zgodnie z opcją `revalidate`. Z punktu widzenia osoby, która przed chwilą kliknęła „Add article”, aplikacja zgubiła jej dane.
 
@@ -88,11 +88,11 @@ Unieważnienie po zapisie zamienia krótką pamięć na długą, czyszczoną dok
 
 | Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
 |---|---|---|
-| Autor widzi swój zapis od razu: „Articles (3)” z unieważnieniem, „Articles (2)” bez niego | Wywołanie musi stać w każdym wejściu, które zmienia dane: `POST /api/articles` go nie ma, więc nowy artykuł pojawia się po wygaśnięciu wpisu (wywołanie w `addArticle` objęłoby wszystkie wejścia) | Lista bez pamięci (`no-store`): nie ma czego unieważniać, wywołanie zostaje na przyszłość |
+| Autor widzi swój zapis od razu: „Articles (3)” z unieważnieniem, „Articles (2)” bez niego | Wywołanie musi stać w każdym wejściu, które zmienia dane: bez niego w `POST /api/articles` nowy artykuł pojawiałby się dopiero po wygaśnięciu wpisu (wywołanie w `addArticle` objęłoby wszystkie wejścia) | Lista bez pamięci (`no-store`): nie ma czego unieważniać, wywołanie zostaje na przyszłość |
 | Pamięć trwa długo, bo zapis ją czyści; zapis, unieważnienie i nowy widok kończą się w jednej odpowiedzi serwera | Pominięte wywołanie nie daje błędu i zostawia stare dane, czasem po wielu minutach; zasięg trzeba wybrać: ścieżka, wzorzec albo layout | `revalidate: 1` zamiast unieważnienia: odświeżanie co sekundę bez zmian i nadal możliwa stara wersja |
 | Odświeżenie obejmuje pamięć `fetch` na serwerze i pamięć klienta w przeglądarce | Pamięć SWR w przeglądarce zostaje bez zmian (tabela wyżej), więc dane pobierane w komponencie klienckim odświeża się osobno | Zmiany spoza aplikacji, na przykład bezpośrednio w bazie: limit czasu `revalidate` zostaje zabezpieczeniem |
 
-> 💡 **Zapamiętaj:** po zapisie akcja unieważnia pamięć danych, które się zmieniły, w tej aplikacji przez `revalidatePath("/")` przed `return`. Wywołanie należy do każdego wejścia, które zmienia dane, także do `POST /api/articles`. Pominięte wywołanie nie zgłasza błędu, a lista zostaje ze starą liczbą.
+> 💡 **Zapamiętaj:** po zapisie akcja unieważnia pamięć danych, które się zmieniły, w tej aplikacji przez `revalidatePath("/")` przed `return`. Wywołanie należy do każdego wejścia, które zmienia dane, więc stoi też w `POST /api/articles`. Pominięte wywołanie nie zgłasza błędu, a lista zostaje ze starą liczbą.
 
 
 Materiał rozszerzony do tego slajdu: [`rozszerzenia/r09_rewalidacja.md`](rozszerzenia/r09_rewalidacja.md)

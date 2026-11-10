@@ -2,10 +2,10 @@
 
 ## Wartości, które zmieniają się w różnym tempie
 
-Przy jednym kontekście `{ cart, dispatch, addOptimistic }` każde dodanie produktu renderuje wszystkie pięć przycisków, choć żaden z nich nie potrzebuje koszyka. Wartości w obiekcie zmieniają się jednak w różnym tempie. Koszyk jest nowym obiektem po każdej akcji, także optymistycznej, a obie funkcje pozostają tymi samymi funkcjami przez cały czas życia dostawcy. Skoro React porównuje wartość kontekstu w całości, rozwiązaniem jest danie każdej z nich osobnego kontekstu. Poniższy podział nie należy do demo i służy jako przykład. W `app/context/CartContext.jsx` jeden kontekst zamieniłby się na trzy:
+Przy jednym kontekście `{ cart, dispatch, addOptimistic }` każde dodanie produktu renderuje wszystkie pięć przycisków, choć żaden z nich nie potrzebuje koszyka. Wartości w obiekcie zmieniają się jednak w różnym tempie. Koszyk jest nowym obiektem po każdej akcji, także optymistycznej, a obie funkcje pozostają tymi samymi funkcjami przez cały czas życia dostawcy. Skoro React porównuje wartość kontekstu w całości, rozwiązaniem jest danie każdej z nich osobnego kontekstu. W `app/context/CartContext.jsx` jeden kontekst zamienia się na trzy:
 
 ```jsx
-// Przykład spoza demo: trzy konteksty zamiast jednego
+// Trzy konteksty zamiast jednego
 const CartStateContext = createContext(null);      // zmienia się przy każdej akcji
 const CartDispatchContext = createContext(null);   // stała tożsamość: dispatch z useReducer
 const CartOptimisticContext = createContext(null); // stała tożsamość: setter z useOptimistic
@@ -28,7 +28,7 @@ export function CartProvider({ children }) {
 }
 ```
 
-`CartProvider` nadal trzyma jeden reducer i jeden hook optymistyczny, ale ich wyniki rozdziela między trzy konteksty. Każdy dostawca dostaje w `value` jedną wartość, a nie obiekt sklejany w JSX. Obu funkcji nie wkłada się do wspólnego obiektu: taki obiekt powstawałby od nowa przy każdym renderze dostawcy i zmieniałby wartość kontekstu tak samo jak koszyk. Pod dostawcą stoją trzy hooki zamiast `useCart`, każdy z własnym strażnikiem:
+`CartProvider` nadal trzyma jeden reducer i jeden hook optymistyczny, ale ich wyniki rozdziela między trzy konteksty. Każdy dostawca dostaje w `value` jedną wartość, a nie obiekt sklejany w JSX. Obu funkcji nie wkłada się do wspólnego obiektu: taki obiekt powstawałby od nowa przy każdym renderze dostawcy i zmieniałby wartość kontekstu tak samo jak koszyk. Pod dostawcą stoją trzy hooki, każdy z własnym strażnikiem:
 
 ```jsx
 // Hook do wysyłania akcji koszyka.
@@ -43,10 +43,10 @@ export function useCartDispatch() {
 
 ## Komponenty wybierają kontekst
 
-Podział zmienia interfejs pliku: zamiast `useCart` są trzy hooki, a każdy konsument bierze tylko te, których potrzebuje. Przycisk dodawania korzysta z obu stałych funkcji, więc importuje dwa hooki.
+Plik udostępnia trzy hooki, a każdy konsument bierze tylko te, których potrzebuje. Przycisk dodawania korzysta z obu stałych funkcji, więc importuje dwa hooki.
 
 ```jsx
-// Przykład spoza demo: AddToCartButton po podziale
+// AddToCartButton po podziale
 import { useCartDispatch, useCartOptimistic } from '../context/CartContext';
 
 const dispatch = useCartDispatch();
@@ -56,14 +56,14 @@ const addOptimistic = useCartOptimistic();
 `CartSummary` tylko wyświetla koszyk, więc wystarczy mu stan. Strona `app/cart/page.jsx` pokazuje koszyk i ma przyciski usuwania oraz czyszczenia, więc bierze stan i `dispatch`.
 
 ```jsx
-// Przykład spoza demo: CartSummary po podziale
+// CartSummary po podziale
 import { useCartState } from '../context/CartContext';
 
 const cart = useCartState();
 ```
 
 ```jsx
-// Przykład spoza demo: app/cart/page.jsx po podziale
+// app/cart/page.jsx po podziale
 import { useCartState, useCartDispatch } from '../context/CartContext';
 
 const cart = useCartState();

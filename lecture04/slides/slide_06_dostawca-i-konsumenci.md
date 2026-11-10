@@ -39,10 +39,10 @@ Stan i hooki działają tylko w komponentach klienckich. Dokumentacja Next.js (*
 
 Next.js pilnuje tej granicy już przy budowaniu. Moduł serwerowy z `createContext` kończy się błędem, który dokumentacja Next.js opisuje zdaniem *„You are using `createContext` in a server component but it only works in client components.”*, czyli w komponencie serwerowym `createContext` nie działa. Samo wywołanie `useContext` w komponencie serwerowym kończy się przy prerenderze wyjątkiem `TypeError` z informacją, że `useContext` nie jest funkcją, bo serwerowa wersja Reacta tego hooka nie udostępnia.
 
-Ta sama strona dokumentacji podaje regułę, która ratuje układ z layoutem: komponent serwerowy można przekazać komponentowi klienckiemu jako prop, najczęściej jako `children`. Najmniejszy przykład poza sklepem korzysta z modułu `node:os` z biblioteki standardowej Node.js, który podaje dane o systemie serwera:
+Ta sama strona dokumentacji podaje regułę, która ratuje układ z layoutem: komponent serwerowy można przekazać komponentowi klienckiemu jako prop, najczęściej jako `children`. Najmniejszy przykład, oddzielny od koszyka, korzysta z modułu `node:os` z biblioteki standardowej Node.js, który podaje dane o systemie serwera. Przykład jest osobną trasą `/server-client` w projekcie, dwoma plikami w katalogu `app/server-client/`:
 
 ```jsx
-// ClientBox.jsx: komponent kliencki ze stanem
+// app/server-client/ClientBox.jsx: komponent kliencki ze stanem
 'use client';
 import { useState } from 'react';
 
@@ -53,7 +53,7 @@ export default function ClientBox({ children }) {
 ```
 
 ```jsx
-// page.jsx: komponent serwerowy, bez 'use client'
+// app/server-client/page.jsx: komponent serwerowy, bez 'use client'
 import os from 'node:os';                  // moduł Node.js, którego nie ma w przeglądarce
 import ClientBox from './ClientBox';
 

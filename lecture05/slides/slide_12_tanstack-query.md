@@ -148,7 +148,7 @@ Komponent dostaje z hooka funkcję `mutate(dane)` i flagę `isPending` do zablok
 
 ## Gdzie powstaje ekran i kto go odświeża
 
-W `articleviewer` lista na `/` powstaje na serwerze przy każdym żądaniu z odpowiedzi API zapamiętanej na minutę, a zapis obsługuje akcja z `revalidatePath` i `redirect`. Kopię w przeglądarce, odświeżaną co pięć sekund, pokazał przykład z SWR, ale nie należy ona do projektu. <u>W przeglądarce pobiera się tylko dane, których serwer nie dostarczy w chwili renderu: zmienne w czasie albo zależne od działań użytkownika</u>.
+W `articleviewer` lista na `/` powstaje na serwerze przy każdym żądaniu z odpowiedzi API zapamiętanej na minutę, a zapis obsługuje akcja z `revalidatePath` i `redirect`. Kopię w przeglądarce, odświeżaną co pięć sekund, tworzy strona z SWR, która należy do projektu; TanStack Query pozostaje przykładem spoza projektu. <u>W przeglądarce pobiera się tylko dane, których serwer nie dostarczy w chwili renderu: zmienne w czasie albo zależne od działań użytkownika</u>.
 
 ## Zalety i koszty TanStack Query
 

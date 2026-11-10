@@ -6,10 +6,10 @@ Kontekst rozwiązał problem pośredników: nagłówek, przyciski i strona `/car
 
 Koszt da się policzyć. **Render** komponentu funkcyjnego to jedno wywołanie jego funkcji: React woła ją, dostaje nowy JSX i porównuje go z poprzednim. DOM zmienia dopiero w fazie zatwierdzenia i tylko tam, gdzie wynik się różni. Render, po którym nic się na ekranie nie zmienia, nadal kosztuje wywołanie funkcji i porównanie wyniku, ale nie kosztuje operacji na DOM.
 
-Licznik renderów to linia `console.log` w ciele funkcji komponentu. Sklep w obecnym stanie ma jeden kontekst `CartContext` (wartość `{ cart, dispatch, addOptimistic }`). Poniższe linie nie należą do projektu: to dopisek pomiarowy w `AddToCartButton` i analogicznie w `CartSummary`.
+Licznik renderów to linia `console.log` w ciele funkcji komponentu. Sklep w obecnym stanie ma jeden kontekst `CartContext` (wartość `{ cart, dispatch, addOptimistic }`). Pomiar wymaga jednej dopisanej linii w `AddToCartButton` i analogicznej w `CartSummary`. To dopisek tymczasowy: po pomiarze się go usuwa.
 
 ```jsx
-// Przykład spoza demo: pomiar, jedna linia na każde wywołanie funkcji komponentu
+// Pomiar tymczasowy: jedna linia na każde wywołanie funkcji komponentu
 export default function AddToCartButton({ product }) {
   const { dispatch, addOptimistic } = useCart();
   console.log('AddToCartButton render', product.id);

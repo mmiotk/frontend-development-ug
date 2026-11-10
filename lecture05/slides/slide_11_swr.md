@@ -10,11 +10,11 @@ Każda dotychczasowa trasa pobierała dane na serwerze, a po zapisie widok odśw
 
 Granicę wyznacza też bezpieczeństwo. Klucze API, czyli tajne identyfikatory, którymi aplikacja przedstawia się zewnętrznej usłudze, oraz hasła do bazy nie mogą trafić do przeglądarki. Pobieranie z ich użyciem zostaje więc na serwerze. Lista artykułów, która ma sama pokazywać cudze zapisy, spełnia pierwszy warunek.
 
-Ten slajd to pokaz. Projekt `articleviewer` nie ma biblioteki SWR w `package.json` ani strony, która z niej korzysta, więc wszystkie fragmenty poniżej są przykładami spoza demo. Uruchomiono je w kopii projektu z dopisaną stroną `app/swr-demo/page.jsx`.
+Projekt `articleviewer` ma bibliotekę SWR (`swr` 2.5.1 w `package.json`) i stronę `app/swr-demo/page.jsx`, która z niej korzysta. Spoza projektu są tylko najmniejszy komponent `Count` i wariant z przyciskiem `mutate`.
 
 ## Najmniejszy przykład `useSWR`
 
-Biblioteka SWR (w pokazie wersja 2.5.1) daje jeden główny hook, `useSWR`. Najmniejszy komponent, który pobiera dane w przeglądarce, ma kilka linii:
+Biblioteka SWR (w projekcie wersja 2.5.1) daje jeden główny hook, `useSWR`. Najmniejszy komponent, który pobiera dane w przeglądarce, ma kilka linii:
 
 ```jsx
 // Przykład spoza demo: najmniejszy komponent z useSWR
@@ -36,7 +36,7 @@ Pierwszy render pokazuje „…”, bo odpowiedzi jeszcze nie ma. Po nadejściu 
 Drugi model: dane pobiera kod w przeglądarce, który sam pilnuje ich świeżości. W pierwszej wersji strona z listą wygląda tak:
 
 ```jsx
-// Przykład spoza demo: app/swr-demo/page.jsx
+// app/swr-demo/page.jsx, pierwsza wersja
 "use client"; // komponent kliencki: korzysta z hooków SWR
 
 import useSWR from "swr";
@@ -67,7 +67,7 @@ Funkcja `fetcher` stoi poza komponentem, więc nie powstaje na nowo przy każdym
 Kod działa w przeglądarce, więc wystarcza ścieżka `/api/articles` bez hosta. Źródłem danych jest Route Handler, jedyne miejsce, z którego przeglądarka odczytuje artykuły. Zapis z formularza idzie inną drogą, przez akcję `createArticle`. Druga wersja dodaje odświeżanie co pięć sekund. Zmienia się tylko wywołanie hooka:
 
 ```jsx
-// Przykład spoza demo: wywołanie useSWR z odpytywaniem
+// app/swr-demo/page.jsx: wywołanie useSWR z odpytywaniem
 const { data: articles, error, isLoading } = useSWR("/api/articles", fetcher, {
   refreshInterval: 5000, // ponowne pobranie co 5 sekund
 });
@@ -104,7 +104,7 @@ Strona `/` wysyła listę w HTML-u. Strona z SWR wysyła napis „Loading (SWR).
 
 ## Przycisk, który dodaje artykuł
 
-Po własnym zapisie użytkownik nie powinien czekać na kolejny cykl. Ostatnia wersja pliku dostaje przycisk „Add test article”. Nowe są `mutate` w wyniku hooka, funkcja obsługi i przycisk:
+Po własnym zapisie użytkownik nie powinien czekać na kolejny cykl. Wariant spoza projektu dodaje do tej strony przycisk „Add test article”. Nowe są `mutate` w wyniku hooka, funkcja obsługi i przycisk:
 
 ```jsx
 // Przykład spoza demo: app/swr-demo/page.jsx (nowe linie)

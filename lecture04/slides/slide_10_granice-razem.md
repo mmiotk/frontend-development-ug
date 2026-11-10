@@ -95,12 +95,12 @@ Plik `Recommended.jsx` ma dyrektywę `'use client'`, a jego kod wykonuje się w 
 - **W przeglądarce** moduł wykonuje się raz na załadowanie strony. Promise należy do jednej karty i znika przy przeładowaniu.
 - **Na serwerze** moduł wykonuje się raz na proces serwera, a w trybie deweloperskim także po każdej zmianie pliku. Ten sam Promise obsługuje wszystkich użytkowników.
 
-Z tego podziału wynikają cztery zachowania:
+Z tego podziału wynikają cztery zachowania. Pod `next dev` zapis `Recommended.jsx` tworzy nowy Promise serwerowy. Pierwsze przeładowanie po zapisie wygląda więc jak pierwsze wejście. Lista od razu w HTML pojawia się dopiero od drugiego:
 
 | Sytuacja | Co widać | Który Promise decyduje |
 |---|---|---|
-| pierwsze wejście po starcie serwera deweloperskiego | napis ładowania, po 2 s lista | serwerowy, jeszcze w toku |
-| przeładowanie strony | lista od razu, w HTML | serwerowy, już spełniony |
+| pierwsze wejście po starcie serwera deweloperskiego albo pierwsze żądanie po każdym zapisie `Recommended.jsx` | napis ładowania, po ok. 2,2 s lista | serwerowy, jeszcze w toku |
+| przeładowanie strony (drugie i kolejne po zapisie pliku) | lista od razu, w HTML | serwerowy, już spełniony |
 | powrót z `/cart` linkiem „Shop” po co najmniej 2 s od załadowania strony | lista od razu | przeglądarkowy, już spełniony |
 | strona po `next build` | lista w zbudowanym HTML, bez napisu ładowania | ten z budowania, które czeka na spełnienie Promise |
 

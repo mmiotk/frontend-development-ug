@@ -1,11 +1,12 @@
 'use client';
 
 import { startTransition, useState } from 'react';
-import { useCart } from '../context/CartContext';
+import { useCartDispatch, useCartOptimistic } from '../context/CartContext';
 import { fakeAddToCart } from '../lib/fakeApi';
 
 export default function AddToCartButton({ product }) {
-  const { dispatch, addOptimistic } = useCart();
+  const dispatch = useCartDispatch();
+  const addOptimistic = useCartOptimistic();
   const [error, setError] = useState(null);
 
   function handleAdd() {
