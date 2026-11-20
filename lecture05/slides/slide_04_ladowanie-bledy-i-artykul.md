@@ -9,27 +9,32 @@
 Strona główna czeka na dane przez `await` i rzuca wyjątek przy złym statusie. Ekran na czas czekania i ekran po wyjątku dają dwa pliki, oba w korzeniu `app/`.
 
 ```jsx
-// app/loading.jsx
+// app/loading.jsx: nowy plik
+// Treść zastępcza na czas, gdy strona czeka na dane. Plik leży w korzeniu
+// app/, więc obejmuje każdą stronę, która nie ma własnego loading.jsx.
 export default function Loading() {
   return <p>Loading...</p>;
 }
 ```
 
 ```jsx
-// app/error.jsx
+// app/error.jsx: nowy plik
+// Ekran zamiast strony, która rzuciła wyjątek. Nazwa Error przesłania
+// wbudowaną klasę, co nie przeszkadza, bo plik nie tworzy wyjątków.
 "use client"; // granica błędów działa w przeglądarce
 
 export default function Error({ error, retry }) {
   return (
     <div>
       <p>Error: {error.message}</p>
+      {/* retry() pobiera stronę od nowa (Next.js 16.3+) */}
       <button onClick={() => retry()}>Try again</button>
     </div>
   );
 }
 ```
 
-Pomiar: po odświeżeniu `/` pod paskiem nawigacji stoi „Loading...” (po 0,3 s), a lista pojawia się po ok. 1,2 s. Gdy serwer deweloperski startuje z `BASE_URL=http://localhost:3999`, na którym nic nie działa, pod paskiem pojawia się „Error: fetch failed” i przycisk „Try again”. Kod strony się nie zmienia.
+Pomiar: po odświeżeniu `/` pod paskiem nawigacji stoi „Loading...” (po ok. 0,1 s), a lista pojawia się po ok. 1,1 s. Gdy serwer deweloperski startuje z `BASE_URL=http://localhost:3999`, na którym nic nie działa, pod paskiem pojawia się „Error: fetch failed” i przycisk „Try again”. Kod strony się nie zmienia.
 
 Next.js owija stronę granicą Suspense z `Loading` i granicą błędów z `Error`, tak jak przy każdym segmencie. Pliki leżą w korzeniu `app/`, więc obejmują każdą stronę aplikacji, która nie ma własnych. Wywołanie `retry()` pobiera segment od nowa (Next.js 16.3+). Layout główny `articleviewer` danych nie pobiera, więc granica z `loading.jsx`, która stoi wewnątrz layoutu, obejmuje całą treść strony, a pasek nawigacji jest widoczny od razu. Nazwa `Error` przesłania w tym pliku wbudowaną klasę `Error`, co nie przeszkadza, bo plik nie tworzy nowych wyjątków.
 
@@ -85,14 +90,15 @@ Druga różnica dotyczy trybu produkcyjnego, czyli aplikacji zbudowanej przez `n
 Każdy tytuł na liście prowadzi pod adres `/articles/1`, `/articles/2` i kolejne. Stronę artykułu tworzy plik `app/articles/[id]/page.jsx`.
 
 ```jsx
-// app/articles/[id]/page.jsx
-// Komponent serwerowy: dane prosto z magazynu, bez żądania HTTP
+// app/articles/[id]/page.jsx: nowy plik
+// Komponent serwerowy czyta magazyn zwykłym wywołaniem funkcji: bez fetch,
+// bez adresu i bez JSON-u, bo to API nie ma tu innych odbiorców.
 import { notFound } from "next/navigation";
 import { getArticle } from "@/lib/store";
 
 export default async function ArticlePage({ params }) {
-  const { id } = await params;
-  const article = getArticle(id);
+  const { id } = await params; // w Next.js 16 params to Promise
+  const article = getArticle(id); // id z adresu jest napisem, np. "1"
   if (!article) notFound(); // widok „nie znaleziono”
 
   return (

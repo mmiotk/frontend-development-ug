@@ -1,28 +1,34 @@
-// app/api/articles/route.js
+// Route Handler: katalog app/api/articles daje adres /api/articles,
+// a każda wyeksportowana funkcja obsługuje metodę HTTP o tej samej nazwie.
 import { revalidatePath } from "next/cache";
 import { getArticles, addArticle } from "@/lib/store";
-import { articleSchema } from "@/lib/validate";
+import { articleSchema } from "@/lib/validate"; // ten sam schemat co w akcji
 
-// nazwa funkcji = nazwa metody HTTP
 export async function GET() {
-  await new Promise((r) => setTimeout(r, 1000)); // udajemy wolną bazę: odpowiedź po 1 s
+  // udajemy wolną bazę: odpowiedź po 1 s
+  await new Promise((r) => setTimeout(r, 1000));
   return Response.json(getArticles()); // JSON i domyślny status 200
 }
 
+// To wejście do magazynu omija formularz, więc samo sprawdza dane.
+// Za zły format i złe pola odpowiada klient: kod 400, nie 500.
 export async function POST(request) {
   let body;
   try {
-    body = await request.json();
+    body = await request.json(); // ucięty JSON rzuca tu SyntaxError
   } catch {
-    return Response.json({ error: "Invalid JSON" }, { status: 400 }); // ciało nie jest JSON-em
+    return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const result = articleSchema.safeParse(body);
   if (!result.success) {
-    // 400: przyczyna leży w wysłanych danych; kształt błędów jak w formularzu
-    return Response.json({ error: result.error.flatten().fieldErrors }, { status: 400 });
+    // kształt błędów jak w formularzu: { title: [...], body: [...] }
+    return Response.json(
+      { error: result.error.flatten().fieldErrors },
+      { status: 400 },
+    );
   }
   const article = addArticle(result.data);
-  revalidatePath("/"); // lista na / pokaże nowy artykuł od razu
+  revalidatePath("/"); // to wejście też zmienia listę na /
   return Response.json(article, { status: 201 }); // 201 Created
 }

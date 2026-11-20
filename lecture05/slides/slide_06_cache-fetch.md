@@ -136,37 +136,22 @@ Opcje opisane wyżej dotyczą tylko pierwszej pozycji. Biblioteki, które pobier
 
 ## Pamięć a budowanie aplikacji
 
-Przy `force-cache` albo `revalidate: 30` strona `/` staje się statyczna, więc `next build` pobiera dane w czasie budowania. Serwer aplikacji wtedy jeszcze nie działa, więc build przerywa się komunikatem „Error occurred prerendering page "/"” z przyczyną `TypeError: fetch failed` i `connect ECONNREFUSED` dla adresu `127.0.0.1` z portem aplikacji. <u>Strony, która pyta własne API, nie da się prerenderować bez działającego serwera.</u> Pamięć `fetch` nie wymaga jednak strony statycznej. Wpis z `revalidate` działa tak samo na stronie renderowanej przy każdym żądaniu, bo dotyczy odpowiedzi, a nie całej strony. Demo łączy więc pamięć czasową z wywołaniem `await connection()` z `next/server`, które przenosi render na chwilę żądania. Tak wygląda plik `app/page.jsx` po zmianie `no-store` na `revalidate`:
+Przy `force-cache` albo `revalidate: 30` strona `/` staje się statyczna, więc `next build` pobiera dane w czasie budowania. Serwer aplikacji wtedy jeszcze nie działa, więc build przerywa się komunikatem „Error occurred prerendering page "/"” z przyczyną `TypeError: fetch failed` i `connect ECONNREFUSED` dla adresu `127.0.0.1` z portem aplikacji. <u>Strony, która pyta własne API, nie da się prerenderować bez działającego serwera.</u> Pamięć `fetch` nie wymaga jednak strony statycznej. Wpis z `revalidate` działa tak samo na stronie renderowanej przy każdym żądaniu, bo dotyczy odpowiedzi, a nie całej strony. Demo łączy więc pamięć czasową z wywołaniem `await connection()` z `next/server`, które przenosi render na chwilę żądania. Zmiana `no-store` na `revalidate` w pliku `app/page.jsx` to nowy import i początek komponentu:
 
 ```jsx
-// app/page.jsx
-// Komponent serwerowy: bez "use client" wykonuje się tylko na serwerze
-import Link from "next/link";
+// app/page.jsx: dopisać po wierszu „import Link from "next/link";”
+// connection: render tej strony zawsze przy żądaniu, nigdy w next build
 import { connection } from "next/server";
+```
 
-const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
-
+```jsx
+// app/page.jsx: zastąpić wiersze od „async function HomePage” do „cache: "no-store"”
+// Strona renderuje się przy każdym żądaniu, ale lista przez 60 s
+// pochodzi z pamięci fetch, więc kolejne wejścia nie pytają API.
 export default async function HomePage() {
-  await connection(); // render przy żądaniu, nigdy w next build
+  await connection(); // bez tego next build pytałby API przy budowaniu
   const res = await fetch(`${BASE_URL}/api/articles`, {
     next: { revalidate: 60 }, // odpowiedź API zapamiętana na 60 s
-  });
-  if (!res.ok) throw new Error(`Failed to fetch articles: ${res.status}`);
-  const articles = await res.json();
-
-  return (
-    <main>
-      <h1>Articles ({articles.length})</h1>
-      <ul>
-        {articles.map((a) => (
-          <li key={a.id}>
-            <Link href={`/articles/${a.id}`}>{a.title}</Link>
-          </li>
-        ))}
-      </ul>
-    </main>
-  );
-}
 ```
 
 Build oznacza teraz `/` symbolem `ƒ` i nie potrzebuje działającego API. Każde wejście renderuje stronę od nowa, ale lista przez minutę pochodzi z pamięci `fetch`. O tym, kiedy renderuje się strona, decyduje `connection()`, a o tym, jak długo żyje odpowiedź API, opcja `revalidate`. W pomiarze pierwsze wejście pokazało „Loading...”, a drugie od razu gotową listę, z wpisem `GET / 200 in 41ms` w terminalu i bez `GET /api/articles`. Po `POST` przez `curl` API zwróciło o jedną pozycję więcej, a `/` dalej pokazywało liczbę z pamięci.

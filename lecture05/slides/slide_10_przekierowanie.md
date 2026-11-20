@@ -2,34 +2,26 @@
 
 ## Po zapisie formularz stoi w miejscu
 
-Akcja `createArticle` po udanym zapisie zwraca `{ success: true }`, a formularz pokazuje „Article saved.” i zostaje na `/new` z pustymi polami. Efekt zapisu użytkownik musi sam sprawdzić na liście. Częstszy wzorzec w aplikacjach to przeniesienie go na stronę, na której efekt widać. W `lib/actions.js` dochodzi import `redirect`, a `return { success: true }` zastępuje wywołanie `redirect("/")`. Oto plik w wersji końcowej:
+Akcja `createArticle` po udanym zapisie zwraca `{ success: true }`, a formularz pokazuje „Article saved.” i zostaje na `/new` z pustymi polami. Efekt zapisu użytkownik musi sam sprawdzić na liście. Częstszy wzorzec w aplikacjach to przeniesienie go na stronę, na której efekt widać. W `lib/actions.js` dochodzi import `redirect`, a `return { success: true }` zastępuje wywołanie `redirect("/")`. Zmiana obejmuje dwa miejsca w pliku:
 
 ```js
-// lib/actions.js
-"use server"; // każdy eksport tego pliku wykonuje się na serwerze
+// lib/actions.js: dopisać po wierszu „import { revalidatePath }”
+import { redirect } from "next/navigation"; // ten sam moduł co notFound
+```
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { addArticle } from "./store";
-import { articleSchema } from "./validate";
-
-export async function createArticle(prevState, formData) {
-  // walidacja na serwerze: danym z przeglądarki się nie ufa
-  const result = articleSchema.safeParse({
-    title: formData.get("title"),
-    body: formData.get("body"),
-  });
-  if (!result.success) return { error: result.error.flatten().fieldErrors };
-
-  addArticle(result.data);
-  revalidatePath("/"); // lista na / pokaże nowy artykuł od razu
+```js
+// lib/actions.js: zastąpić wiersz „return { success: true }”
+  // tylko po sukcesie; błędy walidacji wyżej wracają jako wartość
   redirect("/"); // rzuca wyjątek sterujący: kod niżej się nie wykona
-}
 ```
 
 `redirect` pochodzi z modułu `next/navigation`, tego samego co `notFound`. Po udanym zapisie użytkownik trafia na listę, a nowy artykuł jest na niej od razu dzięki wcześniejszemu `revalidatePath`. Gałąź z błędem walidacji nadal zwraca `{ error }`. Za krótki tytuł zostawia więc użytkownika na `/new` z komunikatem „Title: at least 3 characters” pod polem, a przekierowanie dotyczy tylko sukcesu.
 
 Ta sama zmiana usuwa komunikat. Linia `{state?.success && <p>Article saved.</p>}` w `app/new/page.jsx` nie ma już czego pokazywać: akcja po sukcesie nie zwraca żadnej wartości, więc `state.success` nigdy nie będzie prawdą. Formularz w wersji końcowej zaczyna się od `<h1>New article</h1>` i od razu przechodzi do `<form action={action}>`.
+
+```jsx
+// app/new/page.jsx: usunąć wiersz „{state?.success &&”
+```
 
 Schwarzmüller w *React Key Concepts* opisuje ten układ jako typowy.
 

@@ -1,6 +1,6 @@
-// lib/store.js
-// Dane leżą na globalThis, bo moduł ładuje się w kilku paczkach serwera,
-// a wszystkie mają widzieć jedną tablicę.
+// Obiekt z artykułami stoi na globalThis, bo moduł ładuje się w kilku
+// paczkach serwera, a wszystkie mają widzieć jedną tablicę. ??= tworzy go
+// tylko raz, więc nowe dane startowe wymagają restartu serwera.
 const store = (globalThis.articleStore ??= {
   nextId: 3, // numery 1 i 2 są zajęte przez artykuły startowe
   articles: [
@@ -9,8 +9,11 @@ const store = (globalThis.articleStore ??= {
   ],
 });
 
+// Trzy funkcje to cały kontakt reszty aplikacji z danymi: po przejściu
+// na bazę zmienia się ich wnętrze, a nazwy i argumenty zostają.
 export function getArticles() {
-  return [...store.articles]; // kopia tablicy: dopisanie do niej nie zmieni magazynu
+  // płytka kopia: nowa tablica, ale te same obiekty artykułów
+  return [...store.articles];
 }
 
 export function getArticle(id) {
@@ -19,7 +22,9 @@ export function getArticle(id) {
 }
 
 export function addArticle({ title, body }) {
-  const article = { id: store.nextId++, title, body }; // numer i od razu zwiększenie licznika
+  // odczyt i zwiększenie licznika w jednym ciągu, bez await pomiędzy,
+  // więc dwa równoległe zapisy nie dostaną tego samego numeru
+  const article = { id: store.nextId++, title, body };
   store.articles.push(article);
   return article;
 }

@@ -9,10 +9,13 @@ Formularz na `/new` działa w przeglądarce, a tablica artykułów z `lib/store.
 Zanim powstanie formularz, powstaje opis poprawnych danych. Schemat w bibliotece Zod działa tak samo jak przy formularzach z akcjami w przeglądarce, w tej samej przypiętej wersji 3.25.76. Tak wygląda plik `lib/validate.js`.
 
 ```js
-// lib/validate.js
+// lib/validate.js: nowy plik
+// Opis poprawnego artykułu w osobnym pliku: korzysta z niego każde wejście,
+// które zapisuje artykuł. Plik nie importuje niczego z serwera.
 import { z } from "zod";
 
 export const articleSchema = z.object({
+  // drugi argument min() to komunikat, który zobaczy użytkownik
   title: z.string().min(3, "Title: at least 3 characters"),
   body: z.string().min(10, "Body: at least 10 characters"),
 });
@@ -99,18 +102,22 @@ Na liście nieobsługiwanych stoją też zwykłe funkcje, klasy, instancje klas 
 Zapis artykułu wykonuje funkcja w pliku `lib/actions.js`.
 
 ```js
-// lib/actions.js
+// lib/actions.js: nowy plik
+// Server Action: build zostawia ciało funkcji i jej importy na serwerze,
+// a przeglądarka dostaje tylko identyfikator, który wysyła w żądaniu POST.
 "use server"; // każdy eksport tego pliku wykonuje się na serwerze
 
 import { addArticle } from "./store";
 import { articleSchema } from "./validate";
 
+// prevState: poprzedni wynik akcji, formData: pola wysłanego formularza
 export async function createArticle(prevState, formData) {
   // walidacja na serwerze: danym z przeglądarki się nie ufa
   const result = articleSchema.safeParse({
-    title: formData.get("title"),
+    title: formData.get("title"), // pole wybrane po atrybucie name
     body: formData.get("body"),
   });
+  // błędy pól wracają jako wartość, nie wyjątek: trafią pod pola
   if (!result.success) return { error: result.error.flatten().fieldErrors };
 
   addArticle(result.data);
@@ -153,13 +160,15 @@ Rysunek 5.7 dodaje do kodu format przesyłki: dane jadą na serwer jako `FormDat
 Akcję wywołuje strona z `useActionState`. Hook działa tak samo jak przy akcji wykonywanej w przeglądarce, a jego trzeci element, `pending`, jest `true`, dopóki akcja trwa na serwerze, i wyłącza przycisk. Nowe w `app/new/page.jsx` są import akcji i podłączenie jej do formularza.
 
 ```jsx
-// app/new/page.jsx
+// app/new/page.jsx: nowy plik
+// Komponent kliencki, bo używa hooka. Import akcji daje odnośnik do funkcji
+// serwerowej: formularz wywołuje ją bez adresu i bez JSON-u.
 "use client";
 import { useActionState } from "react";
 import { createArticle } from "@/lib/actions";
 
 export default function NewArticlePage() {
-  // pending: true, dopóki akcja trwa na serwerze
+  // state: wynik akcji, action: do <form>, pending: true, gdy akcja trwa
   const [state, action, pending] = useActionState(createArticle, null);
 
   return (
@@ -167,8 +176,10 @@ export default function NewArticlePage() {
       <h1>New article</h1>
       {state?.success && <p>Article saved.</p>}
       <form action={action}>
+        {/* name pola to klucz, który akcja czyta przez formData.get() */}
         <p>Title: <input name="title" /> {state?.error?.title}</p>
         <p>Body: <textarea name="body" /> {state?.error?.body}</p>
+        {/* wyłączony, dopóki akcja trwa: nikt nie kliknie dwa razy */}
         <button disabled={pending}>Add article</button>
       </form>
     </main>

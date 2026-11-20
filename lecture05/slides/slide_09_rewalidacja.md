@@ -4,17 +4,29 @@
 
 Formularz `/new` zapisuje już tylko poprawne dane. Zapis to jednak połowa drogi, bo lista na stronie głównej musi się o nim dowiedzieć. Pierwsza wersja akcji `createArticle` kończy się na `return { success: true }`. Po zapisie formularz pokazuje „Article saved.”, ale przejście na listę przez link „Articles” albo F5 nadal daje „Articles (2)”, choć magazyn ma już trzy artykuły. Artykuł jest dostępny pod `/articles/3`, tylko lista o nim nie wie.
 
-Przyczyną jest pamięć `fetch`. Lista na stronie głównej trzyma odpowiedź `/api/articles` przez 60 sekund (`next: { revalidate: 60 }`), a wywołanie `await connection()` sprawia tylko, że sama strona renderuje się przy każdym żądaniu. Żeby pamięć była wypełniona, zanim pojawi się zapis, w demo `/` odświeża się F5, po około 3 sekundach drugi raz F5, i dopiero wtedy wysyła się formularz. Poprawka to jedna linia przed `return`:
+Przyczyną jest pamięć `fetch`. Lista na stronie głównej trzyma odpowiedź `/api/articles` przez 60 sekund (`next: { revalidate: 60 }`), a wywołanie `await connection()` sprawia tylko, że sama strona renderuje się przy każdym żądaniu. Żeby pamięć była wypełniona, zanim pojawi się zapis, w demo `/` odświeża się F5, po około 3 sekundach drugi raz F5, i dopiero wtedy wysyła się formularz. Poprawka to import i jedna linia przed `return`, w akcji i w Route Handlerze:
 
 ```js
-// lib/actions.js (dochodzi import i jedna linia)
-import { revalidatePath } from "next/cache";
-import { addArticle } from "./store";
-// ...
-  addArticle(result.data);
-  revalidatePath("/"); // lista na / pokaże nowy artykuł od razu
-  return { success: true };
+// lib/actions.js: dopisać przed wierszem „import { addArticle }”
+import { revalidatePath } from "next/cache"; // unieważnia pamięć ścieżki
 ```
+
+```js
+// lib/actions.js: dopisać przed wierszem „return { success: true }”
+  revalidatePath("/"); // lista na / pokaże nowy artykuł od razu
+```
+
+```js
+// app/api/articles/route.js: dopisać przed wierszem „import { getArticles”
+import { revalidatePath } from "next/cache";
+```
+
+```js
+// app/api/articles/route.js: dopisać przed wierszem „json(article”
+  revalidatePath("/"); // to wejście też zmienia listę na /
+```
+
+W `route.js` ta sama linia stoi przed odpowiedzią 201, bo zapis przez API też zmienia listę pod `/`.
 
 Z linią `revalidatePath("/")` ten sam zapis kończy się napisem „Articles (3)” na liście, z nowym tytułem na końcu. Bez niej nowa liczba pojawia się dopiero po wygaśnięciu wpisu, według wzorca *stale-while-revalidate*. Pomiar po zapisie przez `POST /api/articles` w wersji bez unieważnienia: 62 sekundy po pierwszym pobraniu pierwsze wejście na `/` pokazało jeszcze „Articles (2)”. Drugie tuż po nim również, bo pobranie w tle trwa 1 s, tyle ile odpowiada API. Po kolejnych trzech sekundach lista miała „Articles (3)”.
 

@@ -22,16 +22,18 @@ Pierwsza linia kończy się natychmiast. Zmienna `p` trzyma Promise tablicy, wi�
 Trasa składa się z dwóch plików. Najpierw powstaje komponent kliencki, bo strona go importuje. Plik `app/suspend/ArticleList.jsx`:
 
 ```jsx
-// app/suspend/ArticleList.jsx
+// app/suspend/ArticleList.jsx: nowy plik
+// Komponent kliencki: dostaje Promise z serwera i czyta go przez use.
+// Kod jak dla gotowej tablicy, czekanie obsługuje <Suspense> wyżej.
 "use client";
 import { use } from "react";
 
 export default function ArticleList({ promise }) {
-  const articles = use(promise); // czeka, aż Promise z serwera się rozstrzygnie
+  const articles = use(promise); // zawiesza komponent do nadejścia danych
   return (
     <ul>
       {articles.map((a) => (
-        <li key={a.id}>{a.title}</li>
+        <li key={a.id}>{a.title}</li> // same tytuły, choć dane mają body
       ))}
     </ul>
   );
@@ -45,19 +47,23 @@ Komponent nie wie, skąd pochodzi Promise ani jak długo będzie czekał. Pisze 
 Promise dostarcza strona. Plik `app/suspend/page.jsx`:
 
 ```jsx
-// app/suspend/page.jsx
-// Komponent serwerowy: tworzy Promise, ale na niego nie czeka
+// app/suspend/page.jsx: nowy plik
+// Komponent serwerowy bez async: zaczyna pobieranie i nie czeka na wynik.
+// Nagłówek stoi poza <Suspense>: trafia do pierwszego kawałka odpowiedzi.
 import { Suspense } from "react";
 import ArticleList from "./ArticleList";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 
 export default function SuspendPage() {
-  const promise = fetch(`${BASE_URL}/api/articles`, { cache: "no-store" }).then((r) => r.json());
+  // bez await: żądanie już trwa, a w zmiennej jest Promise
+  const promise = fetch(`${BASE_URL}/api/articles`, { cache: "no-store" })
+    .then((r) => r.json()); // do przeglądarki idą dane, nie obiekt Response
 
   return (
     <main>
       <h1>Articles with use()</h1>
+      {/* treść zastępcza tylko w miejscu listy */}
       <Suspense fallback={<p>Waiting for data...</p>}>
         <ArticleList promise={promise} />
       </Suspense>

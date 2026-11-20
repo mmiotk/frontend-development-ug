@@ -20,11 +20,37 @@ Pod wszystkimi wierszami leży jeszcze jeden kłopot: strony, Server Actions i R
 
 ## Projekt i szablon
 
-Projekt powstaje kreatorem `create-next-app` w wersji 16.4.0: JavaScript, App Router, alias importu `@/*`, bez Tailwinda, ESLinta, katalogu `src/` i dwóch opcji, których wykład nie używa. Kreator wpisuje do `package.json` dokładne wersje: `next` 16.4.0 oraz `react` i `react-dom` 19.3.0. Biblioteka Zod (3.25.76) też ma w projekcie dokładny numer. SWR z końcowych tematów wykładu jest przykładem spoza demo, więc w `package.json` go nie ma.
+Projekt powstaje kreatorem `create-next-app` w wersji 16.4.0: JavaScript, App Router, alias importu `@/*`, bez Tailwinda, ESLinta, katalogu `src/` i dwóch opcji, których wykład nie używa. Kreator wpisuje do `package.json` dokładne wersje: `next` 16.4.0 oraz `react` i `react-dom` 19.3.0. Biblioteki Zod (3.25.76) i SWR (2.5.1) też mają w projekcie dokładne numery. SWR jest potrzebny dopiero na końcu, ale instaluje się go razem z resztą, żeby później nie czekać na `npm install`.
 
 **Bundler** to narzędzie, które składa moduły aplikacji w pliki wykonywane na serwerze i w przeglądarce. Wynikiem jego pracy są **paczki** (*bundles*): pliki JavaScriptu, w których zebrany jest kod wszystkich modułów potrzebnych w danym miejscu aplikacji. Tabela zmian w dokumentacji Turbopacka przy wersji 16.0.0 zapisuje: „Turbopack staje się domyślnym bundlerem Next.js” (*„Turbopack becomes the default bundler for Next.js”*).
 
 Szablonowa strona startowa ma logo, linki i style, więc zostaje z niej `<main>` z nagłówkiem „Articles”, a plik `globals.css` znika. Szablonowy layout pobiera fonty Geist z modułu `next/font/google`, który przy pierwszym uruchomieniu łączy się z serwerami Google, a bez sieci kończy się błędem. Nowy layout zwraca tylko `<html lang="en">` i `<body>` z `children`. Komponenty bez dyrektywy `"use client"` są komponentami serwerowymi, więc obie strony aplikacji zaczynają od serwera.
+
+```jsx
+// app/layout.jsx: nowy plik
+// Layout główny bez fontów z next/font/google i bez globals.css z szablonu:
+// bez nich projekt startuje także bez sieci.
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      {/* children to strona, którą Next.js wstawia w layout */}
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+```jsx
+// app/page.jsx: nowy plik
+// Strona startowa bez logo, linków i stylów z szablonu: sam nagłówek.
+export default function HomePage() {
+  return (
+    <main>
+      <h1>Articles</h1>
+    </main>
+  );
+}
+```
 
 ## Magazyn jako jedyne wejście do danych
 
@@ -57,9 +83,10 @@ s1 === s2; // → true, a s2.items.length to 1
 Górna część `lib/store.js` używa dokładnie tego zapisu. Magazyn jest gotowy przed wykładem, a prowadzący go tylko objaśnia.
 
 ```js
-// lib/store.js (górna część pliku)
-// Dane leżą na globalThis, bo moduł ładuje się w kilku paczkach serwera,
-// a wszystkie mają widzieć jedną tablicę.
+// lib/store.js: nowy plik
+// Obiekt z artykułami stoi na globalThis, bo moduł ładuje się w kilku
+// paczkach serwera, a wszystkie mają widzieć jedną tablicę. ??= tworzy go
+// tylko raz, więc nowe dane startowe wymagają restartu serwera.
 const store = (globalThis.articleStore ??= {
   nextId: 3, // numery 1 i 2 są zajęte przez artykuły startowe
   articles: [
@@ -74,9 +101,12 @@ const store = (globalThis.articleStore ??= {
 Pod obiektem `store` stoją funkcje, przez które reszta aplikacji czyta i zapisuje artykuły:
 
 ```js
-// lib/store.js (dolna część pliku, pod obiektem store)
+// lib/store.js: dopisać na końcu pliku
+// Trzy funkcje to cały kontakt reszty aplikacji z danymi: po przejściu
+// na bazę zmienia się ich wnętrze, a nazwy i argumenty zostają.
 export function getArticles() {
-  return [...store.articles]; // kopia tablicy: dopisanie do niej nie zmieni magazynu
+  // płytka kopia: nowa tablica, ale te same obiekty artykułów
+  return [...store.articles];
 }
 
 export function getArticle(id) {
@@ -85,7 +115,9 @@ export function getArticle(id) {
 }
 
 export function addArticle({ title, body }) {
-  const article = { id: store.nextId++, title, body }; // numer i od razu zwiększenie licznika
+  // odczyt i zwiększenie licznika w jednym ciągu, bez await pomiędzy,
+  // więc dwa równoległe zapisy nie dostaną tego samego numeru
+  const article = { id: store.nextId++, title, body };
   store.articles.push(article);
   return article;
 }

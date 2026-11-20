@@ -36,18 +36,25 @@ Pierwszy render pokazuje „…”, bo odpowiedzi jeszcze nie ma. Po nadejściu 
 Drugi model: dane pobiera kod w przeglądarce, który sam pilnuje ich świeżości. W pierwszej wersji strona z listą wygląda tak:
 
 ```jsx
-// app/swr-demo/page.jsx, pierwsza wersja
-"use client"; // komponent kliencki: korzysta z hooków SWR
+// app/swr-demo/page.jsx: nowy plik
+// Komponent kliencki: listę pobiera przeglądarka po załadowaniu skryptu,
+// więc HTML z serwera ma tylko napis ładowania, bez tytułów artykułów.
+"use client"; // hooki SWR działają tylko w komponencie klienckim
 
 import useSWR from "swr";
 
+// fetcher dostaje klucz (tu adres) i zwraca Promise z danymi;
+// nie sprawdza r.ok, więc odpowiedź 404 z JSON-em trafi do data
 const fetcher = (url) => fetch(url).then((r) => r.json());
 
 export default function SwrDemoPage() {
-  const { data: articles, error, isLoading } = useSWR("/api/articles", fetcher);
+  const { data: articles, error, isLoading } = useSWR(
+    "/api/articles", // klucz: nazwa wpisu w pamięci i argument fetchera
+    fetcher,
+  );
 
-  if (isLoading) return <p>Loading (SWR)...</p>;
-  if (error) return <p>Error: {error.message}</p>;
+  if (isLoading) return <p>Loading (SWR)...</p>; // brak danych, trwa pobranie
+  if (error) return <p>Error: {error.message}</p>; // fetcher rzucił wyjątek
 
   return (
     <div>
@@ -62,15 +69,16 @@ export default function SwrDemoPage() {
 }
 ```
 
-Funkcja `fetcher` stoi poza komponentem, więc nie powstaje na nowo przy każdym renderze. Nie sprawdza `r.ok`, więc odpowiedź 404 z treścią JSON trafiłaby do `data`, a nie do `error`. Dwa wczesne `return` obsługują ładowanie i błąd, a lista renderuje się dopiero przy gotowej tablicy. Strona najpierw pokazuje „Loading (SWR)...”, a potem listę z tytułami „Server Components” i „Server Actions”. Przeglądarka wysyła przy tym jedno żądanie `GET /api/articles`.
+Funkcja `fetcher` stoi poza komponentem, więc nie powstaje na nowo przy każdym renderze. Dwa wczesne `return` obsługują ładowanie i błąd, a lista renderuje się dopiero przy gotowej tablicy. Strona najpierw pokazuje „Loading (SWR)...”, a potem listę z tytułami „Server Components” i „Server Actions”. Przeglądarka wysyła przy tym jedno żądanie `GET /api/articles`.
 
-Kod działa w przeglądarce, więc wystarcza ścieżka `/api/articles` bez hosta. Źródłem danych jest Route Handler, jedyne miejsce, z którego przeglądarka odczytuje artykuły. Zapis z formularza idzie inną drogą, przez akcję `createArticle`. Druga wersja dodaje odświeżanie co pięć sekund. Zmienia się tylko wywołanie hooka:
+Kod działa w przeglądarce, więc wystarcza ścieżka `/api/articles` bez hosta. Źródłem danych jest Route Handler, jedyne miejsce, z którego przeglądarka odczytuje artykuły. Zapis z formularza idzie inną drogą, przez akcję `createArticle`. Druga wersja dodaje odświeżanie co pięć sekund. Zmienia się tylko wywołanie hooka: po `fetcher` dochodzi obiekt opcji.
 
 ```jsx
-// app/swr-demo/page.jsx: wywołanie useSWR z odpytywaniem
-const { data: articles, error, isLoading } = useSWR("/api/articles", fetcher, {
-  refreshInterval: 5000, // ponowne pobranie co 5 sekund
-});
+// app/swr-demo/page.jsx: zastąpić wiersz „fetcher,”
+    fetcher,
+    // odpytywanie: nowe pobranie 5 s po końcu poprzedniego, także wtedy,
+    // gdy nic się nie zmieniło; w ukrytej karcie SWR nie odpytuje
+    { refreshInterval: 5000 }, // ponowne pobranie co 5 sekund
 ```
 
 Przeglądarka wysyła teraz żądanie `/api/articles` co pięć sekund od zakończenia poprzedniego. Ponieważ API odpowiada po sekundzie, odstęp między żądaniami wynosi w pomiarze 6 sekund. Artykuł dodany w innym oknie pojawił się na liście po 4,1 s, bez odświeżania strony, a najpóźniej pojawi się po 6 s.
@@ -108,9 +116,8 @@ Po własnym zapisie użytkownik nie powinien czekać na kolejny cykl. Wariant sp
 
 ```jsx
 // Przykład spoza demo: app/swr-demo/page.jsx (nowe linie)
-const { data: articles, error, isLoading, mutate } = useSWR("/api/articles", fetcher, {
-  refreshInterval: 5000,
-});
+// w wyniku hooka dochodzi mutate; argumenty useSWR bez zmian
+const { data: articles, error, isLoading, mutate } = useSWR(
 
 async function handleAddTest() {
   await fetch("/api/articles", {
@@ -130,7 +137,7 @@ async function handleAddTest() {
 
 Funkcja **`mutate`** z wyniku hooka to według dokumentacji **związany `mutate`** (*bound mutate*), który zna klucz z wywołania `useSWR`. Wywołany bez danych oznacza wpis jako przeterminowany i pobiera go ponownie. Po kliknięciu przeglądarka wysyła `POST`, a zaraz po nim `GET` do `/api/articles`, a po około sekundzie na końcu listy staje trzecia pozycja, „Test SWR 17…”.
 
-`await fetch(...)` czeka na potwierdzenie zapisu. Bez `await` żądanie listy mogłoby dotrzeć przed zapisem i przynieść jeszcze dwa artykuły. Zapis idzie przez `POST /api/articles`, czyli przez Route Handler, który niczego nie waliduje. Przycisk wysyła mimo to treść zgodną ze schematem, dłuższą niż dziesięć znaków.
+`await fetch(...)` czeka na potwierdzenie zapisu. Bez `await` żądanie listy mogłoby dotrzeć przed zapisem i przynieść jeszcze dwa artykuły. Zapis idzie przez `POST /api/articles`, czyli przez Route Handler, który sprawdza ciało tym samym schematem co formularz. Przycisk wysyła więc treść zgodną ze schematem, dłuższą niż dziesięć znaków.
 
 ## Klucz jako nazwa wpisu i argument `fetcher`
 
@@ -157,7 +164,7 @@ Pamięć SWR jest osobna od pamięci Next.js na serwerze, więc `revalidatePath`
 
 | Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
 |---|---|---|
-| Lista sama pokazuje cudze zapisy: `refreshInterval: 5000` i artykuł z innego okna na liście po 4,1 s | Żądanie co 5 s także bez zmian (11 `GET /api/articles` w pierwszej minucie); karta w tle nie odpytuje (0 żądań w 15 s) | Zmiany rzadkie albo własne: `mutate()` po zapisie (jedno żądanie); dane znane w chwili renderu: komponent serwerowy |
+| Lista sama pokazuje cudze zapisy: `refreshInterval: 5000` i artykuł z innego okna na liście po 4,1 s | Żądanie co 5 s także bez zmian (10–11 `GET /api/articles` w pierwszej minucie); karta w tle nie odpytuje (0 żądań w 15 s) | Zmiany rzadkie albo własne: `mutate()` po zapisie (jedno żądanie); dane znane w chwili renderu: komponent serwerowy |
 | Jeden hook bez dostawcy; komponenty z tym samym kluczem czytają wspólny wpis | Dodatkowa biblioteka w paczce przeglądarki; `fetcher` sam sprawdza `r.ok`; pamięć SWR nie widzi `revalidatePath` | Dane, które mają stać w HTML-u od razu: komponent serwerowy |
 | `mutate()` po własnym zapisie odświeża wpis od razu: `POST` i `GET` w około sekundę, bez czekania na cykl | Pierwszy HTML bez listy: robot bez skryptu widzi tylko „Loading (SWR)...” | Treść dla wyszukiwarek: serwer; wartość startowa z serwera przez `fallbackData` (rozszerzenie) |
 

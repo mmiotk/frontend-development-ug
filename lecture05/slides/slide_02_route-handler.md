@@ -79,17 +79,20 @@ Po kodzie z grupy 5xx klient może spróbować ponownie, po kodzie z grupy 4xx p
 Plik leży w katalogu `app/api/articles/`, więc jego funkcje odpowiadają pod `/api/articles`:
 
 ```js
-// app/api/articles/route.js
+// app/api/articles/route.js: nowy plik
+// Route Handler: katalog app/api/articles daje adres /api/articles,
+// a każda wyeksportowana funkcja obsługuje metodę HTTP o tej samej nazwie.
 import { getArticles, addArticle } from "@/lib/store";
 
-// nazwa funkcji = nazwa metody HTTP
 export async function GET() {
-  await new Promise((r) => setTimeout(r, 1000)); // udajemy wolną bazę: odpowiedź po 1 s
+  // udajemy wolną bazę: odpowiedź po 1 s
+  await new Promise((r) => setTimeout(r, 1000));
   return Response.json(getArticles()); // JSON i domyślny status 200
 }
 
 export async function POST(request) {
-  const article = addArticle(await request.json()); // ciało żądania jako obiekt
+  // ciało żądania jako obiekt; ucięty JSON rzuca tu wyjątek
+  const article = addArticle(await request.json());
   return Response.json(article, { status: 201 }); // 201 Created
 }
 ```

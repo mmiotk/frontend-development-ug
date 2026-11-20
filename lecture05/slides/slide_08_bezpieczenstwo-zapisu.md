@@ -40,40 +40,39 @@ Schemat w tej aplikacji ustala tylko minimalne długości, a **górnej granicy n
 
 ## Naprawa w miejscu wejścia
 
-Najprostsza naprawa używa tego samego schematu w Route Handlerze. Schemat leży w `lib/validate.js`, więc `app/api/articles/route.js` może go zaimportować. Poniższa wersja `POST` należy do projektu: sprawdza dane tym samym schematem i odświeża listę pod `/`.
+Najprostsza naprawa używa tego samego schematu w Route Handlerze. Schemat leży w `lib/validate.js`, więc `app/api/articles/route.js` może go zaimportować. Najpierw dochodzi import schematu, a potem nowa wersja `POST`, która odrzuca złe dane kodem 400.
 
 ```js
-// app/api/articles/route.js
-import { revalidatePath } from "next/cache";
-import { getArticles, addArticle } from "@/lib/store";
-import { articleSchema } from "@/lib/validate";
+// app/api/articles/route.js: dopisać po wierszu „import { getArticles”
+import { articleSchema } from "@/lib/validate"; // ten sam schemat co w akcji
+```
 
-// nazwa funkcji = nazwa metody HTTP
-export async function GET() {
-  await new Promise((r) => setTimeout(r, 1000)); // udajemy wolną bazę: odpowiedź po 1 s
-  return Response.json(getArticles()); // JSON i domyślny status 200
-}
-
+```js
+// app/api/articles/route.js: zastąpić blok „export async function POST”
+// To wejście do magazynu omija formularz, więc samo sprawdza dane.
+// Za zły format i złe pola odpowiada klient: kod 400, nie 500.
 export async function POST(request) {
   let body;
   try {
-    body = await request.json();
+    body = await request.json(); // ucięty JSON rzuca tu SyntaxError
   } catch {
-    return Response.json({ error: "Invalid JSON" }, { status: 400 }); // ciało nie jest JSON-em
+    return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const result = articleSchema.safeParse(body);
   if (!result.success) {
-    // 400: przyczyna leży w wysłanych danych; kształt błędów jak w formularzu
-    return Response.json({ error: result.error.flatten().fieldErrors }, { status: 400 });
+    // kształt błędów jak w formularzu: { title: [...], body: [...] }
+    return Response.json(
+      { error: result.error.flatten().fieldErrors },
+      { status: 400 },
+    );
   }
   const article = addArticle(result.data);
-  revalidatePath("/"); // lista na / pokaże nowy artykuł od razu
   return Response.json(article, { status: 201 }); // 201 Created
 }
 ```
 
-Ciało, którego nie da się odczytać jako JSON, dostaje teraz odpowiedź 400 zamiast 500, a treść `{"title":5}` odpowiedź 400 z dwoma komunikatami zamiast miejsca w magazynie. Po poprawnym zapisie `revalidatePath("/")` unieważnia wpis listy, więc artykuł pojawia się pod `/` przy następnym wejściu, a nie po wygaśnięciu `revalidate: 60`.
+Ciało, którego nie da się odczytać jako JSON, dostaje teraz odpowiedź 400 zamiast 500, a treść `{"title":5}` odpowiedź 400 z dwoma komunikatami zamiast miejsca w magazynie.
 
 ```text
 {"error":{"title":["Expected string, received number"],"body":["Required"]}}

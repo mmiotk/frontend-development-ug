@@ -9,15 +9,19 @@ Lista artykułów ma być w HTML-u, który serwer wysyła przeglądarce. Kompone
 Layout główny dostaje pasek nawigacji z dwoma linkami. Layout obejmuje każdą stronę i zostaje na ekranie przy przejściach, więc menu jest zawsze widoczne. W pliku `app/layout.jsx` dochodzą import `Link`, obiekt `metadata` z tytułem karty i blok `<nav>` przed `children`.
 
 ```jsx
-// app/layout.jsx
+// app/layout.jsx: zastąpić w całości
+// Layout obejmuje każdą stronę i zostaje na ekranie przy przejściach,
+// więc pasek nawigacji widać także wtedy, gdy strona czeka albo padnie.
 import Link from "next/link";
 
+// tytuł karty przeglądarki dla wszystkich stron
 export const metadata = { title: "Articles" };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
+        {/* Link zmienia stronę bez przeładowania dokumentu */}
         <nav>
           <Link href="/">Articles</Link> | <Link href="/new">Add</Link>
         </nav>
@@ -35,32 +39,43 @@ export default function RootLayout({ children }) {
 Plik `app/page.jsx` pobiera listę artykułów z własnego API aplikacji i wyświetla ją:
 
 ```jsx
-// app/page.jsx
-// Komponent serwerowy: bez "use client" wykonuje się tylko na serwerze
+// app/page.jsx: zastąpić w całości
+// Komponent serwerowy bez "use client": działa tylko na serwerze, więc może
+// być funkcją async i przez await czekać na dane, zanim wyśle HTML.
 import Link from "next/link";
 
+// na serwerze nie ma bieżącej strony, więc fetch potrzebuje pełnego adresu
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 
 export default async function HomePage() {
   const res = await fetch(`${BASE_URL}/api/articles`, {
     cache: "no-store", // za każdym razem nowe żądanie
   });
+  // kod 404 albo 500 nie odrzuca fetch, więc status sprawdza się ręcznie
   if (!res.ok) throw new Error(`Failed to fetch articles: ${res.status}`);
-  const articles = await res.json();
+  const articles = await res.json(); // tekst JSON z powrotem w tablicę
 
   return (
     <main>
       <h1>Articles ({articles.length})</h1>
+    </main>
+  );
+}
+```
+
+Lista tytułów z linkami dochodzi pod nagłówkiem:
+
+```jsx
+// app/page.jsx: dopisać po wierszu „<h1>Articles ({articles.length})</h1>”
+      {/* każdy tytuł prowadzi do strony /articles/1, /articles/2 itd. */}
       <ul>
         {articles.map((a) => (
+          // key: stały numer artykułu, po którym React rozpoznaje element
           <li key={a.id}>
             <Link href={`/articles/${a.id}`}>{a.title}</Link>
           </li>
         ))}
       </ul>
-    </main>
-  );
-}
 ```
 
 Demo celowo pobiera listę przez własne API, żeby pokazać `fetch` w komponencie serwerowym. Komponent serwerowy mógłby też wywołać `getArticles()` bezpośrednio, bez żądania HTTP. W kodzie brakuje `useState`, `useEffect` i flagi `isLoading`. `HomePage` jest zadeklarowana jako `async function`, a pierwsze `await` wstrzymuje ją do nadejścia odpowiedzi. JSX powstaje dopiero z gotową tablicą, tak jak wynik zwykłej funkcji asynchronicznej w Node.js. Dokumentacja Next.js opisuje ten sposób tak:

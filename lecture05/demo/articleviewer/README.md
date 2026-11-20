@@ -67,7 +67,7 @@ Slajd 12 (TanStack Query) pokazuje kod spoza projektu: `@tanstack/react-query` n
 
 - Dane: `lib/store.js`, magazyn w pamięci procesu na `globalThis`; startuje z dwoma artykułami, działa offline, zeruje się przy restarcie serwera.
 - `GET /api/articles` czeka 1 s (udawana wolna baza), dzięki czemu widać `loading.jsx`, `Suspense` i korzyść z pamięci `fetch`.
-- Strona `/` wywołuje `await connection()`, więc jest renderowana przy każdym żądaniu, a `next build` nie wymaga działającego serwera. Odpowiedź API żyje w pamięci `fetch` 60 s: artykuł dodany przez `POST /api/articles` albo formularzem `/new` pojawia się na `/` od razu, dzięki `revalidatePath("/")` w Route Handlerze i w akcji. Przed dopisaniem tej linii (kroki 4.3 i 5.4 w scenariuszu) `POST` zostawia starą liczbę do wygaśnięcia wpisu.
+- Strona `/` wywołuje `await connection()`, więc jest renderowana przy każdym żądaniu, a `next build` nie wymaga działającego serwera. Odpowiedź API żyje w pamięci `fetch` 60 s: artykuł dodany przez `POST /api/articles` albo formularzem `/new` pojawia się na `/` od razu, dzięki `revalidatePath("/")` w Route Handlerze i w akcji. Przed dopisaniem tej linii (kroki 4.3 i 6.1 w scenariuszu) `POST` zostawia starą liczbę do wygaśnięcia wpisu.
 - `POST /api/articles` sprawdza ciało schematem z `lib/validate.js`: zły JSON i dane niezgodne ze schematem dostają 400.
 - Wersje przypięte w `package.json`: Next.js 16.4.0 (`retry` w `app/error.jsx`), React 19.3.0, SWR 2.5.1, Zod 3.25.76; Node.js >= 20.9.
 - Next.js 16.4.0 przy pierwszym `next dev` w katalogu bez `.next` i co drugie `next build` wypisuje ostrzeżenie o podatności z poleceniem `next upgrade` i kończy działanie. Nie wykonywać; uruchomić to samo polecenie jeszcze raz.
