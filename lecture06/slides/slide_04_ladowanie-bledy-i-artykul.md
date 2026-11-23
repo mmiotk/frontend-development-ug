@@ -134,7 +134,7 @@ Bugl w *Modern Full-Stack React Projects* wymienia trzy podejścia do danych w k
 
 Route Handler nie jest przez to zbędny: służy odbiorcom spoza procesu serwera, którzy nie mogą zaimportować magazynu. Komponent serwerowy sięga do danych krótszą drogą.
 
-## Rysunek 5.4 — dwie drogi do magazynu
+## Rysunek 6.4 — dwie drogi do magazynu
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -147,7 +147,7 @@ flowchart LR
     AP --> B
 ```
 
-Na Rysunku 5.4 cała lewa część działa w jednym procesie serwera. Górna droga ma trzy strzałki i jedno żądanie sieciowe, które wychodzi z serwera i do niego wraca. Dolna droga ma jedną strzałkę. Przeglądarka po prawej w obu przypadkach dostaje gotowy HTML i nie widzi ani adresu `/api/articles`, ani pliku `store.js`. Żądanie z `HomePage` do API zostawia więc ślad wyłącznie w logu serwera.
+Na Rysunku 6.4 cała lewa część działa w jednym procesie serwera. Górna droga ma trzy strzałki i jedno żądanie sieciowe, które wychodzi z serwera i do niego wraca. Dolna droga ma jedną strzałkę. Przeglądarka po prawej w obu przypadkach dostaje gotowy HTML i nie widzi ani adresu `/api/articles`, ani pliku `store.js`. Żądanie z `HomePage` do API zostawia więc ślad wyłącznie w logu serwera.
 
 ## Strona renderowana przy każdym żądaniu
 

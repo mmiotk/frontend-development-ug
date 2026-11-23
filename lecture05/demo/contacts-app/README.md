@@ -1,8 +1,8 @@
-# Contacts App — projekt referencyjny L06
+# Contacts App — projekt referencyjny L05
 
 Demo live-coding: **lista kontaktów** z pomiarem renderów, memoizacją, testami komponentów, dostępnością i buildem produkcyjnym.
 
-Temat celowo inny niż lab 06 (Pokédex), by student przenosił pojęcia, a nie kopiował demo.
+Temat celowo inny niż lab 05 (Pokédex), by student przenosił pojęcia, a nie kopiował demo.
 
 ## Uruchomienie
 

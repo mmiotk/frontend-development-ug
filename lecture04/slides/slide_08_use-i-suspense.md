@@ -163,7 +163,7 @@ Mechanizm przenosi czekanie z komponentu do drzewa nad nim. Komponent opisuje, j
 
 | Zyskujemy | Płacimy | Kiedy nie warto / co zamiast |
 |---|---|---|
-| Komponent pisany jak dla gotowych danych: `RecommendedList` ma samo `map`, bez flag ładowania i błędu. | Promise musi być stabilny między próbami renderu, więc w sklepie leży w stałej modułu. | Dane z serwera Next.js: w komponencie serwerowym prościej napisać `await`, a ładowanie segmentu obsługuje `loading.jsx` (L03, W05). |
+| Komponent pisany jak dla gotowych danych: `RecommendedList` ma samo `map`, bez flag ładowania i błędu. | Promise musi być stabilny między próbami renderu, więc w sklepie leży w stałej modułu. | Dane z serwera Next.js: w komponencie serwerowym prościej napisać `await`, a ładowanie segmentu obsługuje `loading.jsx` (L03, W06). |
 | Ładowanie deklaruje się granicą, a reszta strony działa w czasie czekania: „Add to cart” da się kliknąć, gdy sekcja się ładuje. | Granica pokazuje treść zastępczą za cały fragment pod sobą, nie za pojedynczy komponent. | Dane pobierane w efekcie albo w `onClick`: granica ich nie widzi (Rysunek 4.8), więc czekanie trzeba obsłużyć własną flagą. |
 
 > 💡 **Zapamiętaj:** komponent czytający Promise przez `use` zawiesza się do jego rozstrzygnięcia, a najbliższa granica `<Suspense>` nad nim pokazuje w tym czasie treść zastępczą. Komponent nie wie, że czeka: o tym, kiedy Promise powstaje i co widać w czasie czekania, decydują komponenty nad nim.

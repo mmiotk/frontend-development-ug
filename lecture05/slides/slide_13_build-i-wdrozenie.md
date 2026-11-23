@@ -60,7 +60,7 @@ Zmienne bez prefiksu istnieją tylko na serwerze. Zmienne z prefiksem `NEXT_PUBL
 
 Przy buildzie Next.js podmienia każde wystąpienie `process.env.NEXT_PUBLIC_APP_NAME` na napis `"Contacts"`, który ląduje w pliku z `.next/static/chunks/`. Przeglądarka nigdy nie widzi zmiennej, dostaje gotowy tekst. Wynikają z tego trzy skutki. Klucz zapisany jako `NEXT_PUBLIC_API_KEY` jest publiczny, bo każdy może pobrać ten plik. Zmiana wartości wymaga nowego buildu, bo według dokumentacji zbudowana aplikacja przestaje reagować na zmiany tych zmiennych (*„will no longer respond to changes to these environment variables”*). Odczyt dynamiczny nie działa: dokumentacja podaje dwa przykłady, których Next.js nie podmienia, `process.env[varName]` i odczyt przez zmienną pomocniczą `const env = process.env`.
 
-## Rysunek 6.13 — kiedy zmienna dostaje wartość
+## Rysunek 5.13 — kiedy zmienna dostaje wartość
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -73,7 +73,7 @@ flowchart LR
     R --> S["restart serwera z nową wartością<br/>bez nowego buildu"]
 ```
 
-Rysunek 6.13 łączy obie drogi z wdrożeniem. Górą idą kod klienta i strona statyczna `○`, dołem strona dynamiczna `ƒ`, renderowana przy każdym żądaniu, na przykład po wywołaniu `await connection()` z `next/server`. <u>Wartość ustalona w `next build` należy od tej chwili do plików wdrożenia</u>, a Instant Rollback, czyli powrót do wcześniejszego wdrożenia bez nowego buildu, przywraca ją razem ze starym buildem. Wartość czytaną przy żądaniu na własnym serwerze z `next start` zmienia restart procesu z nową wartością, bez nowego buildu. Na Vercelu zmianę zmiennej obejmuje dopiero nowe wdrożenie.
+Rysunek 5.13 łączy obie drogi z wdrożeniem. Górą idą kod klienta i strona statyczna `○`, dołem strona dynamiczna `ƒ`, renderowana przy każdym żądaniu, na przykład po wywołaniu `await connection()` z `next/server`. <u>Wartość ustalona w `next build` należy od tej chwili do plików wdrożenia</u>, a Instant Rollback, czyli powrót do wcześniejszego wdrożenia bez nowego buildu, przywraca ją razem ze starym buildem. Wartość czytaną przy żądaniu na własnym serwerze z `next start` zmienia restart procesu z nową wartością, bez nowego buildu. Na Vercelu zmianę zmiennej obejmuje dopiero nowe wdrożenie.
 
 ## Wdrożenie na Vercel
 
@@ -87,7 +87,7 @@ Rysunek 6.13 łączy obie drogi z wdrożeniem. Górą idą kod klienta i strona 
 
 Vercel sam rozpoznaje projekt Next.js i uruchamia to samo `next build`, które działa lokalnie. Platforma rozróżnia dwa rodzaje wdrożeń. **Production** to wersja, którą widzą użytkownicy. Według dokumentacji Vercela powstaje po zmianach na gałęzi produkcyjnej albo po poleceniu `vercel --prod`. **Preview** służy do sprawdzania zmian bez wpływu na produkcję i ma własny adres. Powstaje po commicie na innej gałęzi, dla pull requestu, czyli prośby o włączenie zmian do gałęzi głównej, i po samym `vercel`. Dokumentacja zaznacza wyjątek: pierwsze wdrożenie nowego projektu jest zawsze produkcyjne.
 
-Plik `.env.local` nie trafia do repozytorium, więc Vercel go nie widzi. Zmienne ustawia się w ustawieniach projektu na platformie, osobno dla Production, Preview i Development, a polecenie `vercel env pull` pobiera je do lokalnego `.env.local`. Dokumentacja Vercela stawia regułę, która wynika wprost z Rysunku 6.13:
+Plik `.env.local` nie trafia do repozytorium, więc Vercel go nie widzi. Zmienne ustawia się w ustawieniach projektu na platformie, osobno dla Production, Preview i Development, a polecenie `vercel env pull` pobiera je do lokalnego `.env.local`. Dokumentacja Vercela stawia regułę, która wynika wprost z Rysunku 5.13:
 
 > **„Żadna zmiana zmiennych środowiskowych nie jest stosowana do wcześniejszych wdrożeń; dotyczy tylko nowych wdrożeń.”**
 >

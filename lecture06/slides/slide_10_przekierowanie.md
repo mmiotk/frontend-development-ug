@@ -88,7 +88,7 @@ Projektanci frameworka mieli do wyboru dwie drogi. Funkcja `redirect` mogłaby z
 
 Z tego wynika kolejność. <u>`revalidatePath` stoi przed `redirect`, bo kod po `redirect` się nie wykona.</u> Lista w demo trzyma odpowiedź API w pamięci `fetch` przez minutę, więc odwrotna kolejność dałaby przekierowanie na listę bez nowego artykułu. Wiersz z `revalidatePath` nigdy by się nie wykonał.
 
-## Rysunek 5.10 — przekierowanie jako wyjątek
+## Rysunek 6.10 — przekierowanie jako wyjątek
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -101,7 +101,7 @@ flowchart LR
     R -. "catch w akcji" .-> X["wyjątek połknięty<br/>strona zostaje na /new"]
 ```
 
-Rysunek 5.10 zestawia na jednym schemacie trzy losy tego samego wyjątku: dwa tryby odpowiedzi i przerywaną strzałkę do bloku `catch`, który zatrzymuje go wewnątrz akcji.
+Rysunek 6.10 zestawia na jednym schemacie trzy losy tego samego wyjątku: dwa tryby odpowiedzi i przerywaną strzałkę do bloku `catch`, który zatrzymuje go wewnątrz akcji.
 
 ## Pułapka bloku `try`
 

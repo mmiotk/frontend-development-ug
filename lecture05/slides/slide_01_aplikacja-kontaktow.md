@@ -284,7 +284,7 @@ Koszt jednego renderu składa się z dwóch części, które da się odczytać z
 
 Dokumentacja Reacta ocenia taki układ wprost. Domyślne renderowanie wszystkich zagnieżdżonych komponentów nie jest według niej optymalne dla wydajności, jeśli zaktualizowany komponent leży bardzo wysoko w drzewie (*„if the updated component is very high in the tree”*). `HomePage` jest korzeniem strony, więc spełnia ten warunek w całości. Kod wskazuje kandydatów na drogi render, a o tym, który z nich kosztuje najwięcej, rozstrzyga pomiar.
 
-## Rysunek 6.1 — co renderuje się po trzech różnych czynnościach
+## Rysunek 5.1 — co renderuje się po trzech różnych czynnościach
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -297,7 +297,7 @@ flowchart LR
     style RC fill:#fde68a,stroke:#b45309
 ```
 
-Na Rysunku 6.1 trzy czynności użytkownika prowadzą do trzech różnych liczb wywołań w wersji startowej. Różnicę wyznacza miejsce, w którym leży zmieniany stan. Litera w polu „Imie i nazwisko” zmienia stan `name` w `AddContactForm`, więc React wywołuje tylko formularz. Litera w wyszukiwarce zmienia `query` w `HomePage` i budzi całe drzewo strony: jedno wywołanie strony, cztery jej dzieci i pięć wierszy. Usunięcie kontaktu też zaczyna się w `HomePage`, ale lista ma już o jeden wiersz mniej.
+Na Rysunku 5.1 trzy czynności użytkownika prowadzą do trzech różnych liczb wywołań w wersji startowej. Różnicę wyznacza miejsce, w którym leży zmieniany stan. Litera w polu „Imie i nazwisko” zmienia stan `name` w `AddContactForm`, więc React wywołuje tylko formularz. Litera w wyszukiwarce zmienia `query` w `HomePage` i budzi całe drzewo strony: jedno wywołanie strony, cztery jej dzieci i pięć wierszy. Usunięcie kontaktu też zaczyna się w `HomePage`, ale lista ma już o jeden wiersz mniej.
 
 Dokumentacja elementu `<input>` opisuje ten mechanizm od strony pola tekstowego:
 

@@ -27,4 +27,4 @@ console.log(typeof ContactItem.type);  // → function: oryginalny komponent
 console.log(ContactItem.compare);      // → null: brak własnej funkcji porównującej
 ```
 
-Decyzję z Rysunku 6.3 Kumar rozpisuje, czytając w kodzie Reacta funkcję `updateMemoComponent`.
+Decyzję z Rysunku 5.3 Kumar rozpisuje, czytając w kodzie Reacta funkcję `updateMemoComponent`.

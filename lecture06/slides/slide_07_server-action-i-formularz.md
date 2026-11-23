@@ -139,7 +139,7 @@ Dokumentacja Reacta wyjaśnia, do czego akcje służą.
 
 Przewodnik Next.js potwierdza to dla swojego frameworka: „Next.js wysyła Server Actions po jednej na klienta” (*„Next.js dispatches Server Actions one at a time per client.”*). Druga akcja z tej samej karty czeka na koniec pierwszej, więc odświeżony widok zgadza się z wynikiem akcji, która go wywołała. Dwie akcje zebrane w `Promise.all` i tak trafiają do tej kolejki, więc wykonają się jedna po drugiej, a nie równolegle. <u>Komponent serwerowy czyta, a Server Action zapisuje.</u>
 
-## Rysunek 5.7 — od pola formularza do komunikatu
+## Rysunek 6.7 — od pola formularza do komunikatu
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -153,7 +153,7 @@ flowchart LR
     ST --> M["komunikat pod polem<br/>albo „Article saved.”"]
 ```
 
-Rysunek 5.7 dodaje do kodu format przesyłki: dane jadą na serwer jako `FormData` w treści typu `multipart/form-data`, a wracają jako zwykły obiekt. Akcja sama odczytuje pola po nazwach i sama wybiera kształt odpowiedzi, a komponent musi znać ten kształt, żeby wyświetlić `state.error.title`. Wyjątek rzucony w akcji omija `state` i trafia do najbliższej granicy błędów, w tej aplikacji `app/error.jsx`. Wszystko, co da się opisać użytkownikowi, akcja zwraca więc jako wartość.
+Rysunek 6.7 dodaje do kodu format przesyłki: dane jadą na serwer jako `FormData` w treści typu `multipart/form-data`, a wracają jako zwykły obiekt. Akcja sama odczytuje pola po nazwach i sama wybiera kształt odpowiedzi, a komponent musi znać ten kształt, żeby wyświetlić `state.error.title`. Wyjątek rzucony w akcji omija `state` i trafia do najbliższej granicy błędów, w tej aplikacji `app/error.jsx`. Wszystko, co da się opisać użytkownikowi, akcja zwraca więc jako wartość.
 
 ## Formularz `/new`
 

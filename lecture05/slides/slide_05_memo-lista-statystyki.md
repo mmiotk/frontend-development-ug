@@ -96,7 +96,7 @@ Dokumentacja Reacta podaje kryterium z dwóch warunków spełnionych jednocześn
 
 Ta sama strona dodaje, że gdy przy renderze nie widać opóźnienia, `memo` jest niepotrzebne. Liczy się też charakter aplikacji. Gdy interakcje podmieniają całe strony albo sekcje, memoizacja według dokumentacji przeważnie nic nie daje. W edytorze graficznym, gdzie użytkownik przesuwa pojedyncze kształty, może bardzo pomóc.
 
-## Rysunek 6.5 — dwa warunki dokumentacji dla pięciu komponentów
+## Rysunek 5.5 — dwa warunki dokumentacji dla pięciu komponentów
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -111,7 +111,7 @@ flowchart LR
     style N fill:#fde68a,stroke:#b45309
 ```
 
-Na Rysunku 6.5 każdy komponent strony przechodzi przez oba warunki z cytatu. Tylko dwa spełniają oba naraz. Pojedynczy wiersz `ContactItem` jest tani, ale koszt liczy się dla całej listy: litera w wyszukiwarce wywołuje go raz na każdy kontakt, więc przy tysiącu kontaktów daje tysiąc wywołań. Najciekawszy jest środkowy przypadek. `AddContactForm` po dodaniu `useCallback` dostaje przy każdej literze ten sam prop `onAdd`, więc pierwszy warunek spełnia. Jego render tworzy jednak kilka elementów formularza bez żadnej pętli, a jego liczba nie rośnie razem z listą, więc drugi warunek odpada. Brak `memo` na formularzu to decyzja wynikająca z rachunku. Dolna grupa nie spełnia już pierwszego warunku. `ContactList` ma `memo`, które tylko porównuje. `SearchBar` go nie ma i mieć nie powinien, bo przy każdej literze musi pokazać nową wartość.
+Na Rysunku 5.5 każdy komponent strony przechodzi przez oba warunki z cytatu. Tylko dwa spełniają oba naraz. Pojedynczy wiersz `ContactItem` jest tani, ale koszt liczy się dla całej listy: litera w wyszukiwarce wywołuje go raz na każdy kontakt, więc przy tysiącu kontaktów daje tysiąc wywołań. Najciekawszy jest środkowy przypadek. `AddContactForm` po dodaniu `useCallback` dostaje przy każdej literze ten sam prop `onAdd`, więc pierwszy warunek spełnia. Jego render tworzy jednak kilka elementów formularza bez żadnej pętli, a jego liczba nie rośnie razem z listą, więc drugi warunek odpada. Brak `memo` na formularzu to decyzja wynikająca z rachunku. Dolna grupa nie spełnia już pierwszego warunku. `ContactList` ma `memo`, które tylko porównuje. `SearchBar` go nie ma i mieć nie powinien, bo przy każdej literze musi pokazać nową wartość.
 
 Schwarzmüller w *React Key Concepts* dokłada kryterium położenia w drzewie. Najwięcej daje `memo` na komponencie blisko korzenia albo na początku głębokiej gałęzi, bo pominięcie takiego komponentu pomija razem z nim wszystkich potomków. Na bardzo prostym komponencie, takim jak komunikat błędu z jednym napisem, `memo` według niego prawdopodobnie nie da mierzalnej korzyści.
 

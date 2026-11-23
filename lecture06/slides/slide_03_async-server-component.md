@@ -175,7 +175,7 @@ await slowWork();                    // w tym czasie żądanie biegnie w tle
 const articles = await listPromise;  // wynik odbiera się po pracy, razem ok. 300 ms zamiast 600 ms
 ```
 
-## Rysunek 5.3 — żądania po kolei i równolegle
+## Rysunek 6.3 — żądania po kolei i równolegle
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -189,7 +189,7 @@ flowchart LR
     end
 ```
 
-Na Rysunku 5.3 oba warianty dotyczą strony, która obok listy pobiera drugie, niezależne źródło. W lewej ramce drugie żądanie startuje dopiero po powrocie pierwszego, więc render czeka na sumę obu czasów. W prawej ramce oba żądania wychodzą jednocześnie, a render czeka tylko na wolniejsze. `HomePage` ma jedno żądanie, więc kaskady nie ma, ale pojawia się ona przy drugim `await` dopisanym pod pierwszym.
+Na Rysunku 6.3 oba warianty dotyczą strony, która obok listy pobiera drugie, niezależne źródło. W lewej ramce drugie żądanie startuje dopiero po powrocie pierwszego, więc render czeka na sumę obu czasów. W prawej ramce oba żądania wychodzą jednocześnie, a render czeka tylko na wolniejsze. `HomePage` ma jedno żądanie, więc kaskady nie ma, ale pojawia się ona przy drugim `await` dopisanym pod pierwszym.
 
 ## Zalety i koszty komponentu serwerowego z `await`
 

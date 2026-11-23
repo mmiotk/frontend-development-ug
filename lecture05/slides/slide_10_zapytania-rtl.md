@@ -163,7 +163,7 @@ Dokumentacja Testing Library układa zapytania w kolejności, która wynika z za
 
 Za nim idą `getByLabelText` do pól formularza i `getByText` do elementów nieinteraktywnych. Na samym końcu jest `getByTestId`, który szuka po atrybucie `data-testid`, niewidocznym dla użytkownika. W `contacts-app` nie ma ani jednego `data-testid`.
 
-## Rysunek 6.10 — droga elementu do wyniku `getByRole`
+## Rysunek 5.10 — droga elementu do wyniku `getByRole`
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -176,7 +176,7 @@ flowchart LR
     N --> F["filtr name, level"]
 ```
 
-Rysunek 6.10 pokazuje dwa sita, przez które przechodzi element, zanim `getByRole` go zwróci: wykluczenie z drzewa dostępności i rolę.
+Rysunek 5.10 pokazuje dwa sita, przez które przechodzi element, zanim `getByRole` go zwróci: wykluczenie z drzewa dostępności i rolę.
 
 Z tym samym rozróżnieniem wiążą się dwa matchery z `jest-dom`. **`toBeInTheDocument`** sprawdza tylko obecność w dokumencie. **`toBeVisible`** wymaga dodatkowo, żeby element i wszyscy jego przodkowie nie byli ukryci przez `display: none`, `visibility: hidden`, `opacity: 0` ani atrybut `hidden`.
 

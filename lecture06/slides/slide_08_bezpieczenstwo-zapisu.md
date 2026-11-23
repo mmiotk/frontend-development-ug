@@ -101,7 +101,7 @@ import "server-only"; // build przerwie się, gdy moduł trafi do komponentu kli
 
 Import nie zmienia działania magazynu po stronie serwera: komponenty serwerowe, Route Handler i `lib/actions.js` korzystają z niego jak wcześniej. Zmienia się los błędu. Przypadkowy import magazynu w komponencie klienckim przestaje być cichym wyciekiem kodu do paczki przeglądarki i staje się przerwanym buildem z komunikatem „You're importing a module that depends on "server-only"”. Ślad importu w tym komunikacie kończy się wpisem `[Client Component Browser]` przy pliku winnego komponentu.
 
-## Rysunek 5.8 — wejścia do zapisu i ich kontrola
+## Rysunek 6.8 — wejścia do zapisu i ich kontrola
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -115,7 +115,7 @@ flowchart LR
     H -- "bez kontroli" --> S
 ```
 
-Rysunek 5.8 pokazuje, gdzie stoi kontrola: tylko na drodze przez akcję, a strzałka z Route Handlera omija ją i trafia prosto do zapisu. Romb przeniesiony do wnętrza `addArticle` leżałby na wszystkich trzech drogach naraz.
+Rysunek 6.8 pokazuje, gdzie stoi kontrola: tylko na drodze przez akcję, a strzałka z Route Handlera omija ją i trafia prosto do zapisu. Romb przeniesiony do wnętrza `addArticle` leżałby na wszystkich trzech drogach naraz.
 
 ## Kolejność kontroli: kto, czy wolno, jakie dane
 

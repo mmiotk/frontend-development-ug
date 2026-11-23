@@ -129,7 +129,7 @@ Zakładka *Profiler* nagrywa zatwierdzenia i rysuje wykres płomieniowy (*Flameg
 
 W wersji startowej żaden pasek nie jest szary: kolorowe są `ContactStats`, `ContactList` i pięć `ContactItem`. Widok *Ranked*, czyli te same komponenty posortowane od najwolniejszego, ma na szczycie `ContactStats`. Pytanie diagnostyczne brzmi więc: dlaczego statystyka się renderuje, skoro zmieniło się tylko `query`, a jej prop `contacts` jest tą samą tablicą. Sekcja *Why did this render?* podaje dla niej *„The parent component rendered.”*, czyli render rodzica.
 
-## Rysunek 6.2 — pętla pomiaru
+## Rysunek 5.2 — pętla pomiaru
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -140,7 +140,7 @@ flowchart LR
     D --> A
 ```
 
-Na Rysunku 6.2 strzałka z ostatniego prostokąta wraca do pierwszego. Poprawka bez drugiego nagrania jest tylko hipotezą. Drugie nagranie dotyczy tej samej interakcji na tych samych danych: trzech liter i pięciu kontaktów z `lib/contacts.js`. Pętlę kończy się, gdy poprawiony komponent spada z góry widoku *Ranked* albo jego pasek staje się szary.
+Na Rysunku 5.2 strzałka z ostatniego prostokąta wraca do pierwszego. Poprawka bez drugiego nagrania jest tylko hipotezą. Drugie nagranie dotyczy tej samej interakcji na tych samych danych: trzech liter i pięciu kontaktów z `lib/contacts.js`. Pętlę kończy się, gdy poprawiony komponent spada z góry widoku *Ranked* albo jego pasek staje się szary.
 
 ## Od wyniku pomiaru do poprawki
 

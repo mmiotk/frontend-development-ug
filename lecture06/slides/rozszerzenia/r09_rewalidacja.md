@@ -75,7 +75,7 @@ Tag to dowolny napis do 256 znaków, najwyżej 128 tagów na jedno wywołanie `f
 
 Dokumentacja `revalidateTag` mówi wprost, że forma z jednym argumentem jest przestarzała (*„The single-argument form `revalidateTag(tag)` is deprecated.”*). Działa dziś jak natychmiastowe wygaśnięcie, ale może zniknąć w przyszłej wersji. Gdy dane muszą wygasnąć od razu poza Server Action, dokumentacja podaje wariant `revalidateTag(tag, { expire: 0 })`.
 
-## Rysunek 5.9 — dwie ścieżki unieważnienia na osi czasu
+## Rysunek 6.9 — dwie ścieżki unieważnienia na osi czasu
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -86,7 +86,7 @@ flowchart LR
     T --> T1["wpis oznaczony<br/>jako nieświeży"] --> T2["następne wejście na /<br/>stara lista, nowa w tle"]
 ```
 
-Rysunek 5.9 dodaje oś czasu: różnica między ścieżkami leży w tym, które wejście na `/` pierwsze zobaczy nowy artykuł.
+Rysunek 6.9 dodaje oś czasu: różnica między ścieżkami leży w tym, które wejście na `/` pierwsze zobaczy nowy artykuł.
 
 ## Rozszerzenie: rewalidacja na żądanie z zewnątrz
 

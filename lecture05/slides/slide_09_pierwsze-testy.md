@@ -181,7 +181,7 @@ Minimalny kod to jeden atrybut na przycisku w `components/ContactItem.jsx`:
 
 Po zmianie raport pokazuje `Tests  3 passed (3)`. <u>Nazwa dostępna mówi, którego kontaktu dotyczy przycisk</u>: na liście z pięcioma wierszami osoba z czytnikiem ekranu nie słyszy pięć razy tego samego słowa, a zapytanie w teście listy wskazuje jeden przycisk. Barklund uzasadnia wybór ról tym, że przypominają sposób korzystania z aplikacji (*„as roles are similar to how users interact with an application”*).
 
-## Rysunek 6.9 — przebieg testu kliknięcia
+## Rysunek 5.9 — przebieg testu kliknięcia
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -193,7 +193,7 @@ flowchart LR
     M --> A["expect(handleDelete)<br/>.toHaveBeenCalledWith(1)"]
 ```
 
-Rysunek 6.9 pokazuje, że komponent nie wie, że jest testowany: woła `onDelete` tak samo jak w przeglądarce, a jedynym świadkiem wywołania jest atrapa na końcu łańcucha.
+Rysunek 5.9 pokazuje, że komponent nie wie, że jest testowany: woła `onDelete` tak samo jak w przeglądarce, a jedynym świadkiem wywołania jest atrapa na końcu łańcucha.
 
 > 💡 **Zapamiętaj:** test sprawdza to, co widzi i robi użytkownik: `render` montuje komponent, zapytanie szuka przycisku po roli i nazwie dostępnej, `await user.click(...)` klika jak człowiek, a atrapa `vi.fn()` z `toHaveBeenCalledWith` sprawdza kontrakt wobec rodzica.
 

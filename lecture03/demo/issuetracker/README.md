@@ -70,7 +70,7 @@ Wersje pośrednie nie leżą w katalogu; każda powstaje z wersji końcowej prze
 ## Uwagi
 
 - `app/lib/store.js` to demo store (moduł JS ze zmiennymi na poziomie modułu); dane resetują się po przeładowaniu strony.
-  Prawdziwa persystencja: wykład 05.
+  Prawdziwa persystencja: wykład 06.
 - Trasa `/issue/[id]` odczytuje tylko `initialIssues` (dane statyczne); nowo dodane zgłoszenia widać wyłącznie na liście `/`
   (komponent kliencki z dostępem do store), a klik w nie kończy się widokiem 404.
 - Brak stylowania (`className`, CSS) i brak `app/globals.css`. Brak też `app/favicon.ico` i `public/` z kreatora.

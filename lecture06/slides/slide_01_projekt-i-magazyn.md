@@ -139,7 +139,7 @@ Najprostszy magazyn to zmienna modułu: `let articles = [...]`. Moduł wykonuje 
 
 Pomiar na końcowej wersji demo, z magazynem w zwykłej zmiennej (`const store = { … }` bez `globalThis`), wygląda tak. Po zapisie formularzem przeglądarka wraca na `/` i pokazuje „Articles (2)”. Adres `/api/articles` zwraca 2 pozycje, a `/articles/3` pokazuje nowy artykuł. Akcja i strona artykułu widzą jedną kopię modułu, Route Handler drugą, a lista na `/` pochodzi właśnie z niego. Z magazynem na `globalThis` lista po tym samym zapisie ma „Articles (3)”. <u>Kod, który polega na jednej kopii modułu, działa przypadkiem i przestaje działać po zmianie narzędzia.</u>
 
-## Rysunek 5.1 — jeden magazyn dla dwóch kopii modułu
+## Rysunek 6.1 — jeden magazyn dla dwóch kopii modułu
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -150,7 +150,7 @@ flowchart LR
     M2 -- "??= odczytuje" --> G
 ```
 
-Na Rysunku 5.1 po lewej stoją dwie paczki serwera, które Turbopack buduje osobno. Każda ładuje własną kopię `lib/store.js`. Strzałki z obu kopii prowadzą do jednego obiektu w pamięci procesu. Kopia, która wykona się pierwsza, zastaje `globalThis.articleStore` puste i tworzy magazyn, a druga tylko go odczytuje. Gdyby dane leżały w zmiennej modułu, w środku rysunku stałyby dwie niezależne tablice.
+Na Rysunku 6.1 po lewej stoją dwie paczki serwera, które Turbopack buduje osobno. Każda ładuje własną kopię `lib/store.js`. Strzałki z obu kopii prowadzą do jednego obiektu w pamięci procesu. Kopia, która wykona się pierwsza, zastaje `globalThis.articleStore` puste i tworzy magazyn, a druga tylko go odczytuje. Gdyby dane leżały w zmiennej modułu, w środku rysunku stałyby dwie niezależne tablice.
 
 ## Przeładowanie modułu nie czyści magazynu
 

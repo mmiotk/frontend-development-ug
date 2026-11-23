@@ -28,7 +28,7 @@ test('within narrows the search', () => {
 
 W pełnej kolejności dokumentacji, w grupie dostępnej dla wszystkich użytkowników, stoją po `getByRole` **`getByLabelText`** do pól formularza, **`getByPlaceholderText`**, **`getByText`** do elementów nieinteraktywnych i **`getByDisplayValue`**. Przy placeholderze dokumentacja zaznacza, że nie zastępuje on etykiety (*„A placeholder is not a substitute for a label”*). Niżej stoją zapytania semantyczne `getByAltText` i `getByTitle`. Na samym końcu jest `getByTestId`, który szuka po atrybucie `data-testid`. Dokumentacja zaleca go tylko wtedy, gdy elementu nie da się dopasować po roli ani tekście, bo użytkownik tego atrybutu nie widzi ani nie słyszy. Wprowadzenie do React Testing Library nazywa go „furtką awaryjną” (*„escape hatch”*).
 
-Poniższy fragment sprawdza oba sita z Rysunku 6.10, dosłowne porównanie ról i opcję `level`:
+Poniższy fragment sprawdza oba sita z Rysunku 5.10, dosłowne porównanie ról i opcję `level`:
 
 ```jsx
 // Przykład spoza demo: elementy, które getByRole pomija albo widzi inaczej

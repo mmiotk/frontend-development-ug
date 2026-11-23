@@ -147,7 +147,7 @@ Projekt bez żadnego pliku testów kończy `vitest run` komunikatem `No test fil
 
 Tryb obserwowania nie powtarza po każdym zapisie całego zestawu. Według dokumentacji Vitest przeszukuje wtedy graf modułów i uruchamia tylko powiązane testy (*„Vitest smartly searches the module graph and only reruns the related tests”*). **Graf modułów** to zapis tego, który plik importuje który.
 
-## Rysunek 6.8 — co Vitest uruchamia po zapisie pliku
+## Rysunek 5.8 — co Vitest uruchamia po zapisie pliku
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -162,7 +162,7 @@ flowchart LR
     R --> W
 ```
 
-Rysunek 6.8 zakłada, że w `__tests__/` leży po jednym pliku testów dla wiersza, listy, wyszukiwarki i formularza. Zapis `ContactItem.jsx` uruchamia wtedy dwa z nich: jeden importuje wiersz wprost, drugi przez `ContactList.jsx`. Testy `SearchBar` i `AddContactForm` nie startują, bo żaden z ich importów nie prowadzi do zmienionego pliku. Pętlę obserwowania zamyka klawisz `q`.
+Rysunek 5.8 zakłada, że w `__tests__/` leży po jednym pliku testów dla wiersza, listy, wyszukiwarki i formularza. Zapis `ContactItem.jsx` uruchamia wtedy dwa z nich: jeden importuje wiersz wprost, drugi przez `ContactList.jsx`. Testy `SearchBar` i `AddContactForm` nie startują, bo żaden z ich importów nie prowadzi do zmienionego pliku. Pętlę obserwowania zamyka klawisz `q`.
 
 ## Gdzie Vitest szuka testów
 

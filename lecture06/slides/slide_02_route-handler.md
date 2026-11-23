@@ -125,7 +125,7 @@ export async function GET(request, { params }) {
 
 W projekcie z tym plikiem adres `/api/articles/99` odpowiada `HTTP/1.1 404 Not Found` i ciałem `{"error":"Not found"}`, a `/api/articles/1` zwraca pierwszy artykuł. `params` jest obiektem Promise, tak jak w komponencie strony. W Route Handlerze pominięcie `await` daje jednak mylący objaw. Zapis `const { id } = params;` zostawia `id` z wartością `undefined`, więc klient dostaje 404 także dla `/api/articles/1`. Dla klienta API taka odpowiedź wygląda jak brak artykułu. Prawdziwą przyczynę podaje tylko terminal serwera: „`params` is a Promise and must be unwrapped with `await` or `React.use()` before accessing its properties”.
 
-## Rysunek 5.2 — droga żądania przez Route Handler
+## Rysunek 6.2 — droga żądania przez Route Handler
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -140,7 +140,7 @@ flowchart LR
     D -- "artykułu brak" --> N["404 + { error }"]
 ```
 
-Na Rysunku 5.2 klient wybiera adres i metodę, a Next.js na tej podstawie wskazuje plik i funkcję. Gałąź z `[id]` pochodzi z przykładu spoza demo. Gałęzie `DELETE` i `OPTIONS` obsługuje sam framework, bez kodu w `route.js`. Metoda, której plik nie eksportuje, dostaje `405 Method Not Allowed` z pustym ciałem. MDN wymaga, żeby taka odpowiedź miała nagłówek `Allow` z listą metod, ale Next.js 16.4.0 go przy 405 nie wysyła. Listę podaje dopiero odpowiedź na `OPTIONS`, w nagłówku `allow`. Brak artykułu jest dla API zwykłą odpowiedzią z kodem 404. Co z nią zrobić, decyduje klient.
+Na Rysunku 6.2 klient wybiera adres i metodę, a Next.js na tej podstawie wskazuje plik i funkcję. Gałąź z `[id]` pochodzi z przykładu spoza demo. Gałęzie `DELETE` i `OPTIONS` obsługuje sam framework, bez kodu w `route.js`. Metoda, której plik nie eksportuje, dostaje `405 Method Not Allowed` z pustym ciałem. MDN wymaga, żeby taka odpowiedź miała nagłówek `Allow` z listą metod, ale Next.js 16.4.0 go przy 405 nie wysyła. Listę podaje dopiero odpowiedź na `OPTIONS`, w nagłówku `allow`. Brak artykułu jest dla API zwykłą odpowiedzią z kodem 404. Co z nią zrobić, decyduje klient.
 
 ## Żądanie wysłane z terminala
 

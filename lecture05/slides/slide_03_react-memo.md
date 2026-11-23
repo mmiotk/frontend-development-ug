@@ -71,7 +71,7 @@ Wymogiem jest czysty render: te same propsy, stan i kontekst mają dawać ten sa
 
 Samo owinięcie niczego jeszcze nie oblicza. Całą pracę wykonuje algorytm uzgadniania, czyli część Reacta, która porównuje stare drzewo elementów z nowym. Przy każdym renderze rodzica zadaje on komponentowi w `memo` te same pytania w tej samej kolejności.
 
-## Rysunek 6.3 — decyzja algorytmu uzgadniania przy komponencie w `memo`
+## Rysunek 5.3 — decyzja algorytmu uzgadniania przy komponencie w `memo`
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -85,7 +85,7 @@ flowchart LR
     S -->|"nie"| B["pominięcie<br/>poprzedni wynik, dzieci bez wywołania"]
 ```
 
-Na Rysunku 6.3 widać trzy pytania, które padają przy każdym renderze rodzica. Pierwsze odsiewa montowanie: komponent dopiero wchodzi do drzewa, więc nie ma z czym porównywać. Drugie zadaje funkcja porównująca. Gdy programista nie podał własnej, React używa porównania płytkiego `shallowEqual`. Kumar zwraca uwagę na warunek, którego nie widać w propsach: równy musi być także `ref`, czyli specjalny prop, przez który rodzic dostaje dostęp do węzła DOM albo wartości dziecka. Trzecie pytanie dotyczy zmian zaplanowanych w samym komponencie, czyli dwóch pozostałych powodów renderu z listy Barklunda.
+Na Rysunku 5.3 widać trzy pytania, które padają przy każdym renderze rodzica. Pierwsze odsiewa montowanie: komponent dopiero wchodzi do drzewa, więc nie ma z czym porównywać. Drugie zadaje funkcja porównująca. Gdy programista nie podał własnej, React używa porównania płytkiego `shallowEqual`. Kumar zwraca uwagę na warunek, którego nie widać w propsach: równy musi być także `ref`, czyli specjalny prop, przez który rodzic dostaje dostęp do węzła DOM albo wartości dziecka. Trzecie pytanie dotyczy zmian zaplanowanych w samym komponencie, czyli dwóch pozostałych powodów renderu z listy Barklunda.
 
 Pominięcie obejmuje też dzieci komponentu. Skoro React nie wywołał funkcji, nowy JSX nie powstał i nie ma nowych elementów dzieci do wywołania. Barklund dopisuje, że odpada także porównanie z drzewem strony, bo wynik jest dokładnie tym samym obiektem co poprzednio (*„the JSX is not just similar but exactly the same”*).
 

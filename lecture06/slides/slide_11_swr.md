@@ -143,7 +143,7 @@ Funkcja **`mutate`** z wyniku hooka to według dokumentacji **związany `mutate`
 
 Domyślnie klucz trafia do `fetcher` jako argument, więc tutaj musi być adresem. Klucz `"my-articles"` daje `fetch("my-articles")`, czyli `/my-articles`. Next.js odpowiada stroną 404 w HTML-u, a `r.json()` rzuca `SyntaxError`. Ekran pokazuje wtedy „Error: Unexpected token '<', "<!DOCTYPE "... is not valid JSON”.
 
-## Rysunek 5.11 — co uruchamia pobranie wpisu SWR
+## Rysunek 6.11 — co uruchamia pobranie wpisu SWR
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -156,7 +156,7 @@ flowchart LR
     F --> D["wpis zaktualizowany<br/>lista na ekranie"]
 ```
 
-Rysunek 5.11 zbiera w jednym węźle wszystkie wyzwalacze pobrania i pokazuje przerywaną strzałką ze znakiem ✗ połączenie, którego nie ma: `revalidatePath` nie uruchamia pobrania w SWR.
+Rysunek 6.11 zbiera w jednym węźle wszystkie wyzwalacze pobrania i pokazuje przerywaną strzałką ze znakiem ✗ połączenie, którego nie ma: `revalidatePath` nie uruchamia pobrania w SWR.
 
 ## Zalety i koszty pobierania w przeglądarce
 

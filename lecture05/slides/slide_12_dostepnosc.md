@@ -73,7 +73,7 @@ test('list has accessible label', () => {
 
 Raport pokazuje teraz `Test Files  4 passed (4)` i `Tests  13 passed (13)`. Usunięcie `aria-label` z `<ul>` zmienia wynik tego testu na czerwony.
 
-## Rysunek 6.12 — skąd przeglądarka bierze nazwę dostępną
+## Rysunek 5.12 — skąd przeglądarka bierze nazwę dostępną
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -84,7 +84,7 @@ flowchart LR
     D --> E["5. title<br/>gdy nic wcześniej nie dało tekstu"]
 ```
 
-Rysunek 6.12 pokazuje kolejność, w jakiej specyfikacja W3C *Accessible Name and Description Computation 1.2* szuka **nazwy dostępnej** (*accessible name*) elementu. Pierwsze źródło, które da niepusty tekst, wygrywa, a dalszych przeglądarka już nie sprawdza. Dlatego przycisk „Usun” ma w drzewie nazwę z `aria-label`, a widoczny napis do nazwy nie wchodzi. Atrybut `title` stoi na końcu, bo specyfikacja używa go tylko wtedy, gdy nic innego, łącznie z treścią elementu, nie dało wyniku. Ta sama specyfikacja wymienia role, którym nazw nadawać nie wolno.
+Rysunek 5.12 pokazuje kolejność, w jakiej specyfikacja W3C *Accessible Name and Description Computation 1.2* szuka **nazwy dostępnej** (*accessible name*) elementu. Pierwsze źródło, które da niepusty tekst, wygrywa, a dalszych przeglądarka już nie sprawdza. Dlatego przycisk „Usun” ma w drzewie nazwę z `aria-label`, a widoczny napis do nazwy nie wchodzi. Atrybut `title` stoi na końcu, bo specyfikacja używa go tylko wtedy, gdy nic innego, łącznie z treścią elementu, nie dało wyniku. Ta sama specyfikacja wymienia role, którym nazw nadawać nie wolno.
 
 MDN dodaje dwie wskazówki. Najlepszą nazwą jest tekst widoczny na ekranie (*„It is best to use visible text as the accessible name”*), a nazwy elementów powinny być na stronie unikalne. Sekcja statystyk nie ma nagłówka, więc jej nazwa istnieje tylko w atrybucie. Wersja z widocznym nagłówkiem daje tę samą rolę i nazwę widoczną dla wszystkich:
 

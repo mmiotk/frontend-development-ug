@@ -54,6 +54,6 @@ poniższymi odstępstwami:
 ## Uwagi
 
 - Napis „Loading recommendations...” widać pod `npm run dev` przy pierwszym wejściu po starcie serwera i po zapisaniu pliku; po `next build` strona `/` jest statyczna.
-- Stan koszyka żyje w pamięci otwartej strony; po F5 koszyk jest pusty (trwałość to wykład 05).
+- Stan koszyka żyje w pamięci otwartej strony; po F5 koszyk jest pusty (trwałość to wykład 06).
 - Wersje przypięte w `package.json`: Next.js 16.4.0, React 19.3.0; Node.js >= 20.9.
 - `node cart.test.mjs` wypisuje ostrzeżenie `MODULE_TYPELESS_PACKAGE_JSON` (w `package.json` nie ma `"type": "module"`); test przechodzi z kodem wyjścia 0.

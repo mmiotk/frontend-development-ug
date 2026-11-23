@@ -186,7 +186,7 @@ Część odpowiedzi wysłaną, zanim rozstrzygnie się jakakolwiek praca asynchr
 
 Od powłoki zależy **czas do pierwszego bajtu** (**TTFB**, *Time to First Byte*). Przewodnik *Streaming* opisuje oba przypadki. Bez strumieniowania serwer czeka na wszystkie dane, więc TTFB równa się czasowi najwolniejszego zapytania. Ze strumieniowaniem TTFB spada do czasu wyrenderowania layoutów i treści zastępczych. W przykładzie z dwiema stronami to 1,07 s i 0,07 s. W `/suspend` powłoką jest layout z nawigacją, nagłówek strony i akapit „Waiting for data...”. Element, który ma się pojawić najszybciej, na przykład główny nagłówek, stawia się więc poza granicą.
 
-## Rysunek 5.5 — co trafia do pierwszego kawałka odpowiedzi
+## Rysunek 6.5 — co trafia do pierwszego kawałka odpowiedzi
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -197,7 +197,7 @@ flowchart LR
     P2 --> P3["kawałek 2 po 1,07 s<br/>sama lista"]
 ```
 
-Na Rysunku 5.5 obie strony stoją pod granicą z `app/loading.jsx` i obie zaczynają odpowiadać w tym samym czasie. Górny wiersz zużywa pierwszy kawałek na ekran ładowania całej strony, bo cała strona czeka na `await`. Dolny wiersz mieści w pierwszym kawałku nagłówek, a po sekundzie dosyła tylko HTML listy. Dane przychodzą w obu wierszach w tej samej chwili.
+Na Rysunku 6.5 obie strony stoją pod granicą z `app/loading.jsx` i obie zaczynają odpowiadać w tym samym czasie. Górny wiersz zużywa pierwszy kawałek na ekran ładowania całej strony, bo cała strona czeka na `await`. Dolny wiersz mieści w pierwszym kawałku nagłówek, a po sekundzie dosyła tylko HTML listy. Dane przychodzą w obu wierszach w tej samej chwili.
 
 ## Własna granica a `app/loading.jsx`
 

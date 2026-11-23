@@ -105,7 +105,7 @@ Ta funkcja widzi `contacts` z pierwszego renderu, czyli pięć kontaktów z `ini
 
 Naprawy są dwie. Pierwsza to aktualizator `setContacts((prev) => prev.filter(...))` z pustą tablicą. Druga to dopisanie `contacts` do zależności. Wtedy `handleDelete` zmienia się po każdym dodaniu i usunięciu, a `memo` w wierszach przestaje pomijać render po takich zmianach. <u>Aktualizator jest lepszy, bo usuwa zależność zamiast ją dopisywać.</u>
 
-## Rysunek 6.4 — dokąd trafia funkcja i co wtedy daje `useCallback`
+## Rysunek 5.4 — dokąd trafia funkcja i co wtedy daje `useCallback`
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -117,7 +117,7 @@ flowchart LR
     Q -->|"wynik własnego hooka"| H["konsument hooka sam decyduje,<br/>czy potrzebuje stałej tożsamości"]
 ```
 
-Na Rysunku 6.4 romb zadaje jedno pytanie o każdą funkcję. Tylko gałąź „onClick elementu HTML” kończy się bez zysku, bo element HTML nie porównuje propsów. Pozostałe trzy prowadzą do miejsc, w których ktoś porównuje tożsamość funkcji: `memo`, tablica zależności albo kod, który dopiero użyje hooka.
+Na Rysunku 5.4 romb zadaje jedno pytanie o każdą funkcję. Tylko gałąź „onClick elementu HTML” kończy się bez zysku, bo element HTML nie porównuje propsów. Pozostałe trzy prowadzą do miejsc, w których ktoś porównuje tożsamość funkcji: `memo`, tablica zależności albo kod, który dopiero użyje hooka.
 
 ## Funkcja na przycisku nie przeszkadza
 

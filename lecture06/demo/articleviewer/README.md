@@ -1,10 +1,10 @@
-# Articles Viewer — projekt referencyjny L05
+# Articles Viewer — projekt referencyjny L06
 
 Demo live-coding (120 min): **przeglądarka artykułów**. Własne API (Route Handler z walidacją i `revalidatePath`), lista pobierana na serwerze
 z pamięcią `fetch`, strona z `use` i `Suspense`, formularz z Server Action, `revalidatePath` i `redirect` oraz strona odpytująca API przez SWR.
 Artykuł ma pola `id`, `title` i `body`.
 
-Temat celowo inny niż lab 05 (Pokédex), by student przenosił pojęcia, a nie kopiował demo.
+Temat celowo inny niż lab 06 (Pokédex), by student przenosił pojęcia, a nie kopiował demo.
 
 ## Uruchomienie
 

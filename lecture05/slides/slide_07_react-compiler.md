@@ -137,7 +137,7 @@ const ContactStats = memo(function ContactStats({ contacts }) {
 
 W `contacts-app` w trybie `annotation` bez żadnej dyrektywy kod przeglądarki nie ma ani jednego wywołania `c(N)`. Z `'use memo'` w `ContactStats` ma jedno. W trybie `infer` z `'use no memo'` w `ContactStats` ma pięć zamiast sześciu, a statystyka wraca do postaci sprzed kompilacji. Dyrektywa ma pierwszeństwo przed każdym trybem kompilacji. Dokumentacja traktuje `'use no memo'` jako narzędzie tymczasowe i zaleca dopisać obok komentarz z powodem wyłączenia.
 
-## Rysunek 6.7 — droga funkcji przez kompilator w trybie `infer`
+## Rysunek 5.7 — droga funkcji przez kompilator w trybie `infer`
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -151,7 +151,7 @@ flowchart LR
     R -->|"tak"| C["pamięć c(N)<br/>porównania !== przed obliczeniem i JSX"]
 ```
 
-Na Rysunku 6.7 są trzy pytania i tylko jedna droga do skompilowanego kodu. Pierwsze rozstrzyga dyrektywa, która ma pierwszeństwo przed resztą. Drugie wynika z nazwy i treści funkcji, dlatego `filterContacts` zostaje bez zmian. Trzecie zadaje analiza kodu. Wątpliwość kończy się pominięciem, a nie błędem buildu.
+Na Rysunku 5.7 są trzy pytania i tylko jedna droga do skompilowanego kodu. Pierwsze rozstrzyga dyrektywa, która ma pierwszeństwo przed resztą. Drugie wynika z nazwy i treści funkcji, dlatego `filterContacts` zostaje bez zmian. Trzecie zadaje analiza kodu. Wątpliwość kończy się pominięciem, a nie błędem buildu.
 
 ## Ręczne `useMemo` przy włączonym kompilatorze
 

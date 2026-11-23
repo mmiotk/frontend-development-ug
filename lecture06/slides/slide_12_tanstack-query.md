@@ -64,7 +64,7 @@ Daniel Bugl w *Modern Full-Stack React Projects* ujmuje to tak:
 
 Barklund w *React in Depth* dodaje zasadę, która za tym stoi. Dane przechowuje baza na serwerze, a serwer jest jedynym źródłem prawdy. Pamięć w przeglądarce jest kopią, którą trzeba co pewien czas porównać z oryginałem. Całą tę pamięć trzyma jeden obiekt, **klient zapytań** (*query client*). Czas, przez który kopia uchodzi za świeżą, ustawia opcja `staleTime`.
 
-## Rysunek 5.12 — cykl życia wpisu `["articles"]`
+## Rysunek 6.12 — cykl życia wpisu `["articles"]`
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -76,7 +76,7 @@ flowchart LR
     I -- "5 minut" --> G["usunięte z pamięci"]
 ```
 
-Rysunek 5.12 nazywa stany wpisu, których SWR nie nazywa wprost. Nieświeży wpis dalej trafia na ekran. Domyślnie dane stają się nieświeże zaraz po nadejściu, a wpis znika z pamięci po pięciu minutach bez żadnego komponentu, który go używa.
+Rysunek 6.12 nazywa stany wpisu, których SWR nie nazywa wprost. Nieświeży wpis dalej trafia na ekran. Domyślnie dane stają się nieświeże zaraz po nadejściu, a wpis znika z pamięci po pięciu minutach bez żadnego komponentu, który go używa.
 
 ## `isLoading` w dwóch bibliotekach
 

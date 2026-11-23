@@ -107,7 +107,7 @@ Nazwa wzorca znaczy „nieświeże w trakcie rewalidacji” i pochodzi z dyrekty
 
 Opcja `next: { tags: ["articles"] }` w wywołaniu `fetch` przypina do wpisu w pamięci nazwę `"articles"`, po której można go później unieważnić. Sam tag niczego nie odświeża: dopóki nikt go nie unieważni, wpis żyje według opcji `cache` albo `revalidate`.
 
-## Rysunek 5.6 — cztery sposoby wywołania `fetch`
+## Rysunek 6.6 — cztery sposoby wywołania `fetch`
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 360}}}%%
@@ -121,7 +121,7 @@ flowchart LR
     R -. "tag" .-> U
 ```
 
-Na Rysunku 5.6 każda gałąź to jedno ustawienie. Gałąź „brak” jest jedyną, której zachowanie zależy od reszty trasy. Pozostałe trzy wybiera się jawnie. Linie przerywane prowadzą do unieważniania: dane w pamięci trwałej i czasowej można wyrzucić wcześniej, na żądanie. Gałąź `no-store` takiej linii nie ma, bo nie ma czego unieważniać.
+Na Rysunku 6.6 każda gałąź to jedno ustawienie. Gałąź „brak” jest jedyną, której zachowanie zależy od reszty trasy. Pozostałe trzy wybiera się jawnie. Linie przerywane prowadzą do unieważniania: dane w pamięci trwałej i czasowej można wyrzucić wcześniej, na żądanie. Gałąź `no-store` takiej linii nie ma, bo nie ma czego unieważniać.
 
 ## Która pamięć jest która
 
